@@ -8,8 +8,8 @@ import { Card, EmptyState } from "@/components/ui";
 type R={id:string;type:string;title:string;detail:string;href:string;icon:LucideIcon; tone:string};
 const typeMeta:Record<string,{icon:LucideIcon;tone:string}>={
  Tugas:{icon:CheckSquare,tone:"bg-accent/10 text-accent"},Proyek:{icon:FolderKanban,tone:"bg-accent/10 text-accent"},Target:{icon:Target,tone:"bg-success/10 text-success"},Catatan:{icon:StickyNote,tone:"bg-accentSoft/10 text-accentSoft"},Inbox:{icon:Inbox,tone:"bg-accent/10 text-accent"},Kalender:{icon:CalendarDays,tone:"bg-accentSoft/10 text-accentSoft"},Keputusan:{icon:Activity,tone:"bg-danger/10 text-danger"},Rutinitas:{icon:Timer,tone:"bg-accent/10 text-accent"},Langganan:{icon:Wallet,tone:"bg-accentSoft/10 text-accentSoft"},Memori:{icon:Brain,tone:"bg-accent/10 text-accent"},Vault:{icon:BookOpen,tone:"bg-accent/10 text-accent"},Automation:{icon:Zap,tone:"bg-success/10 text-success"}};
-export default async function SearchPage({searchParams}:{searchParams?:{q?:string}}){
- const supabase=createClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user)return null; const q=(searchParams?.q||"").trim(); let results:R[]=[];
+export default async function SearchPage({searchParams}:{searchParams?:Promise<{q?:string|string[]}>}){
+ const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user)return null; const params=searchParams?await searchParams:{}; const rawQ=params.q; const q=(Array.isArray(rawQ)?rawQ[0]:rawQ||"").trim(); let results:R[]=[];
  if(q.length>=2){const like=`%${q.replace(/[%_]/g,"\\$&")}%`;const [tasks,projects,goals,notes,inbox,agenda,decisions,habits,subs,memory,vault,automations]=await Promise.all([
   supabase.from("tasks").select("id,title,status,due_at").eq("user_id",user.id).ilike("title",like).limit(20),
   supabase.from("projects").select("id,name,status").eq("user_id",user.id).ilike("name",like).limit(20),

@@ -5,7 +5,7 @@ import { enforceSameOrigin, rateLimit } from "@/lib/security";
 export async function GET(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
-  const client = createClient();
+  const client = await createClient();
   const { data: { user } } = await client.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const limited = rateLimit(`onboarding:${user.id}`, 30, 60_000);

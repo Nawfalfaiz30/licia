@@ -8,7 +8,7 @@ import { dateStrInTimezone } from "@/lib/date";
 import { Card } from "@/components/ui";
 
 export default async function LifePulsePage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const { data: profile } = await supabase.from("users").select("display_name,timezone").eq("id", user.id).single();

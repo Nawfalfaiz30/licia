@@ -5,7 +5,7 @@ import { rateLimit } from "@/lib/security";
 import { previewPlainText } from "@/lib/text";
 
 export async function GET(req: Request) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ activities: [] }, { status: 401 });
   const gate = rateLimit(`activity:${user.id}`, 60, 60_000); if (gate) return gate;

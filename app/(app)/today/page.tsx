@@ -7,7 +7,7 @@ import { previewPlainText } from "@/lib/text";
 function minutesLabel(n:number){if(n<60)return `${n} m`;return `${Math.floor(n/60)}j ${n%60?`${n%60}m`:""}`.trim()}
 function time(v:string){return v?.slice(0,5)||v}
 export default async function TodayPage(){
- const supabase=createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return null;const{data:profile}=await supabase.from("users").select("display_name,timezone").eq("id",user.id).single();const timezone=profile?.timezone||"Asia/Jakarta";const now=new Date();const today=dateStrInTimezone(now,timezone);const start=startOfDayIsoForTimezone(now,timezone);const end=endOfDayIsoForTimezone(now,timezone);
+ const supabase=await createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return null;const{data:profile}=await supabase.from("users").select("display_name,timezone").eq("id",user.id).single();const timezone=profile?.timezone||"Asia/Jakarta";const now=new Date();const today=dateStrInTimezone(now,timezone);const start=startOfDayIsoForTimezone(now,timezone);const end=endOfDayIsoForTimezone(now,timezone);
  const [{data:tasks},{data:agenda},{data:focus},{data:inbox},{data:habits},{data:hydration}]=await Promise.all([
   supabase.from("tasks").select("id,title,status,priority,due_at,estimated_minutes,project_id").eq("user_id",user.id).neq("status","done").order("due_at",{ascending:true,nullsFirst:false}).limit(25),
   supabase.from("schedule_blocks").select("id,title,start_time,end_time,location,description,project_id,task_id").eq("user_id",user.id).order("start_time"),

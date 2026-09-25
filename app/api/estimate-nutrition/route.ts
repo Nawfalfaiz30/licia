@@ -23,7 +23,7 @@ function getOpenAI(): OpenAI {
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req); if (originError) return originError;
   const sizeError = assertJsonSize(req, 32 * 1024); if (sizeError) return sizeError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

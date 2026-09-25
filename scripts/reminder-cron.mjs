@@ -12,9 +12,9 @@ function loadEnv(file) {
   }
 }
 loadEnv(path.resolve(process.cwd(), ".env.local"));
-const origin = String(process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+const origin = String(process.env.LICIA_INTERNAL_URL || process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 const secret = String(process.env.LICIA_CRON_SECRET || "").trim();
-if (!origin || !secret) throw new Error("APP_URL/NEXT_PUBLIC_SITE_URL dan LICIA_CRON_SECRET wajib tersedia.");
+if (!origin || !secret) throw new Error("LICIA_INTERNAL_URL/APP_URL/NEXT_PUBLIC_SITE_URL dan LICIA_CRON_SECRET wajib tersedia.");
 const response = await fetch(`${origin}/api/reminders/dispatch`, { headers: { "x-licia-cron-secret": secret, "user-agent": "LiciaReminderCron/1.0" }, cache: "no-store" });
 const body = await response.text();
 if (!response.ok) throw new Error(`Reminder dispatch ${response.status}: ${body}`);

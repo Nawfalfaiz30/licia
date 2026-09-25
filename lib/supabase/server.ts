@@ -1,11 +1,11 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-// Creates a Supabase client bound to the current user's session (via cookies),
-// so Row Level Security (auth.uid()) is enforced correctly. Never use the
-// service-role key for user-facing requests like the chat endpoint.
-export function createClient() {
-  const cookieStore = cookies();
+/**
+ * Server-side Supabase client for Next.js 16. Request-time cookies are async.
+ */
+export async function createClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,14 +19,14 @@ export function createClient() {
           try {
             cookieStore.set({ name, value, ...options });
           } catch {
-            // Called from a Server Component; middleware handles refresh instead.
+            // Server Components cannot mutate response cookies; proxy refreshes them.
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: "", ...options });
           } catch {
-            // Called from a Server Component; middleware handles refresh instead.
+            // Server Components cannot mutate response cookies; proxy refreshes them.
           }
         },
       },

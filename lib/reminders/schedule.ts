@@ -41,7 +41,7 @@ export async function createDefaultScheduleReminder(
     .limit(1);
   if (existing?.[0]) return existing[0];
 
-  const { data } = await supabase.from("reminders").insert({
+  const inserted = await supabase.from("reminders").insert({
     user_id: userId,
     title: `Pengingat: ${block.title}`,
     body: `${String(block.start_time).slice(0, 5)}–${String(block.end_time).slice(0, 5)}`,
@@ -55,7 +55,12 @@ export async function createDefaultScheduleReminder(
     status: "pending",
     updated_at: new Date().toISOString(),
   }).select("id,title,remind_at,target_type,target_id,offset_minutes,status").maybeSingle();
-  return data ?? null;
+  if (!inserted.error) return inserted.data ?? null;
+  if (inserted.error.code === "23505") {
+    const { data: existingAfterRace } = await supabase.from("reminders").select("id,status,enabled").eq("user_id", userId).eq("target_type", "schedule").eq("target_id", block.id).eq("offset_minutes", minutes).limit(1);
+    return existingAfterRace?.[0] ?? null;
+  }
+  return null;
 }
 
 /** Keep an existing pending agenda reminder synced after a schedule edit. */
@@ -116,7 +121,7 @@ export async function createDefaultTaskReminder(
     .eq("target_id", task.id)
     .limit(1);
   if (existing?.[0]) return existing[0];
-  const { data } = await supabase.from("reminders").insert({
+  const inserted = await supabase.from("reminders").insert({
     user_id: userId,
     title: `Pengingat: ${task.title}`,
     body: `Deadline ${new Date(task.due_at).toLocaleString("id-ID", { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
@@ -130,7 +135,12 @@ export async function createDefaultTaskReminder(
     status: "pending",
     updated_at: new Date().toISOString(),
   }).select("id,title,remind_at,target_type,target_id,offset_minutes,status").maybeSingle();
-  return data ?? null;
+  if (!inserted.error) return inserted.data ?? null;
+  if (inserted.error.code === "23505") {
+    const { data: existingAfterRace } = await supabase.from("reminders").select("id,status,enabled").eq("user_id", userId).eq("target_type", "task").eq("target_id", task.id).eq("offset_minutes", minutes).limit(1);
+    return existingAfterRace?.[0] ?? null;
+  }
+  return null;
 }
 
 export async function syncExistingTaskReminder(
@@ -147,7 +157,11 @@ export async function syncExistingTaskReminder(
     .eq("target_id", task.id)
     .in("status", ["pending", "waiting_for_device", "failed"])
     .maybeSingle();
-  if (!reminder || reminder.enabled === false || !reminder.offset_minutes || !task.due_at) return null;
+  if (!reminder || reminder.enabled === false || !reminder.offset_minutes) return null;
+  if (!task.due_at) {
+    const { data } = await supabase.from("reminders").update({ enabled: false, status: "cancelled", last_error: "Task deadline removed", updated_at: new Date().toISOString() }).eq("id", reminder.id).eq("user_id", userId).select().maybeSingle();
+    return data ?? null;
+  }
   const dueMs = new Date(task.due_at).getTime();
   const remindMs = dueMs - Number(reminder.offset_minutes) * 60_000;
   if (!Number.isFinite(remindMs)) return null;

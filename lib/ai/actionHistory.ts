@@ -101,8 +101,11 @@ export async function captureBeforeAction(supabase: SupabaseClient, userId: stri
     const { data: rows, error } = await query.order("created_at", { ascending: false });
     if (error || !rows?.length) return error ? null : { rows: [], subtasks: [] };
     const ids = rows.map((row:any)=>String(row.id));
-    const { data: subtasks } = await supabase.from("subtasks").select("*").in("task_id", ids).eq("user_id", userId);
-    return { rows, subtasks: subtasks ?? [] };
+    const [{ data: subtasks }, { data: reminders }] = await Promise.all([
+      supabase.from("subtasks").select("*").in("task_id", ids).eq("user_id", userId),
+      supabase.from("reminders").select("*").eq("user_id", userId).eq("target_type", "task").in("target_id", ids),
+    ]);
+    return { rows, subtasks: subtasks ?? [], reminders: reminders ?? [] };
   }
   const deletion = DELETE_IDS[toolName];
   const meta = update || deletion;
@@ -111,8 +114,15 @@ export async function captureBeforeAction(supabase: SupabaseClient, userId: stri
   const { data, error } = await supabase.from(meta.table).select("*").eq("id", id).eq("user_id", userId).maybeSingle();
   if (error || !data) return null;
   if (meta.table === "tasks") {
-    const { data: subtasks } = await supabase.from("subtasks").select("*").eq("task_id", id).eq("user_id", userId);
-    return { row: data, subtasks: subtasks ?? [] };
+    const [{ data: subtasks }, { data: reminders }] = await Promise.all([
+      supabase.from("subtasks").select("*").eq("task_id", id).eq("user_id", userId),
+      supabase.from("reminders").select("*").eq("target_type", "task").eq("target_id", id).eq("user_id", userId),
+    ]);
+    return { row: data, subtasks: subtasks ?? [], reminders: reminders ?? [] };
+  }
+  if (meta.table === "schedule_blocks") {
+    const { data: reminders } = await supabase.from("reminders").select("*").eq("target_type", "schedule").eq("target_id", id).eq("user_id", userId);
+    return { row: data, reminders: reminders ?? [] };
   }
   return { row: data };
 }
@@ -141,7 +151,7 @@ export function buildUndoRecord(toolName: string, result: any, before: any) {
   if (toolName === "delete_tasks_bulk" && Array.isArray(result.deleted) && before && Array.isArray(before.rows)) {
     const ids = result.deleted.map((r:any)=>r.id).filter(Boolean);
     if (!ids.length) return null;
-    return { operation: "delete", table_name: "tasks", record_ids: ids, before_snapshot: { rows: before.rows, subtasks: before.subtasks ?? [] }, after_snapshot: null, undoable: true };
+    return { operation: "delete", table_name: "tasks", record_ids: ids, before_snapshot: { rows: before.rows, subtasks: before.subtasks ?? [], reminders: before.reminders ?? [] }, after_snapshot: null, undoable: true };
   }
   const deletion = DELETE_IDS[toolName];
   if (toolName === "delete_health_log" && result.deleted?.id && before?.table) {

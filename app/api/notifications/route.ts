@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { enforceSameOrigin, rateLimit } from "@/lib/security";
 
 export async function GET(req: Request) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ notifications: [] }, { status: 401 });
   const gate = rateLimit(`notifications:${user.id}`, 60, 60_000);
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   let body: any; try { body = await req.json(); } catch { body = {}; }

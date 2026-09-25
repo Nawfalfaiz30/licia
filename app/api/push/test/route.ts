@@ -6,7 +6,7 @@ import { sendPushToUser, isPushConfigured } from "@/lib/notifications/push";
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`push-test:${user.id}`, 3, 60_000);

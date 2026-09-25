@@ -2,17 +2,19 @@ import fs from "node:fs";
 import path from "node:path";
 const root=process.cwd();
 const failures=[];
-const required=["lib/notifications/push.ts","lib/notifications/events.ts","lib/ai/reminderContinuity.ts","app/api/reminders/dispatch/route.ts","app/api/reminders/sync-defaults/route.ts","app/api/push/subscribe/route.ts","app/api/chat/route.ts","app/(app)/reminders/page.tsx","app/(app)/system/page.tsx","app/(app)/life-graph/page.tsx","supabase/schema_v28_intelligence.sql","public/sw.js"];
+const required=["lib/notifications/push.ts","lib/notifications/events.ts","lib/ai/reminderContinuity.ts","app/api/reminders/dispatch/route.ts","app/api/reminders/sync-defaults/route.ts","app/api/push/subscribe/route.ts","app/api/chat/route.ts","app/(app)/reminders/page.tsx","app/(app)/system/page.tsx","app/(app)/life-graph/page.tsx","supabase/schema_v28_intelligence.sql","supabase/schema_v30_core_intelligence.sql","proxy.ts","public/sw.js"];
 for(const file of required)if(!fs.existsSync(path.join(root,file)))failures.push(`Missing: ${file}`);
 const pkg=JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8"));
 if(!pkg.dependencies?.["web-push"])failures.push("web-push dependency missing");
 if(!pkg.devDependencies?.["@types/web-push"])failures.push("@types/web-push devDependency missing");
 const schema=fs.readFileSync(path.join(root,"supabase/schema_v28_intelligence.sql"),"utf8");
+const schemaV30=fs.readFileSync(path.join(root,"supabase/schema_v30_core_intelligence.sql"),"utf8");
+for(const token of ["life_os_events","system_health_heartbeats","delivery_attempts","last_delivery_error","uniq_reminders_one_active_bound_target_offset"])if(!schemaV30.includes(token))failures.push(`V30 schema missing ${token}`);
 for(const token of ["push_subscriptions","reminders","notification_events"])if(!schema.includes(`public.${token}`))failures.push(`Schema missing ${token}`);
 const chat=fs.readFileSync(path.join(root,"app/api/chat/route.ts"),"utf8");
 for(const token of ["detectReminderContinuity","get_unified_life_snapshot","get_life_module_data","search_life_os"])if(!chat.includes(token))failures.push(`AI integration missing ${token}`);
 const sw=fs.readFileSync(path.join(root,"public/sw.js"),"utf8");
 if(!sw.includes("push"))failures.push("service worker push listener missing");
 const textFiles=[];function walk(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(["node_modules",".next",".git"].includes(ent.name))continue;const p=path.join(dir,ent.name);if(ent.isDirectory())walk(p);else if(/\.(ts|tsx|mjs|js|css|json|sql)$/.test(ent.name))textFiles.push(p)}}walk(root);
-for(const file of textFiles){const s=fs.readFileSync(file,"utf8");if(/\bsk-proj-[A-Za-z0-9_-]{20,}/.test(s)||/-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/.test(s))failures.push(`Possible secret in ${path.relative(root,file)}`);if(/localhost:3000|127\.0\.0\.1:3000/.test(s)&&!file.endsWith("preflight.mjs")&&!file.endsWith("healthcheck.mjs")&&!file.endsWith("audit.mjs"))failures.push(`Runtime localhost reference in ${path.relative(root,file)}`)}
+for(const file of textFiles){const s=fs.readFileSync(file,"utf8");if(/\bsk-proj-[A-Za-z0-9_-]{20,}/.test(s)||/-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/.test(s))failures.push(`Possible secret in ${path.relative(root,file)}`);if(/localhost:3000|127\.0\.0\.1:3000/.test(s)&&!file.endsWith("preflight.mjs")&&!file.endsWith("healthcheck.mjs")&&!file.endsWith("audit.mjs")&&!file.endsWith("reminder-cron.mjs")&&!file.endsWith("reminder-worker.mjs"))failures.push(`Runtime localhost reference in ${path.relative(root,file)}`)}
 if(failures.length){console.error(`Licia audit FAILED (${failures.length})`);for(const x of failures)console.error(`- ${x}`);process.exit(1)}console.log(`Licia audit OK — ${textFiles.length} text files scanned, ${required.length} core files present, no obvious runtime secrets/origin leaks.`);

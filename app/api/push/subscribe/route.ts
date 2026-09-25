@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   if (originError) return originError;
   const sizeError = assertJsonSize(req, 64 * 1024);
   if (sizeError) return sizeError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`push-subscribe:${user.id}`, 10, 60_000);
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const url = new URL(req.url);

@@ -113,7 +113,7 @@ for (const file of ["ecosystem.config.cjs", "deploy/nginx-licia.conf", "supabase
 }
 
 if (!fs.existsSync("package-lock.json")) {
-  warnings.push("package-lock.json belum tersedia; deployment akan memakai npm install. Setelah dependency stabil, simpan lockfile dan gunakan npm ci.");
+  warnings.push("package-lock.json belum tersedia. Buat/commit lockfile dari mesin yang memiliki akses npm registry lalu gunakan npm ci untuk deployment reproducible.");
 }
 
 if (errors.length) {

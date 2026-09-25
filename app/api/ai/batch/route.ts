@@ -27,7 +27,7 @@ function actionLabel(tool: string) {
 
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req); if (originError) return originError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`ai-batch:${user.id}`, 8, 60_000); if (gate) return gate;
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const originError = enforceSameOrigin(req); if (originError) return originError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const body = await req.json().catch(() => ({}));

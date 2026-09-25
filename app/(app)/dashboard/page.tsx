@@ -17,7 +17,7 @@ type Expense = { amount: number | string | null; category: string | null; occurr
 type Income = { amount: number | string | null; source: string | null; occurred_at: string; note: string | null };
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.18em] text-accent">LICIA · PERSONAL OS</p>
           <h1 className="mt-1 truncate font-display text-2xl text-text sm:text-3xl">{greeting}, {profile?.display_name || "kamu"}.</h1>
-          <p className="mt-1 text-xs text-textMuted">Ini ringkasanmu bersama Licia.</p>
+          <p className="mt-1 text-xs text-textMuted">Ini ringkasan harianmu.</p>
           <p className="mt-1 text-[10px] text-textMuted">{new Intl.DateTimeFormat("id-ID", { timeZone: timezone, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(now)}</p>
         </div>
       </div>

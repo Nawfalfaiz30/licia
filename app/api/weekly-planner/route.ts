@@ -32,7 +32,7 @@ function minutesBetween(start: string, end: string) {
 }
 
 async function resolveContext() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null, timezone: "Asia/Jakarta", weekStart: "", weekEnd: "" };
   const { data: profile } = await supabase.from("users").select("display_name, timezone").eq("id", user.id).single();

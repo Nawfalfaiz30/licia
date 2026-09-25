@@ -13,7 +13,7 @@ function ensureScheduleIso(date: string, time: string, timezone: string) {
 export async function GET(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const now = new Date();
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
     }
     const result = matched > 0 ? `Terpenuhi · ${details}` : `Belum terpenuhi · ${details}`;
     if (matched > 0) {
-      const shouldNotify = r.action_type === "notify" || r.action_type === "suggest_focus" || r.action_type === "open_brief";
+      const shouldNotify = r.trigger_type !== "schedule_soon" && (r.action_type === "notify" || r.action_type === "suggest_focus" || r.action_type === "open_brief");
       if (shouldNotify) {
         const href = r.action_type === "suggest_focus" ? "/focus" : r.action_type === "open_brief" ? "/brief" : r.trigger_type === "schedule_soon" ? "/calendar" : "/today";
         await upsertNotificationEvent(supabase, {

@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dateStrInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone, startOfMonthIsoForTimezone, startOfWeekIsoForTimezone, ensureTimezoneOffset } from "@/lib/date";
 import { createDefaultTaskReminder, getDefaultReminderMinutes, createDefaultScheduleReminder, syncExistingScheduleReminder, syncExistingTaskReminder } from "@/lib/reminders/schedule";
+import { cancelTaskReminders, cancelScheduleReminders } from "@/lib/domain/reminderLifecycle";
+import { emitLifeEvent } from "@/lib/events/bus";
 import type OpenAI from "openai";
 
 type ToolDef = OpenAI.Chat.Completions.ChatCompletionTool;
@@ -1834,6 +1836,7 @@ async function deleteReminder(ctx: HandlerCtx, args: any) {
   if (confirmId) {
     const { data, error } = await ctx.supabase.from("reminders").delete().eq("id", confirmId).eq("user_id", ctx.userId).select().maybeSingle();
     if (error || !data) return { ok: false, error: "Pengingat tidak ditemukan atau sudah dihapus." };
+    await emitLifeEvent(ctx.supabase, { userId: ctx.userId, eventType: "reminder.cancelled", entityType: "reminder", entityId: data.id, payload: { reason: "reminder_deleted" } });
     return { ok: true, deleted: data };
   }
   const keyword = String(args.keyword || "").trim();
@@ -1984,7 +1987,7 @@ async function updateTask(ctx: HandlerCtx, args: any) {
   if (args.title) patch.title = args.title;
   if (args.description !== undefined) patch.description = args.description;
   if (args.priority) patch.priority = args.priority;
-  if (args.due_at) patch.due_at = ensureTimezoneOffset(args.due_at, ctx.timezone);
+  if (args.due_at !== undefined) patch.due_at = args.due_at ? ensureTimezoneOffset(String(args.due_at), ctx.timezone) : null;
   patch.updated_at = new Date().toISOString();
 
   const { data, error } = await ctx.supabase
@@ -1996,12 +1999,13 @@ async function updateTask(ctx: HandlerCtx, args: any) {
     .single();
   if (error) return { ok: false, error: error.message };
   let reminder = null;
-  if (data?.status === "done") {
-    await ctx.supabase.from("reminders").update({ enabled: false, status: "cancelled", updated_at: new Date().toISOString() }).eq("user_id", ctx.userId).eq("target_type", "task").eq("target_id", data.id).in("status", ["pending", "waiting_for_device", "failed"]);
+  if (data?.status === "done" || data?.due_at === null) {
+    await cancelTaskReminders(ctx.supabase, ctx.userId, [data.id], data.status === "done" ? "task_completed" : "task_deadline_removed");
   } else if (data?.due_at) {
     reminder = await syncExistingTaskReminder(ctx.supabase, ctx.userId, ctx.timezone, data);
     if (!reminder) { const mins = await getDefaultReminderMinutes(ctx.supabase, ctx.userId); if (mins > 0) reminder = await createDefaultTaskReminder(ctx.supabase, ctx.userId, ctx.timezone, data, mins); }
   }
+  await emitLifeEvent(ctx.supabase, { userId: ctx.userId, eventType: "task.updated", entityType: "task", entityId: data.id, payload: { status: data.status, due_at: data.due_at } });
   return { ok: true, task: data, reminder };
 }
 
@@ -2027,6 +2031,8 @@ async function deleteTask(ctx: HandlerCtx, args: any) {
       .select()
       .single();
     if (error) return { ok: false, error: error.message };
+    await cancelTaskReminders(ctx.supabase, ctx.userId, [String(data.id)], "task_deleted");
+    await emitLifeEvent(ctx.supabase, { userId: ctx.userId, eventType: "task.deleted", entityType: "task", entityId: data.id, payload: { title: data.title } });
     return { ok: true, deleted: data };
   }
 
@@ -2053,6 +2059,8 @@ async function deleteTasksBulk(ctx: HandlerCtx, args: any) {
   const ids = rows.map((row) => row.id).filter(Boolean);
   const { data: deleted, error: deleteError } = await ctx.supabase.from("tasks").delete().in("id", ids).eq("user_id", ctx.userId).select("id,title,status,priority,due_at,project_id");
   if (deleteError) return { ok: false, error: deleteError.message };
+  await cancelTaskReminders(ctx.supabase, ctx.userId, ids, "task_bulk_deleted");
+  for (const row of deleted ?? []) await emitLifeEvent(ctx.supabase, { userId: ctx.userId, eventType: "task.deleted", entityType: "task", entityId: row.id, payload: { title: row.title, bulk: true } });
   return { ok: true, operation: "bulk_delete", count: deleted?.length ?? ids.length, deleted: deleted ?? [], requested: { status, keyword: typeof args.keyword === "string" ? args.keyword.trim() || null : null } };
 }
 
@@ -2156,14 +2164,9 @@ async function updateScheduleBlock(ctx: HandlerCtx, args: any) {
     .select()
     .single();
   if (error) return { ok: false, error: error.message };
-  // Keep an existing active agenda-bound reminder aligned when its source event moves.
-  const { data: boundReminder } = await ctx.supabase.from("reminders").select("id,offset_minutes,status,enabled").eq("user_id", ctx.userId).eq("target_type", "schedule").eq("target_id", data.id).in("status", ["pending", "waiting_for_device"]).maybeSingle();
-  if (boundReminder?.enabled !== false && boundReminder?.offset_minutes) {
-    const startIso = ensureTimezoneOffset(`${data.block_date}T${String(data.start_time).slice(0, 8)}`, ctx.timezone);
-    const remindMs = startIso ? new Date(startIso).getTime() - Number(boundReminder.offset_minutes) * 60_000 : NaN;
-    if (Number.isFinite(remindMs) && remindMs > Date.now()) await ctx.supabase.from("reminders").update({ remind_at: new Date(remindMs).toISOString(), timezone: ctx.timezone, status: "pending", sent_at: null, updated_at: new Date().toISOString() }).eq("id", boundReminder.id).eq("user_id", ctx.userId);
-  }
-  return { ok: true, block: data };
+  const reminder = await syncExistingScheduleReminder(ctx.supabase, ctx.userId, ctx.timezone, data);
+  await emitLifeEvent(ctx.supabase, { userId: ctx.userId, eventType: "schedule.updated", entityType: "schedule", entityId: data.id, payload: { block_date: data.block_date, start_time: data.start_time, end_time: data.end_time } });
+  return { ok: true, block: data, reminder };
 }
 
 async function getSchedule(ctx: HandlerCtx, args: any) {
@@ -2189,6 +2192,8 @@ async function deleteScheduleBlock(ctx: HandlerCtx, args: any) {
       .select()
       .single();
     if (error) return { ok: false, error: error.message };
+    await cancelScheduleReminders(ctx.supabase, ctx.userId, [String(data.id)], "schedule_deleted");
+    await emitLifeEvent(ctx.supabase, { userId: ctx.userId, eventType: "schedule.deleted", entityType: "schedule", entityId: data.id, payload: { title: data.title } });
     return { ok: true, deleted: data };
   }
 

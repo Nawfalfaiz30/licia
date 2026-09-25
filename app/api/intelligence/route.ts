@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dateStrInTimezone, ensureTimezoneOffset, startOfDayIsoForTimezone, startOfMonthIsoForTimezone, startOfWeekIsoForTimezone } from "@/lib/date";
 import { rateLimit } from "@/lib/security";
 import { upsertNotificationEvent } from "@/lib/notifications/events";
+import { buildActionableContext } from "@/lib/ai/contextEngine";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ function rupiah(n: number) {
 }
 
 export async function GET(req: Request) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`intelligence:${user.id}`, 30, 60_000); if (gate) return gate;
@@ -42,21 +43,7 @@ export async function GET(req: Request) {
       supabase.from("automations").select("id,name,trigger_type,trigger_config,action_type,enabled").eq("user_id", user.id).eq("enabled", true).eq("trigger_type", "schedule_soon").limit(20),
       supabase.from("schedule_blocks").select("id,title,block_date,start_time,end_time").eq("user_id", user.id).gte("block_date", today).lte("block_date", endDate).order("block_date", { ascending: true }).order("start_time", { ascending: true }).limit(80),
     ]);
-    const scheduleReminders = ((automationsRes.data ?? []) as any[]).flatMap((rule) => {
-      const minutes = Math.min(240, Math.max(5, Number(rule.trigger_config?.minutes) || 30));
-      const targetId = rule.trigger_config?.schedule_block_id ? String(rule.trigger_config.schedule_block_id) : null;
-      const horizon = now.getTime() + minutes * 60 * 1000;
-      const matches = ((scheduleRes.data ?? []) as any[]).filter((block) => {
-        if (targetId && String(block.id) !== targetId) return false;
-        const startIso = ensureTimezoneOffset(`${block.block_date}T${String(block.start_time).slice(0,8)}`, timezone);
-        if (!startIso) return false;
-        const startMs = new Date(startIso).getTime();
-        return Number.isFinite(startMs) && startMs >= now.getTime() && startMs <= horizon;
-      }).slice(0, 2);
-      return matches.map((block) => ({ id: `automation-${rule.id}-${block.id}`, title: rule.name || "Pengingat agenda", detail: `${block.title} · ${String(block.start_time).slice(0,5)} (≤ ${minutes} mnt)`, href: "/calendar", tone: "accent" }));
-    });
     const notifications = [
-      ...scheduleReminders,
       ...((tasksRes.data ?? []) as any[]).filter((t) => t.due_at && new Date(t.due_at).getTime() < now.getTime()).slice(0, 5).map((t) => ({ id: `task-${t.id}`, title: "Tugas melewati tenggat", detail: t.title, href: "/tasks", tone: "danger" })),
       ...((subsRes.data ?? []) as any[]).slice(0, 5).map((s) => ({ id: `sub-${s.id}`, title: "Langganan mendekati tagihan", detail: s.name, href: "/subscriptions", tone: "accent" })),
       ...((decisionsRes.data ?? []) as any[]).slice(0, 5).map((d) => ({ id: `decision-${d.id}`, title: "Keputusan perlu ditinjau", detail: d.title, href: "/decisions", tone: "accentSoft" })),
@@ -121,6 +108,7 @@ export async function GET(req: Request) {
   const focusDays = new Set((focusRes.data ?? []).map((x: any) => String(x.started_at).slice(0, 10))).size;
   const workloadScore = Math.max(0, Math.min(100, 100 - overdue.length * 10 - Math.max(0, tasks.length - 8) * 4 + Math.min(focusDays * 6, 24)));
   const projectRiskCount = staleProjects.length + nearProjects.length;
+  const actionableContext = await buildActionableContext(supabase, user.id, timezone);
 
   const suggestions: any[] = [];
   if (overdue.length) suggestions.push({ id: "overdue", title: "Rapikan tugas yang terlambat", detail: `${overdue.length} tugas melewati tenggat. Pilih satu untuk dibereskan lebih dulu.`, href: "/tasks", action: "Buka tugas", tone: "danger" });
@@ -182,6 +170,7 @@ export async function GET(req: Request) {
       habitsChecked: habitsRes.data?.length ?? 0,
     },
     nextActions: tasks.slice(0, 5).map((t: any) => ({ id: t.id, title: t.title, priority: t.priority, dueAt: t.due_at, href: "/tasks" })),
+    actionableContext: { signals: actionableContext.signals.slice(0, 10), focusCandidates: actionableContext.focusCandidates, stats: actionableContext.stats },
     suggestions: suggestions.slice(0, 6),
     notifications,
     focusMessage: focusMinutes ? `Minggu ini ${focusMinutes} menit fokus sudah tercatat.` : "Belum ada sesi fokus minggu ini.",

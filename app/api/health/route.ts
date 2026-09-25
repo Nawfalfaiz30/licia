@@ -8,7 +8,7 @@ export async function GET(){
   const openaiConfigured=Boolean(process.env.OPENAI_API_KEY?.trim());
   const supabaseConfigured=Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
   try{
-    const supabase=createClient();
+    const supabase=await createClient();
     const {data:{user}}=await supabase.auth.getUser();
     const db=await supabase.from("users").select("id").limit(1);
     const [reminders, notificationEvents, pushSubscriptions] = await Promise.all([

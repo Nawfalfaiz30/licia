@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`reminder-test:${user.id}`, 5, 60_000);

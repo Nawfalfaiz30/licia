@@ -1,4 +1,4 @@
-const CACHE = 'licia-v28-pwa-r1';
+const CACHE = 'licia-v30-pwa-r1';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/licia-avatar.png'];
 

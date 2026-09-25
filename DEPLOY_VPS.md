@@ -1,87 +1,145 @@
-# Licia V20 — Deployment VPS Ubuntu (IP-only)
+# Licia V30 — Deployment VPS Ubuntu
 
-Licia V20 dapat dijalankan 24/7 tanpa domain. Untuk deployment ini, gunakan IP publik VPS sebagai origin dan Nginx sebagai reverse proxy di depan Next.js. Domain/HTTPS bersifat opsional dan dapat ditambahkan kemudian.
+Licia V30 adalah baseline production baru setelah upgrade dari V29. Stack utama:
+
+- Next.js 16.x + React 19.x
+- Supabase + RLS
+- OpenAI tool-calling + AI model router
+- Reminder Engine V30 + server heartbeat
+- Web Push + PWA
+- PM2 + Nginx
+
+V30 tetap cocok untuk VPS Ubuntu dengan Node 22. Jangan menyalin source V30 ke folder lama. Gunakan folder deploy bersih agar file stale tidak tertinggal.
 
 ## 1. Requirement
+
 - Ubuntu 22.04/24.04
-- Node.js 22 LTS
+- Node.js 22.x
 - npm 10+
 - PM2
 - Nginx
 - Supabase production project
-- IP publik VPS
+- Domain + HTTPS sangat dianjurkan untuk PWA/Web Push
+- Swap minimal 2 GB untuk VPS kecil saat build
 
-## 2. Deploy ke folder bersih
-Jangan mengekstrak V20 di atas folder Licia lama karena file stale dari versi sebelumnya dapat tetap tertinggal dan kembali memunculkan error TypeScript.
+## 2. Deploy source
 
 ```bash
 cd /root
 mv licia licia-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
 mkdir -p licia
-unzip licia-v20-final-ip-only-clean.zip -d licia
+unzip licia-v30.zip -d licia
 cd licia
 ```
 
-Jika arsip sudah berisi source langsung di root ZIP, `package.json` harus berada di `/root/licia/package.json`.
+Pastikan:
 
-## 3. Environment
-Buat `.env.local` di VPS. Jangan masukkan secret ke Git atau ZIP.
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
-OPENAI_API_KEY=YOUR_OPENAI_KEY
-
-NEXT_PUBLIC_SITE_URL=http://YOUR_VPS_PUBLIC_IP
-APP_URL=http://YOUR_VPS_PUBLIC_IP
-DEV_TUNNEL_ORIGIN=
+```bash
+ls package.json proxy.ts
 ```
 
-`NEXT_PUBLIC_SITE_URL` dan `APP_URL` harus identik dan berupa origin tanpa path. HTTP diperbolehkan untuk deployment IP-only. Preflight akan memberi warning karena PWA/service worker dan browser notification membutuhkan secure context/HTTPS di browser modern.
+## 3. Environment
 
-## 4. Install + preflight
+Buat `.env.local` dari `.env.local.example`.
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+
+NEXT_PUBLIC_SITE_URL=https://licia.example.com
+APP_URL=https://licia.example.com
+LICIA_INTERNAL_URL=http://127.0.0.1:3000
+
+VAPID_SUBJECT=mailto:admin@example.com
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+LICIA_CRON_SECRET=...
+LICIA_AI_MODEL=gpt-4o-mini
+LICIA_AI_HEAVY_MODEL=gpt-4o-mini
+```
+
+`LICIA_INTERNAL_URL` dipakai worker untuk komunikasi internal VPS sehingga tidak perlu melewati DNS/Nginx/public HTTPS.
+
+## 4. Database migration V30
+
+Jalankan **sekali** di Supabase SQL Editor:
+
+```text
+supabase/schema_v30_core_intelligence.sql
+```
+
+File ini idempotent untuk objek V30. Untuk instalasi database dari nol, gunakan:
+
+```text
+supabase/schema_all_v30.sql
+```
+
+Migration V30 menambahkan:
+
+- `life_os_events`
+- `ai_usage_events`
+- `system_health_heartbeats`
+- delivery telemetry pada reminders/notification_events
+- unique active reminder guard
+- trigger pembatalan reminder ketika task/schedule dihapus atau task selesai/deadline dihapus
+
+## 5. Install dependency
 
 ```bash
 npm install
 npm run preflight
 npm run verify
+npm run audit
+npm run test
 ```
 
-Jika `preflight` menampilkan `Environment loaded from: .env.local`, berarti file environment berhasil dibaca oleh script preflight.
-
-## 5. Build production
-Pada VPS 1 GB, siapkan swap minimal 2 GB sebelum build.
+Untuk deployment yang reproducible, commit `package-lock.json` yang dihasilkan di mesin/VPS yang memiliki akses registry, lalu gunakan pada deployment berikutnya:
 
 ```bash
-sudo fallocate -l 2G /swapfile
+npm ci
+```
+
+## 6. Build
+
+V30 memakai Node 22 dan build script dengan memory guard:
+
+```bash
+sudo fallocate -l 2G /swapfile 2>/dev/null || true
 sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-```
+sudo mkswap /swapfile 2>/dev/null || true
+sudo swapon /swapfile 2>/dev/null || true
 
-Lalu:
-
-```bash
 npm run build
 ```
 
-`prebuild` akan menjalankan preflight lebih dulu. Jangan menambal error TypeScript di VPS satu per satu; gunakan arsip V20 final pada folder bersih.
+`npm run build` menjalankan `scripts/build.mjs`, yang membatasi Node ke heap sekitar 1 GB sebelum memanggil Next build.
 
-## 6. PM2
+## 7. PM2
 
 ```bash
+pm2 delete licia licia-reminder-worker 2>/dev/null || true
 pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup
-# Jalankan command `sudo ...` yang dicetak oleh pm2 startup.
+# jalankan command sudo yang dicetak PM2
 pm2 save
+pm2 status
 ```
 
-Next.js hanya listen di `127.0.0.1:3000`, sehingga port 3000 tidak perlu dibuka ke internet.
+Ada dua process:
 
-## 7. Nginx — IP-only
+```text
+licia
+licia-reminder-worker
+```
 
-Salin konfigurasi:
+Aplikasi listen di `127.0.0.1:3000`.
+
+## 8. Nginx
+
+Gunakan konfigurasi pada `deploy/nginx-licia.conf`.
 
 ```bash
 sudo cp deploy/nginx-licia.conf /etc/nginx/sites-available/licia
@@ -90,119 +148,114 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Konfigurasi V20 menggunakan `server_name _;`, sehingga langsung dapat melayani akses via IP publik. Jika VPS memiliki situs lain, review virtual host yang ada sebelum menjadikannya default.
+Pastikan domain mengarah ke VPS dan HTTPS aktif sebelum menguji Web Push.
 
-Akses:
+## 9. Web Push
 
-```text
-http://IP-VPS-KAMU
-```
-
-## 8. Healthcheck
-Tes dari VPS:
-
-```bash
-curl http://127.0.0.1:3000/api/health
-curl http://IP-VPS-KAMU/api/health
-```
-
-Pastikan response menunjukkan aplikasi hidup dan konfigurasi Supabase/OpenAI terdeteksi. Secret tidak pernah dikembalikan oleh endpoint health.
-
-## 9. Security / origin
-`enforceSameOrigin()` tetap aktif. Production mengizinkan origin yang sama dengan `NEXT_PUBLIC_SITE_URL`/`APP_URL`; origin asing tetap ditolak. Dukungan loopback dan Dev Tunnel hanya untuk development.
-
-## 10. PWA / HTTPS
-Tanpa domain dan tanpa HTTPS, aplikasi utama tetap dapat diakses melalui IP. Namun service worker/PWA installability dan browser notification dapat dibatasi oleh secure-context policy browser. Ini bukan blocker untuk penggunaan web 24/7.
-
-Jika suatu hari domain + HTTPS ditambahkan, cukup ubah:
-
-```env
-NEXT_PUBLIC_SITE_URL=https://domain-kamu
-APP_URL=https://domain-kamu
-```
-
-dan sesuaikan `server_name` Nginx.
-
-
-## Licia V29 — Notifikasi & Reminder 24/7
-
-Setelah source terbaru dipasang, jalankan sekali dari folder Licia:
-
-```bash
-npm install
-npm run preflight
-npm run verify
-npm run build
-```
-
-`web-push` adalah dependency runtime server. Jika source sudah diperbarui tetapi `node_modules` masih berasal dari versi sebelum V28, `npm run build` akan gagal dengan `Can't resolve 'web-push'`. Jangan menambahkan library secara manual ke source; cukup jalankan `npm install`.
-
-Untuk Web Push, buat VAPID key di VPS setelah `web-push` terpasang:
+Generate key:
 
 ```bash
 npx web-push generate-vapid-keys
 ```
 
-Isi `.env.local` di VPS dengan:
+Simpan public/private key di `.env.local`. Jangan commit secret.
 
-```env
-VAPID_SUBJECT=mailto:admin@domain-kamu
-VAPID_PUBLIC_KEY=PUBLIC_KEY_DARI_COMMAND
-VAPID_PRIVATE_KEY=PRIVATE_KEY_DARI_COMMAND
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
-LICIA_CRON_SECRET=random-secret-panjang
-```
-
-`NEXT_PUBLIC_SITE_URL` dan `APP_URL` harus menunjuk ke origin HTTPS production agar PWA dan Web Push dapat digunakan browser.
-
-### Reminder 24/7 dengan cron
-
-Agar reminder tetap diproses ketika tidak ada tab Licia yang terbuka, cron VPS memanggil endpoint dispatch setiap menit. Source sudah menyediakan helper:
-
-```bash
-cd /root/licia
-node scripts/reminder-cron.mjs
-```
-
-Tambahkan ke `crontab -e`:
-
-```cron
-* * * * * cd /root/licia && /usr/bin/node scripts/reminder-cron.mjs >> /var/log/licia-reminder.log 2>&1
-```
-
-Mode ketika tab Licia terbuka juga tetap aktif: Notification Center melakukan polling ringan dan membuat event notifikasi. Jadi pengingat tidak sepenuhnya bergantung pada Web Push. Web Push + cron diperlukan untuk notifikasi ketika aplikasi/browser tidak sedang terbuka.
-
-### Tes setelah deploy
+Setelah login di browser production:
 
 1. Buka `/system`.
-2. Klik **Tes browser**.
-3. Klik **Reminder 1 menit**.
-4. Klik **Jalankan reminder** setelah waktunya lewat.
-5. Setelah push aktif, buka Settings → Experience → aktifkan push pada perangkat lalu gunakan **Kirim tes push**.
+2. Tes browser notification.
+3. Aktifkan Push dari Settings.
+4. Jalankan `Reminder 1 menit`.
+5. Klik `Jalankan reminder` bila ingin menguji dispatch manual.
+6. Gunakan `Kirim tes push` untuk jalur Web Push.
 
-### Reminder worker via PM2 (direkomendasikan)
+## 10. Reminder worker 24/7
 
-Source terbaru menyediakan `licia-reminder-worker` di `ecosystem.config.cjs`. Worker ini memanggil dispatch reminder setiap 60 detik menggunakan `LICIA_CRON_SECRET`, sehingga tidak bergantung pada crontab OS.
-
-Setelah `.env.local` berisi `APP_URL`/`NEXT_PUBLIC_SITE_URL` dan `LICIA_CRON_SECRET`, jalankan:
-
-```bash
-npm install
-npm run build
-```
-
-Untuk deployment PM2, gunakan langsung:
-
-```bash
-pm2 start ecosystem.config.cjs
-pm2 save
-```
+Worker PM2 menjalankan dispatch kira-kira setiap 60 detik dan mengirim heartbeat ke `system_health_heartbeats`.
 
 Periksa:
 
 ```bash
 pm2 status
-pm2 logs licia-reminder-worker --lines 50
+pm2 logs licia-reminder-worker --lines 100
 ```
 
-Crontab `scripts/reminder-cron.mjs` tetap tersedia sebagai alternatif. Gunakan salah satu mekanisme scheduler, tidak perlu keduanya.
+Health UI:
+
+```text
+/system
+```
+
+System Center akan memperlihatkan:
+
+- heartbeat worker
+- overdue reminder
+- reminder stuck
+- orphan reminder
+- notification delivery
+- push subscription
+- V30 schema
+- AI usage telemetry
+
+Crontab OS tetap tersedia sebagai fallback, tetapi **jangan aktifkan PM2 worker dan crontab bersamaan**, karena keduanya dapat memanggil dispatcher yang sama.
+
+## 11. Healthcheck
+
+```bash
+curl http://127.0.0.1:3000/api/health
+curl https://licia.example.com/api/health
+```
+
+Secret tidak pernah ditampilkan oleh health endpoint.
+
+## 12. Update release berikutnya
+
+Backup folder lama lalu deploy V30 ke folder bersih:
+
+```bash
+cd /root
+mv licia licia-backup-$(date +%Y%m%d-%H%M%S)
+mkdir licia
+unzip licia-v30.zip -d licia
+cd licia
+npm ci
+npm run verify
+npm run audit
+npm run test
+npm run build
+pm2 restart ecosystem.config.cjs --update-env
+pm2 save
+```
+
+Setelah restart, buka `/system` dan pastikan worker heartbeat tidak stale.
+
+## 13. Troubleshooting cepat
+
+### Reminder tidak terkirim
+
+Periksa `/system`.
+
+Jika `Worker` stale:
+
+```bash
+pm2 restart licia-reminder-worker --update-env
+pm2 logs licia-reminder-worker --lines 100
+```
+
+Jika `waiting_for_device`, pastikan ada subscription Web Push aktif.
+
+Jika `failed`, lihat `last_error` pada `/reminders` lalu gunakan `Jadwalkan ulang`.
+
+### Migration belum lengkap
+
+Jalankan:
+
+```text
+supabase/schema_v30_core_intelligence.sql
+```
+
+kemudian `/system` → `Segarkan`.
+
+### PWA/push tidak aktif
+
+Pastikan production dibuka melalui HTTPS dan service worker sudah aktif. IP-only HTTP tidak menjamin secure context untuk semua kemampuan browser.

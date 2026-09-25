@@ -23,7 +23,7 @@ type InputItem = { id?: string; content: string };
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req); if (originError) return originError;
   const sizeError = assertJsonSize(req, 128 * 1024); if (sizeError) return sizeError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`inbox-triage:${user.id}`, 12, 60_000); if (gate) return gate;

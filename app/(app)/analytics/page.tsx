@@ -10,7 +10,7 @@ function pct(n:number,d:number){return d?Math.round(n/d*100):0}
 function width(v:number,max:number){return `${max ? Math.max(6,Math.min(100,Math.round(v/max*100))) : 6}%`}
 
 export default async function AnalyticsPage(){
- const supabase=createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return null;
+ const supabase=await createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return null;
  const {data:profile}=await supabase.from("users").select("timezone").eq("id",user.id).single();const resolved=profile??await getOrCreateProfile(supabase,user.id);const timezone=(resolved as any)?.timezone??"Asia/Jakarta";
  const now=new Date();const month=startOfMonthIsoForTimezone(now,timezone);const week=startOfWeekIsoForTimezone(now,timezone);const today=dateStrInTimezone(now,timezone);
  const [tasks,focus,expenses,incomes,projects,goals,inbox,reading,movement,habits,subscriptions,schedule]=await Promise.all([

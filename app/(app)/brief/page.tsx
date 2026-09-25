@@ -14,9 +14,10 @@ function monthBounds(month:string){const [y,m]=month.split("-").map(Number);cons
 function monthLabel(month:string){return new Intl.DateTimeFormat("id-ID",{month:"long",year:"numeric"}).format(new Date(`${month}-01T12:00:00Z`))}
 function fmtTime(v:string){return v.slice(0,5)}
 
-export default async function BriefPage({searchParams}:{searchParams?:{month?:string}}){
- const supabase=createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");
- const{data:profile}=await supabase.from("users").select("display_name,timezone").eq("id",user.id).single();const timezone=profile?.timezone??"Asia/Jakarta";const now=new Date();const today=dateStrInTimezone(now,timezone);const dayStart=startOfDayIsoForTimezone(now,timezone);const dayEnd=endOfDayIsoForTimezone(now,timezone);const weekStart=startOfWeekIsoForTimezone(now,timezone);const selectedMonth=safeMonth(searchParams?.month)||today.slice(0,7);const bounds=monthBounds(selectedMonth);
+export default async function BriefPage({searchParams}:{searchParams?:Promise<{month?:string|string[]}>}){
+ const supabase=await createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");
+ const params=searchParams?await searchParams:{}; const rawMonth=params.month; const monthParam=Array.isArray(rawMonth)?rawMonth[0]:rawMonth;
+ const{data:profile}=await supabase.from("users").select("display_name,timezone").eq("id",user.id).single();const timezone=profile?.timezone??"Asia/Jakarta";const now=new Date();const today=dateStrInTimezone(now,timezone);const dayStart=startOfDayIsoForTimezone(now,timezone);const dayEnd=endOfDayIsoForTimezone(now,timezone);const weekStart=startOfWeekIsoForTimezone(now,timezone);const selectedMonth=safeMonth(monthParam)||today.slice(0,7);const bounds=monthBounds(selectedMonth);
  const [tasks,agenda,focusToday,expensesToday,incomeToday,inboxToday,goals,weekTasks,weekFocus,weekInbox,monthFocus,monthExpenses,monthIncome,monthInbox,monthReading,monthMovement]=await Promise.all([
   supabase.from("tasks").select("id,title,priority,status,due_at").eq("user_id",user.id).neq("status","done").order("due_at",{ascending:true,nullsFirst:false}).limit(12),
   supabase.from("schedule_blocks").select("id,title,start_time,end_time,location").eq("user_id",user.id).eq("block_date",today).order("start_time",{ascending:true}),

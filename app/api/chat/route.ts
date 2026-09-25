@@ -6,6 +6,9 @@ import { getOrCreateProfile } from "@/lib/getOrCreateProfile";
 import { buildSystemPrompt, AiMode } from "@/lib/ai/systemPrompt";
 import { toolDefs, executeTool } from "@/lib/ai/tools";
 import { buildConnectedContext } from "@/lib/ai/context";
+import { buildActionableContext } from "@/lib/ai/contextEngine";
+import { selectAiModel } from "@/lib/ai/modelRouter";
+import { recordAiUsage } from "@/lib/ai/usage";
 import { detectAiDomains, selectToolDefs } from "@/lib/ai/toolRouting";
 import { withOpenAIRetry } from "@/lib/ai/runtime";
 import { assertJsonSize, enforceSameOrigin, rateLimit } from "@/lib/security";
@@ -117,13 +120,14 @@ function isSupportedImageDataUrl(value: unknown): value is string {
 
 async function analyzeImageFirst(imageDataUrl: string, userInstruction: string) {
   const prompt = `Analisis gambar ini dengan teliti untuk Licia. Instruksi pengguna: ${userInstruction || "Baca dan jelaskan gambar ini."}\n\nTugas: (1) baca teks yang terlihat sedapat mungkin, (2) identifikasi data/objek penting, (3) bedakan fakta yang terlihat dari dugaan, (4) bila ada tabel/daftar/angka, pertahankan struktur secara ringkas. Jangan mengarang bagian yang tidak terbaca. Gunakan Bahasa Indonesia.`;
+  const visionModel = selectAiModel({ text: userInstruction, hasImage: true });
   const completion = await withOpenAIRetry(() => getOpenAI().chat.completions.create({
-    model: "gpt-4o-mini",
+    model: visionModel,
     messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: imageDataUrl } }] as any }],
     temperature: 0.1,
     max_tokens: 1200,
   }), 2);
-  return completion.choices[0]?.message?.content?.trim() || "Gambar diterima, tetapi bagian yang terlihat belum cukup jelas untuk dibaca dengan yakin.";
+  return { text: completion.choices[0]?.message?.content?.trim() || "Gambar diterima, tetapi bagian yang terlihat belum cukup jelas untuk dibaca dengan yakin.", usage: completion.usage, model: visionModel };
 }
 
 function isMutationTool(tool: string) {
@@ -155,7 +159,7 @@ export async function POST(req: Request) {
   if (originError) return originError;
   const sizeError = assertJsonSize(req, 10 * 1024 * 1024);
   if (sizeError) return sizeError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk (unauthorized)." }, { status: 401 });
   const gate = rateLimit(`ai-chat:${user.id}`, 30, 60_000);
@@ -188,7 +192,9 @@ export async function POST(req: Request) {
   let visionFailed = false;
   if (imageDataUrl) {
     try {
-      visionSummary = await analyzeImageFirst(imageDataUrl, message || "Baca dan jelaskan gambar ini.");
+      const visionResult = await analyzeImageFirst(imageDataUrl, message || "Baca dan jelaskan gambar ini.");
+      visionSummary = visionResult.text;
+      await recordAiUsage(supabase, user.id, { model: visionResult.model, endpoint: "vision", usage: visionResult.usage });
     } catch (error) {
       visionFailed = true;
       console.error("Licia vision preprocessing failed; raw image will be sent to the agent", error);
@@ -214,6 +220,12 @@ export async function POST(req: Request) {
   const domains = [...domainsSet];
   const pendingAction = sanitizePendingAction(pendingActionInput);
   const connectedContext = await buildConnectedContext(supabase, user.id, timezone, domains);
+  const actionableContext = await buildActionableContext(supabase, user.id, timezone);
+  const intelligenceContext = [
+    connectedContext,
+    "CONTEXT SINYAL V30 (urut prioritas, gunakan sebagai petunjuk terverifikasi; detail tetap ambil lewat tool):",
+    ...actionableContext.signals.slice(0, 8).map((s) => `- ${s.type}: ${s.title} — ${s.reason}`),
+  ].join("\n");
 
   // Deterministic continuity path: a short confirmation like "Oke buatkan" after an
   // explicit reminder request must execute the pending reminder instead of relying on
@@ -291,8 +303,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains, pendingAction: null, pendingBulkAction: null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: performedActions, undoActionId: null });
   }
 
+  const selectedAiModel = selectAiModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const messages: RawMsg[] = [
-    { role: "system", content: buildSystemPrompt(resolvedProfile?.display_name ?? null, timezone, clientNowIso ?? undefined, connectedContext, selectedMode, selectedResponseStyle as any, { aiReadAllData, aiAutoLink, aiProactive, aiSuggestActions, aiConfirmDestructive, aiConfirmMassive }) },
+    { role: "system", content: buildSystemPrompt(resolvedProfile?.display_name ?? null, timezone, clientNowIso ?? undefined, intelligenceContext, selectedMode, selectedResponseStyle as any, { aiReadAllData, aiAutoLink, aiProactive, aiSuggestActions, aiConfirmDestructive, aiConfirmMassive }) },
     ...(pendingAction ? [{ role: "system", content: `AKSI PENGHAPUSAN TERTUNDA: pengguna sebelumnya sudah melihat kandidat "${pendingAction.label || "item ini"}". Jika pesan sekarang jelas merupakan konfirmasi (mis. "iya", "ya", "hapus", "lanjutkan"), panggil tool ${pendingAction.tool} dengan argumen ${pendingAction.confirmField}=${pendingAction.id}. Jangan mencari kandidat baru kecuali tool gagal atau item sudah tidak ditemukan. Jika pengguna menolak/membatalkan, jangan panggil tool ini.` } as RawMsg] : []),
     { role: "system", content: `${confirmBulkActions || aiConfirmMassive ? "Untuk perubahan yang berpotensi mengubah banyak data sekaligus, verifikasi dulu targetnya dan lakukan secara bertahap." : "Untuk perubahan massal, tetap verifikasi target secara semantik sebelum bertindak."} ${aiConfirmDestructive ? "Penghapusan/perubahan destruktif memerlukan konfirmasi eksplisit untuk target yang ditemukan." : "Penghapusan tetap harus memakai target ID yang jelas dan jangan menghapus item ambigu."} ${aiAutoLink ? "Boleh menghubungkan entitas bila relasinya nyata dan dapat diverifikasi." : "Jangan menghubungkan entitas secara otomatis kecuali diminta."} ${aiSuggestActions ? "Aksi dapat dijalankan ketika instruksi pengguna jelas." : "Jangan melakukan write action kecuali pengguna memberikan instruksi eksplisit."}` },
     ...(visionFailed ? [{ role: "system", content: "Pra-analisis vision tidak tersedia. Gambar asli tetap tersedia pada pesan pengguna; analisis gambar asli secara langsung jika memang diperlukan. Jangan menyatakan gambar gagal dibaca kecuali setelah memeriksanya." } as RawMsg] : []),
@@ -311,13 +324,14 @@ export async function POST(req: Request) {
     let completion;
     try {
       completion = await withOpenAIRetry(() => getOpenAI().chat.completions.create({
-        model: "gpt-4o-mini",
+        model: selectedAiModel,
         messages,
         tools: selectedTools,
         tool_choice: "auto",
         temperature: 0.2,
         max_tokens: responseStyle === "concise" ? 420 : responseStyle === "detailed" ? 760 : 560,
       }), 2);
+      await recordAiUsage(supabase, user.id, { model: selectedAiModel, endpoint: "chat", usage: completion.usage });
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Kesalahan layanan AI.";
       console.error("Licia AI completion failed", error);
@@ -414,11 +428,12 @@ export async function POST(req: Request) {
     if (i === iterationLimit - 1 && !finalText) {
       try {
         const synthesis = await withOpenAIRetry(() => getOpenAI().chat.completions.create({
-          model: "gpt-4o-mini",
+          model: selectedAiModel,
           messages: [...messages, { role: "system", content: "Berikan ringkasan hasil dari tool yang baru saja dijalankan. Jangan panggil tool lagi. Sebutkan apa yang berhasil, apa yang gagal, dan tindakan berikutnya yang relevan." }],
           temperature: 0.2,
           max_tokens: 500,
         }), 1);
+        await recordAiUsage(supabase, user.id, { model: selectedAiModel, endpoint: "chat_synthesis", usage: synthesis.usage });
         finalText = synthesis.choices[0]?.message?.content?.trim() || "Permintaan selesai sebagian. Periksa ringkasan tindakan untuk detail perubahan.";
       } catch {
         finalText = "Permintaan selesai sebagian. Aku sudah menyimpan hasil yang berhasil dan tidak melanjutkan langkah yang tidak terverifikasi.";

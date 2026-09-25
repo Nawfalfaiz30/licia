@@ -18,7 +18,11 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   reactStrictMode: true,
-  images: { remotePatterns: [{ protocol: "https", hostname: "**" }] },
+  reactCompiler: false,
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
+  },
+  turbopack: {},
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

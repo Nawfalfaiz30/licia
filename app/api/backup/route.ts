@@ -7,7 +7,7 @@ const TABLES=[
 ] as const;
 export async function GET(req:Request){
   const originError=enforceSameOrigin(req);if(originError)return originError;
-  const supabase=createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:"Belum masuk."},{status:401});
+  const supabase=await createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:"Belum masuk."},{status:401});
   const gate=rateLimit(`backup:get:${user.id}`,3,60_000);if(gate)return gate;
   const{data:profile}=await supabase.from("users").select("display_name,timezone,preferences").eq("id",user.id).single();
   const entries=await Promise.all(TABLES.map(async table=>{const{data,error}=await supabase.from(table).select("*").eq("user_id",user.id);return[table,error?[]:data??[]] as const;}));
@@ -19,7 +19,7 @@ export async function GET(req:Request){
 export async function POST(req:Request){
   const originError=enforceSameOrigin(req);if(originError)return originError;
   const sizeError=assertJsonSize(req,10*1024*1024);if(sizeError)return sizeError;
-  const supabase=createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:"Belum masuk."},{status:401});
+  const supabase=await createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:"Belum masuk."},{status:401});
   const gate=rateLimit(`backup:post:${user.id}`,2,60_000);if(gate)return gate;
   let body:any;try{body=await req.json()}catch{return NextResponse.json({error:"File backup bukan JSON valid."},{status:400})}
   const serialized=JSON.stringify(body);if(serialized.length>10*1024*1024)return NextResponse.json({error:"Payload backup terlalu besar. Batas sekitar 10 MB."},{status:413});

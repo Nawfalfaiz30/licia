@@ -8,7 +8,7 @@ import { getOrCreateProfile } from "@/lib/getOrCreateProfile";
 import { dateStrInTimezone } from "@/lib/date";
 
 export default async function LifeMapPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const profile = await getOrCreateProfile(supabase, user.id);

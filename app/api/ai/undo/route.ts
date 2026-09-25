@@ -3,6 +3,19 @@ import { createClient } from "@/lib/supabase/server";
 import { enforceSameOrigin, rateLimit } from "@/lib/security";
 import { sanitizeBeforeForRestore } from "@/lib/ai/actionHistory";
 
+async function restoreBoundReminders(supabase: any, userId: string, reminders: any[]) {
+  for (const reminder of reminders ?? []) {
+    const { id, ...payload } = reminder;
+    if (!id) continue;
+    const existing = await supabase.from("reminders").select("id").eq("id", String(id)).eq("user_id", userId).maybeSingle();
+    if (existing.data?.id) {
+      await supabase.from("reminders").update(payload).eq("id", String(id)).eq("user_id", userId);
+    } else {
+      await supabase.from("reminders").insert({ id, ...payload, user_id: userId });
+    }
+  }
+}
+
 async function undoOne(supabase: any, userId: string, action: any) {
   const ids = Array.isArray(action.record_ids) ? action.record_ids.map(String) : [];
   let error: any = null;
@@ -25,6 +38,8 @@ async function undoOne(supabase: any, userId: string, action: any) {
         const subtasks = await supabase.from("subtasks").insert(action.before_snapshot.subtasks);
         error = subtasks.error;
       }
+      if (!error && Array.isArray(action.before_snapshot?.reminders) && action.before_snapshot.reminders.length) await restoreBoundReminders(supabase, userId, action.before_snapshot.reminders);
+      if (!error && Array.isArray(action.before_snapshot?.reminders) && action.before_snapshot.reminders.length) await restoreBoundReminders(supabase, userId, action.before_snapshot.reminders);
     } else {
       const row = action.before_snapshot?.row ?? action.before_snapshot;
       if (!row?.id) return { ok: false, error: "Snapshot pemulihan tidak lengkap." };
@@ -41,7 +56,7 @@ async function undoOne(supabase: any, userId: string, action: any) {
 
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req); if (originError) return originError;
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`undo:${user.id}`, 20, 60_000); if (gate) return gate;
