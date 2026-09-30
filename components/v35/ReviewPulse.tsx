@@ -1,0 +1,12 @@
+"use client";
+import { useEffect, useState } from "react";
+import { ArrowRight, CheckCircle2, Inbox, Sparkles, Timer } from "lucide-react";
+import Link from "next/link";
+import { Card } from "@/components/ui";
+export function ReviewPulse(){
+ const [data,setData]=useState<any>(null);
+ useEffect(()=>{fetch('/api/v35/review',{cache:'no-store',credentials:'include'}).then(r=>r.json()).then(j=>setData(j?.ok?j:null)).catch(()=>{})},[]);
+ if(!data) return null;
+ const s=data.summary||{};
+ return <Card className="border-accent/15 bg-accent/5"><div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-bold uppercase tracking-[.16em] text-accent">Review cepat</p><h3 className="mt-1 font-display text-xl text-text">Apa yang bergerak minggu ini?</h3></div><Sparkles size={18} className="text-accent"/></div><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-xl bg-bg p-3"><CheckCircle2 size={13} className="text-success"/><p className="mt-1 text-lg font-semibold text-text">{s.completedTasks??0}</p><p className="text-[9px] text-textMuted">Tugas selesai</p></div><div className="rounded-xl bg-bg p-3"><Timer size={13} className="text-accent"/><p className="mt-1 text-lg font-semibold text-text">{s.focusMinutes??0}</p><p className="text-[9px] text-textMuted">Menit fokus</p></div><div className="rounded-xl bg-bg p-3"><Inbox size={13} className="text-accent"/><p className="mt-1 text-lg font-semibold text-text">{s.inboxProcessed??0}</p><p className="text-[9px] text-textMuted">Inbox diproses</p></div><div className="rounded-xl bg-bg p-3"><Sparkles size={13} className="text-accent"/><p className="mt-1 text-lg font-semibold text-text">{s.createdTasks??0}</p><p className="text-[9px] text-textMuted">Task baru</p></div></div><p className="mt-3 text-[10px] leading-relaxed text-textMuted">{data.narrative || 'Gunakan review ini untuk melihat pola tanpa menjadikannya skor.'}</p><div className="mt-3 flex flex-wrap gap-2"><Link href="/brief" className="inline-flex items-center gap-1 rounded-xl bg-surface px-3 py-2 text-[10px] font-semibold text-textMuted hover:text-accent">Buka review <ArrowRight size={11}/></Link><Link href="/chat?prompt=Analisis%20minggu%20saya%20dan%20beri%20satu%20saran%20praktis" className="inline-flex items-center gap-1 rounded-xl bg-accent px-3 py-2 text-[10px] font-semibold text-white">Tanya Licia <ArrowRight size={11}/></Link></div></Card>
+}
