@@ -1,2053 +1,414 @@
-# 🌙 Licia — Personal Life OS
+
+## AI Reliability & Context Intelligence
+
+Licia memisahkan intent pesan saat ini dari konteks percakapan lama. Sistem mengenali pergantian topik, follow-up, referensi entitas, dan operasi data sebelum memilih konteks serta tool. Pesan terbaru memiliki prioritas lebih tinggi daripada topik aktif dan riwayat lama.
+
+Untuk mutation, server menggunakan pola `UNDERSTAND → ROUTE → VALIDATE → ACT → VERIFY → RESPOND`. Jawaban sukses diblokir apabila tidak ada mutation terverifikasi. Aksi yang gagal dapat masuk jalur recovery dengan tool mutation yang lebih sempit, sedangkan hasil database dibaca ulang sebelum dianggap selesai.
+
+Percakapan juga menyimpan state singkat di perangkat untuk mempertahankan referensi seperti “yang tadi”, tanpa membuat semua topik lama menjadi konteks aktif.
+
+# 🌙 Licia 2.0
 
 <p align="center">
-  <img src="public/licia-avatar.png" alt="Licia" width="112" />
+  <img src="public/licia-avatar.png" alt="Licia" width="96" />
 </p>
 
 <p align="center">
-  <strong>AI-powered Personal Life OS untuk mengatur tugas, agenda, tujuan, pengetahuan, kesehatan, keuangan, fokus, dan pengingat dalam satu ruang pribadi.</strong>
+  <strong>Personal Life OS yang menggabungkan AI, produktivitas, pengetahuan, kesehatan, keuangan, dan refleksi dalam satu ruang pribadi.</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Licia-v0.57.1-6d5dfc?style=for-the-badge" alt="Licia v0.57.1" />
-  <img src="https://img.shields.io/badge/Next.js-16.3.6-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 16.3.6" />
-  <img src="https://img.shields.io/badge/React-19.2.8-149eca?style=for-the-badge&logo=react&logoColor=white" alt="React 19.2.8" />
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript 5.9" />
+  <img src="https://img.shields.io/badge/Licia-2.0-6d5dfc?style=for-the-badge" alt="Licia 2.0" />
+  <img src="https://img.shields.io/badge/Next.js-16.3.6-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/React-19.2.8-149eca?style=for-the-badge&logo=react&logoColor=white" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ecf8e?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/PWA-Offline%20Ready-5a67d8?style=flat-square" alt="PWA" />
-  <img src="https://img.shields.io/badge/Web%20Push-Enabled-0ea5e9?style=flat-square" alt="Web Push" />
-  <img src="https://img.shields.io/badge/AI-Tool%20Calling-8b5cf6?style=flat-square" alt="AI Tool Calling" />
-  <img src="https://img.shields.io/badge/i18n-ID%20%2F%20EN-10b981?style=flat-square" alt="Indonesia English" />
-  <img src="https://img.shields.io/badge/Sync-Conflict%20Aware-f59e0b?style=flat-square" alt="Conflict Aware Sync" />
-</p>
-
-<p align="center"><em>Capture it. Understand it. Organize it. Act on it.</em></p>
+<p align="center"><em>Your life, connected.</em></p>
 
 ---
 
-## 🧭 Daftar Isi
+## ✨ Tentang Licia
 
-- [Apa itu Licia?](#-apa-itu-licia)
-- [Konsep inti](#-konsep-inti)
-- [Arsitektur singkat](#-arsitektur-singkat)
-- [Fitur utama](#-fitur-utama)
-- [Modul aplikasi](#-modul-aplikasi)
-- [AI & intelligence layer](#-ai--intelligence-layer)
-- [AI reliability & safety](#-ai-reliability--safety)
-- [Reminder & Web Push](#-reminder--web-push)
-- [Offline, PWA & multi-device sync](#-offline-pwa--multi-device-sync)
-- [Backup, export & undo](#-backup-export--undo)
-- [Security & privacy](#-security--privacy)
-- [Tech stack](#-tech-stack)
-- [Struktur repository](#-struktur-repository)
-- [Instalasi development](#-instalasi-development)
-- [Environment variables](#-environment-variables)
-- [Setup Supabase](#-setup-supabase)
-- [Setup Web Push](#-setup-web-push)
-- [Production & VPS](#-production--vps)
-- [Quality checks](#-quality-checks)
-- [API overview](#-api-overview)
-- [Workflow contoh](#-workflow-contoh)
-- [Troubleshooting](#-troubleshooting)
-- [Riwayat versi](#-riwayat-versi)
-- [Kontribusi](#-kontribusi)
+**Licia 2.0** adalah aplikasi **Personal Life OS** yang dirancang untuk menjadi pusat kendali kehidupan digital pribadi.
 
----
-
-## ✨ Apa itu Licia?
-
-**Licia** adalah aplikasi **Personal Life OS**: sebuah workspace pribadi yang menggabungkan produktivitas, AI, knowledge management, planning, kesehatan, keuangan, refleksi, dan otomatisasi.
-
-Licia dibangun dengan prinsip bahwa aplikasi kehidupan pribadi seharusnya tidak terdiri dari puluhan silo yang tidak saling terhubung. Tugas, agenda, tujuan, pengingat, catatan, keuangan, pembelajaran, fokus, dan insight seharusnya dapat membentuk satu konteks yang bisa dipahami oleh pengguna maupun AI.
-
-```text
-                   ┌─────────────────────┐
-                   │       Capture       │
-                   └──────────┬──────────┘
-                              ↓
-                   ┌─────────────────────┐
-                   │     Smart Inbox     │
-                   └──────────┬──────────┘
-                              ↓
-          ┌──────────────────────────────────────┐
-          │ Task · Note · Goal · Project · Event │
-          └──────────────────┬───────────────────┘
-                             ↓
-      ┌───────────────────────────────────────────────┐
-      │ Calendar · Focus · Habit · Health · Finance   │
-      │ Learning · Reading · Memory · Vault           │
-      └──────────────────────┬────────────────────────┘
-                             ↓
-                 ┌──────────────────────┐
-                 │  Context / AI Layer  │
-                 └──────────┬───────────┘
-                            ↓
-        ┌─────────────────────────────────────────┐
-        │ Insight · Plan · Reminder · Action     │
-        └─────────────────────────────────────────┘
-```
-
-### Prinsip utama
-
-> **Data nyata → konteks relevan → tindakan terkontrol → hasil terverifikasi.**
-
-Licia bukan hanya chatbot dan bukan sekadar to-do list. Chat AI dapat membaca konteks Life OS, menggunakan tool, menjalankan mutation, mencatat action history, dan mengembalikan hasil berdasarkan data yang benar-benar tersimpan.
-
----
-
-# 🧠 Konsep inti
-
-## 1. One Life OS, bukan banyak aplikasi terpisah
-
-Semua domain hidup berada di satu workspace sehingga hubungan antardata tetap terlihat:
-
-```text
-Goal
- ├── Project
- │    ├── Task
- │    ├── Subtask
- │    └── Calendar
- │
- ├── Focus
- ├── Habit
- └── Review
-```
-
-Contoh lain:
-
-```text
-Calendar event
-      ↓
-Reminder
-      ↓
-Web Push
-      ↓
-Notification Event
-      ↓
-Timeline / Review
-```
-
-## 2. Capture first, organize later
-
-Licia menyediakan jalur cepat untuk menampung ide atau informasi tanpa memaksa pengguna langsung menentukan struktur sempurna.
-
-```text
-Input cepat
-   ↓
-Capture
-   ↓
-Inbox
-   ↓
-AI triage / manual organize
-   ↓
-Task / Note / Memory / Expense / Event / dst.
-```
-
-## 3. AI bekerja sebagai operator, bukan hanya generator teks
-
-AI mempunyai akses ke context, routing, validation, tool execution, history, recovery, dan undo. Oleh karena itu, jawaban AI dapat berupa:
-
-- penjelasan,
-- pencarian data,
-- rencana,
-- pembuatan atau perubahan data,
-- batch action,
-- reminder,
-- ringkasan,
-- insight,
-- atau kombinasi beberapa langkah.
-
----
-
-# 🗺️ Arsitektur singkat
-
-```mermaid
-flowchart TD
-    USER[User] --> WEB[Next.js Web / PWA]
-    WEB --> UI[React UI]
-    UI --> API[Next.js Route Handlers]
-
-    API --> AUTH[Supabase Auth]
-    API --> DB[(Supabase PostgreSQL)]
-    API --> AI[AI Runtime]
-    API --> SYNC[Sync Layer]
-    API --> PUSH[Web Push]
-
-    AI --> CTX[Context Engine]
-    AI --> ROUTER[Model Router]
-    AI --> TOOLS[Tool Router + Validation]
-    TOOLS --> DB
-
-    DB --> RLS[Row Level Security]
-    SYNC --> CONFLICT[Conflict Center]
-    PUSH --> WORKER[Reminder Worker]
-    WORKER --> DISPATCH[/api/reminders/dispatch]
-    DISPATCH --> DB
-
-    AI --> HISTORY[AI Action History]
-    API --> SYSTEM[System Center Diagnostics]
-```
-
-### Alur mutation AI
-
-```text
-UNDERSTAND
-    ↓
-ROUTE
-    ↓
-VALIDATE
-    ↓
-ACT
-    ↓
-VERIFY
-    ↓
-RESPOND
-```
-
-Mutasi tidak dianggap sukses hanya karena tool dipanggil. Licia berusaha memverifikasi hasil data sebelum memberikan konfirmasi sukses.
-
----
-
-# 🚀 Fitur utama
-
-## 🤖 AI Chat
-
-Route utama: **`/chat`**
-
-Chat Licia dapat digunakan untuk pertanyaan biasa maupun operasi Life OS.
-
-Contoh:
-
-```text
-"Apa yang harus saya selesaikan hari ini?"
-
-"Cari tugas yang belum selesai minggu ini dan prioritaskan berdasarkan deadline."
-
-"Buat task untuk menyiapkan presentasi hari Jumat jam 9 pagi."
-
-"Atur pengingat 30 menit sebelum agenda besok."
-
-"Ringkas kondisi produktivitas saya minggu ini."
-```
-
-### Kemampuan AI
-
-- Context-aware conversation
-- Tool calling
-- Natural language planning
-- Search lintas Life OS
-- Task/project/calendar operations
-- Reminder operations
-- Finance operations
-- Memory/knowledge operations
-- AI action history
-- Undo untuk action yang memenuhi syarat
-- Batch/mass actions dengan pending confirmation
-- Streaming SSE
-- Stop/cancel pada streaming chat
-- Fallback model
-- Circuit breaker
-- Retry untuk error jaringan/rate limit/server
-- Perlindungan terhadap prompt injection dari data pengguna
-
----
-
-## 🧩 Context Engine
-
-Licia memisahkan **intent saat ini** dari topik percakapan lama.
-
-Sistem mempertimbangkan hal seperti:
-
-- pergantian topik,
-- follow-up,
-- referensi entitas seperti “yang tadi”,
-- domain Life OS yang relevan,
-- kebutuhan pencarian,
-- mode planner/analyst,
-- dan operasi mutation.
-
-Context dapat berasal dari:
-
-```text
-Current message
-      ↓
-Intent / domain detection
-      ↓
-Context selection
-      ↓
-Relevant Life OS data
-      ↓
-AI reasoning / tool execution
-```
-
-Untuk kebutuhan lintas domain tersedia pendekatan snapshot/unified context sehingga AI tidak harus menerima seluruh database pada setiap permintaan.
-
----
-
-## 🧰 AI Tool Layer
-
-Tool layer dirancang agar AI bekerja terhadap data nyata, bukan sekadar memberi teks yang terlihat seperti tindakan.
-
-Kategori operasi yang didukung mencakup:
-
-| Domain | Contoh operasi |
-|---|---|
-| Tasks | create, update, complete, delete, batch |
-| Subtasks | create, update, complete |
-| Projects | create, update, archive |
-| Goals | create, progress, milestone |
-| Calendar | agenda, schedule, completion |
-| Focus | focus session, Pomodoro |
-| Inbox | capture, triage, organize |
-| Notes | create, search, update |
-| Memory | save, search, update |
-| Vault | knowledge/private content |
-| Learning | skills, progress, next action |
-| Reading | books, sessions, notes |
-| Habits | habit, check-in |
-| Finance | account, income, expense, budget, subscription |
-| Health | health logs and metrics |
-| Reminder | create, update, cancel, dispatch |
-| Automation | automation rules and evaluation |
-| Search | cross-module search |
-| AI history | action log, batch result, undo |
-
-Tool arguments divalidasi sebelum eksekusi. Untuk action yang berisiko atau destruktif, Licia dapat menggunakan **pending action / confirmation** sebelum menerapkan perubahan.
-
----
-
-## 🧭 AI mode & model routing
-
-Model dipilih melalui `lib/ai/modelRouter.ts` berdasarkan kompleksitas request.
-
-Faktor yang dapat memengaruhi pemilihan route antara lain:
-
-- adanya image/vision input,
-- panjang request,
-- intent kompleks,
-- kata yang berkaitan dengan planning, perubahan, analisis, atau schedule,
-- jumlah domain yang disentuh,
-- mode `planner`,
-- mode `analyst`.
-
-Konfigurasi utama:
-
-```env
-LICIA_AI_MODEL=
-LICIA_AI_HEAVY_MODEL=
-LICIA_AI_TOOL_MODEL=
-LICIA_AI_FALLBACK_MODEL=
-```
-
-Source saat ini mempunyai default model di router. Untuk deployment hemat biaya, Anda dapat mengatur model yang diinginkan secara eksplisit melalui `LICIA_AI_MODEL`; model untuk tool call dapat dipisahkan melalui `LICIA_AI_TOOL_MODEL` apabila diperlukan.
-
----
-
-## 🔄 AI fallback & circuit breaker
-
-Bila model utama mengalami error yang layak diulang, Licia dapat mencoba model cadangan bila `LICIA_AI_FALLBACK_MODEL` diisi.
-
-Contoh kondisi yang dapat memicu fallback:
-
-```text
-429 rate limit
-408 / timeout
-409 / transient conflict
-425
-5xx
-model_not_found / model unavailable
-network error tanpa status
-```
-
-Tidak semua error di-fallback. Error credential seperti `401/403` dan pembatalan pengguna tidak diperlakukan sebagai kegagalan model yang perlu dipindahkan ke model lain.
-
-Circuit breaker juga digunakan untuk menghindari retry berulang ke model yang sedang bermasalah.
-
-```text
-3 kegagalan berturut-turut
-        ↓
-model utama dilewati sementara
-        ↓
-fallback dipakai bila tersedia
-        ↓
-cooldown
-        ↓
-half-open retry
-```
-
----
-
-## 🌐 Internationalization — Indonesia / English
-
-Mulai `v0.57.0`, UI diarahkan ke sistem i18n terpusat.
-
-### Karakteristik
-
-- Bahasa **Indonesia** dan **English**
-- String UI diproses lewat `tr()`
-- Bahasa disimpan pada cookie `licia-language`
-- localStorage dipakai untuk pengalaman client
-- `<html lang>` mengikuti bahasa aktif
-- API tertentu menerima konteks bahasa pengguna
-- Chat AI diarahkan membalas sesuai bahasa antarmuka
-- Format angka dan tanggal mengikuti locale
-- Placeholder/pluralization didukung
-- Audit i18n tersedia melalui `npm run i18n:check`
-
-Sumber translation berada di:
-
-```text
-i18n-src/en.json
-i18n-src/keys.json
-lib/i18n.ts
-lib/i18n/en.ts
-lib/i18n/server.ts
-```
-
-Build kamus Inggris:
-
-```bash
-npm run i18n:build
-```
-
-Validasi:
-
-```bash
-npm run i18n:check
-```
-
----
-
-# 🧭 Modul aplikasi
-
-Licia saat ini memiliki workspace yang luas. Route utama yang tersedia di source:
-
-| Modul | Route | Fokus |
-|---|---|---|
-| 🏠 Dashboard | `/dashboard` | Ringkasan Life OS dan quick actions |
-| 📆 Today | `/today` | Agenda, task, focus, aktivitas hari ini |
-| 🤖 Chat | `/chat` | AI assistant dan tool execution |
-| ⚡ Command | `/command` | Command center / natural-language actions |
-| 📥 Capture | `/capture` | Quick capture, voice, share target |
-| 📥 Smart Inbox | `/inbox` | Inbox + triage |
-| ✅ Tasks | `/tasks` | Task, subtask, priority, deadline, views |
-| 📅 Calendar | `/calendar` | Schedule dan agenda |
-| 🗓️ Planner | `/planner` | Perencanaan mingguan |
-| 📋 Plan | `/plan` | Workspace rencana |
-| 📁 Projects | `/projects` | Pekerjaan multi-step |
-| 🎯 Goals | `/goals` | Target, progress, milestone |
-| 🎯 Goals & Projects | `/goals-projects` | Workspace gabungan target/proyek |
-| ⏱️ Focus | `/focus` | Sesi fokus |
-| 🍅 Pomodoro | `/pomodoro` | Pomodoro dan histori fokus |
-| 🔁 Habits | `/habits` | Rutinitas dan check-in |
-| 🎓 Learning | `/learning` | Skill, progress, next action |
-| 📚 Reading | `/reading` | Buku/bacaan dan reading sessions |
-| 🗒️ Notes | `/notes` | Catatan pribadi |
-| 🧠 Memory | `/memory` | Memori jangka panjang yang dipilih pengguna |
-| 🔐 Vault | `/vault` | Knowledge/private vault |
-| 💰 Finance | `/finance` | Income, expense, account, budget |
-| 🔁 Subscriptions | `/subscriptions` | Pembayaran berulang dan renewal |
-| ❤️ Health | `/health` | Log kesehatan dan metrik |
-| 🗺️ Life Map | `/life-map` | Hubungan data antar-domain |
-| 🕸️ Life Graph | `/life-graph` | Graph hubungan Goal/Project/Task |
-| 🕒 Timeline | `/timeline` | Riwayat aktivitas/perubahan |
-| 📊 Analytics | `/analytics` | Analitik lintas modul |
-| 💡 Insights | `/insights` | Insight berbasis data |
-| 🌊 Life Pulse | `/pulse` | Snapshot kondisi Life OS |
-| 📰 Brief | `/brief` | Brief / ringkasan |
-| 🔎 Search | `/search` | Search lintas Life OS |
-| 🧠 AI History | `/ai-history` | Log action AI, batch, undo |
-| 🔔 Reminders | `/reminders` | Reminder dan delivery state |
-| ⚙️ Automations | `/automations` | Trigger → condition → action |
-| 📝 Decisions | `/decisions` | Jurnal pengambilan keputusan |
-| 🩺 System Center | `/system` | Diagnostics, telemetry, service status |
-| 🔄 Sync | `/sync` | Status sinkronisasi dan konflik |
-| 🔍 Review Center | `/review-center` | Review terpusat |
-| 📖 Guide | `/guide` | Panduan penggunaan |
-| ⚙️ Settings | `/settings` | Preferensi, AI, UI, PWA, data |
-| 🔒 Privacy Center | `/privacy-center` | Kontrol privasi akun |
-| 📡 Copilot | `/copilot` | Pengalaman AI proaktif |
-| 📚 Knowledge | `/knowledge` | Knowledge workspace |
-| 📈 Review | `/review` | Review/reflection workflow |
-| 🔗 Relations | `/relations` | Data relasional/connection workspace |
-| 🩺 Wellbeing | `/wellbeing` | Ringkasan wellbeing |
-
-> Tidak semua route harus muncul di navigasi utama pada setiap ukuran layar. Sidebar, bottom navigation, command palette, dan quick search dapat mengatur akses sesuai konteks device.
-
----
-
-# 🔔 Reminder & Web Push
-
-Reminder Licia adalah **server-backed**, bukan timer browser yang hanya aktif ketika tab terbuka.
-
-## Komponen
-
-```text
-Task / Calendar / Subscription / Habit / Custom reminder
-                        ↓
-                 Reminder Engine
-                        ↓
-                  reminders table
-                        ↓
-               Dispatcher endpoint
-                        ↓
-              notification_events
-                        ↓
-                 Web Push delivery
-                        ↓
-              Service Worker / Browser
-```
-
-### Kapabilitas
-
-- Custom reminder
-- Task-bound reminder
-- Schedule-bound reminder
-- Goal/project/subscription/habit reminder
-- Default schedule reminders
-- Retry delivery
-- Overdue handling
-- Delivery attempt limits
-- Push subscription registration
-- Notification event history
-- Test push
-- Reminder test
-- Worker health/diagnostics
-- Deduplication sebelum delivery
-- Recovery untuk state yang macet
-
-## Variable utama
-
-```env
-VAPID_PUBLIC_KEY=
-VAPID_PRIVATE_KEY=
-VAPID_SUBJECT=mailto:you@example.com
-
-SUPABASE_SERVICE_ROLE_KEY=
-LICIA_CRON_SECRET=
-LICIA_REMINDER_WORKER_INTERVAL_MS=60000
-LICIA_REMINDER_MAX_DELIVERY_ATTEMPTS=5
-LICIA_REMINDER_MAX_OVERDUE_MS=86400000
-```
-
-## Worker
-
-Production menggunakan proses PM2 kedua:
-
-```text
-licia-reminder-worker
-```
-
-Worker menjalankan request ke:
-
-```text
-/api/reminders/dispatch
-```
-
-Dengan header rahasia:
-
-```text
-x-licia-cron-secret
-```
-
-Interval minimal yang diterima worker adalah **30 detik**; nilai default proyek adalah **60 detik**.
-
-### Penting
-
-Gunakan **satu dispatcher utama** di production. Jangan menjalankan PM2 worker dan cron dispatcher yang memanggil endpoint yang sama pada interval yang sama tanpa alasan yang jelas, karena dapat menyebabkan duplicate delivery atau race.
-
-Alternatif manual/cron tersedia melalui:
-
-```bash
-node scripts/reminder-cron.mjs
-```
-
----
-
-# 📱 Offline, PWA & multi-device sync
-
-Licia memiliki fondasi Progressive Web App dengan service worker.
-
-## PWA
-
-File utama:
-
-```text
-public/manifest.webmanifest
-public/sw.js
-public/offline.html
-public/icon-192.png
-public/icon-512.png
-public/icon-maskable-192.png
-public/icon-maskable-512.png
-```
-
-Manifest menyediakan shortcut untuk:
-
-- Rencana
-- Chat
-- Tangkap
-- Insights
-- Target & Proyek
-
-Licia juga mendukung **Share Target** sehingga teks/link dari menu Share perangkat dapat masuk ke Capture.
-
-## Offline queue
-
-Service worker menyimpan mutation tertentu menggunakan IndexedDB lalu mencoba mengirimkannya kembali saat koneksi tersedia.
-
-```text
-Offline input
-     ↓
-IndexedDB queue
-     ↓
-Network returns
-     ↓
-/api/sync/mutation
-     ↓
-Applied / Replay / Conflict
-```
-
-## Conflict resolution
-
-Bila perubahan perangkat bertabrakan dengan versi server, Licia dapat menyimpan conflict dan menampilkannya pada Conflict Center.
-
-Pilihan resolusi mencakup:
-
-- **Pakai server**
-- **Pakai perangkat**
-- **Gabungkan aman**
-- **Buang**
-
-Entity yang dapat terlibat dalam conflict mencakup task, schedule, project, goal, note, inbox, reminder, memory, finance, subscription, health, habit, reading, automation, vault, focus session, dan domain lain yang memakai sync layer.
-
----
-
-# 🎨 UX & accessibility
-
-Licia dirancang untuk desktop maupun mobile dengan fokus pada layout yang tetap ringan di layar kecil.
-
-### UI foundation
-
-- Responsive sidebar / bottom navigation
-- Command palette
-- Quick search
-- Bottom sheet / overlay
-- Toast system
-- Skeleton loading
-- Motion runtime
-- Reduced motion support
-- Haptic feedback untuk device yang mendukung
-- Touch target yang diperhatikan untuk mobile
-- Keyboard navigation pada daftar
-- Skip link dan focus state
-- ARIA dialog/listbox untuk komponen interaktif
-- Contrast audit untuk tema
-
-### Command palette
-
-`Ctrl+K` pada Windows/Linux atau `⌘K` pada macOS membuka pusat perintah/pencarian.
-
-Contoh prefix command:
-
-```text
-t teks       → buat task
- i teks      → kirim ke inbox
-$ teks       → catat pengeluaran
-> perintah   → jalankan command
-```
-
-Command palette juga mendukung navigasi keyboard.
-
-### Shortcut daftar
-
-Pada daftar tertentu:
-
-```text
-J / K     → pindah item
-X         → selesai / arsip sesuai konteks
-E         → edit
-Enter     → buka
-```
-
-Shortcut tidak aktif saat pengguna sedang mengetik atau ketika overlay/modal mengambil alih fokus.
-
----
-
-# 💾 Backup, export & undo
-
-## Data export
-
-API export menyediakan bentuk data yang dapat disimpan untuk arsip.
-
-```text
-GET/POST /api/export-data
-```
-
-## JSON backup
-
-Licia juga menyediakan jalur backup terstruktur melalui:
-
-```text
-/api/backup
-```
-
-## Restore / merge
-
-Restore dirancang agar tidak secara otomatis menghapus semua data yang tidak ada dalam backup. Payload tetap dibatasi dan `user_id` diperlakukan sebagai data milik user yang sedang login.
-
-## AI Action History
-
-`/ai-history` menyimpan metadata action AI yang benar-benar dieksekusi, termasuk informasi operasi dan snapshot ketika tersedia.
-
-```text
-AI action
-   ↓
-Action history
-   ├── tool
-   ├── operation
-   ├── table/domain
-   ├── record ids
-   ├── before snapshot
-   ├── after snapshot
-   └── undo state
-```
-
----
-
-# 🔐 Security & privacy
-
-## Supabase Row Level Security
-
-Data pengguna menggunakan **RLS** untuk membatasi akses berdasarkan `auth.uid()` pada tabel yang sesuai.
-
-## Service role
-
-`SUPABASE_SERVICE_ROLE_KEY` hanya boleh digunakan di server.
-
-**Jangan pernah:**
-
-- memakai service role pada `NEXT_PUBLIC_*`,
-- memasukkannya ke source browser,
-- commit secret ke Git,
-- memasukkannya ke README,
-- menyimpan real secret di `.env.example`,
-- menampilkan secret di screenshot/log.
-
-## Vault: client-side encryption
-
-Vault menggunakan enkripsi sisi client:
-
-```text
-Passphrase
-   ↓
-PBKDF2-SHA256
-   ↓
-AES-GCM 256
-   ↓
-Encrypted envelope
-```
-
-Implementasinya berada di:
-
-```text
-lib/crypto/vaultCrypto.ts
-```
-
-Karakteristik penting:
-
-- AES-GCM 256-bit
-- PBKDF2-SHA256
-- 310.000 iterasi derivasi key
-- passphrase tidak dikirim sebagai secret ke server
-- key sesi berada di memory client
-- data terenkripsi menggunakan prefix `enc:v1:`
-
-> **Lupa passphrase Vault berarti data terenkripsi tidak dapat dipulihkan melalui server.**
-
-## AI privacy
-
-Context AI dibentuk sesuai kebutuhan request. Isi Vault yang terenkripsi tidak diperlakukan sebagai plaintext context sebelum dibuka oleh pengguna/client dengan kredensial yang tepat.
-
-## Security headers
-
-`next.config.js` memasang header keamanan seperti:
-
-- `X-Content-Type-Options`
-- `X-Frame-Options`
-- `Referrer-Policy`
-- `Permissions-Policy`
-- `Content-Security-Policy`
-- `Cross-Origin-Opener-Policy`
-- `Cross-Origin-Resource-Policy`
-- HSTS ketika origin production menggunakan HTTPS
-
----
-
-# 🧰 Tech stack
-
-| Layer | Teknologi |
-|---|---|
-| Framework | Next.js 16.3.6 |
-| UI | React 19.2.8 |
-| Language | TypeScript 5.9 |
-| Styling | Tailwind CSS 3.4 |
-| Icons | Lucide React |
-| Database | Supabase PostgreSQL |
-| Auth | Supabase Auth + SSR |
-| AI | OpenAI API |
-| Push | Web Push / VAPID |
-| PWA | Web App Manifest + Service Worker |
-| Testing | Vitest + custom verification scripts |
-| Lint | ESLint 9 + Next config |
-| Formatting | Prettier |
-| Runtime | Node.js 22.x |
-| Process manager | PM2 |
-| Reverse proxy | Nginx |
-
-### Engine requirement
-
-```json
-{
-  "node": ">=22 <23",
-  "npm": ">=10"
-}
-```
-
-Gunakan Node **22.x** agar konsisten dengan project.
-
----
-
-# 📦 Struktur repository
-
-```text
-licia/
-├── app/
-│   ├── (app)/                    # seluruh workspace Life OS
-│   ├── (auth)/                   # login / signup
-│   ├── api/                      # server route handlers
-│   ├── privacy/                  # public privacy page
-│   ├── globals.css
-│   └── layout.tsx
-│
-├── components/
-│   ├── chat/                     # Chat UI
-│   ├── intelligence/             # proactive intelligence
-│   ├── intelligence/...          # insight / daily plan / review
-│   ├── layout/                   # sidebar, topbar, mobile nav
-│   ├── settings/                 # settings controls
-│   ├── sync/                     # conflict UI
-│   ├── tasks/                    # task views
-│   └── ui/                       # reusable primitives
-│
-├── lib/
-│   ├── ai/                       # AI runtime, tools, context, routing
-│   ├── chat/                     # streaming helper
-│   ├── crypto/                   # Vault encryption
-│   ├── domain/                   # domain lifecycle
-│   ├── events/                   # event bus
-│   ├── notifications/            # push / notification logic
-│   ├── pwa/                      # offline queue
-│   ├── reminders/                # reminder scheduling
-│   ├── supabase/                 # client / server / admin
-│   ├── sync/                     # sync + conflict handling
-│   └── v35 / v36                # advanced intelligence layers
-│
-├── public/
-│   ├── sw.js                     # service worker
-│   ├── manifest.webmanifest      # PWA metadata
-│   ├── offline.html              # offline fallback
-│   └── icons / avatar
-│
-├── scripts/
-│   ├── build.mjs
-│   ├── preflight.mjs
-│   ├── reminder-worker.mjs
-│   ├── reminder-cron.mjs
-│   ├── setup-push.mjs
-│   ├── healthcheck.mjs
-│   ├── audit.mjs
-│   ├── eval.mjs
-│   └── test / verify scripts
-│
-├── supabase/
-│   ├── schema_all.sql             # baseline consolidated schema
-│   ├── schema_v*.sql              # incremental migrations
-│   └── schema_ai_chat_history.sql # server chat history
-│
-├── deploy/
-│   ├── ecosystem config example
-│   ├── reminder worker service
-│   └── nginx configuration
-│
-├── tests/
-├── .env.example
-├── ecosystem.config.cjs
-├── next.config.js
-├── package.json
-└── README.md
-```
-
----
-
-# 🛠️ Instalasi development
-
-## 1. Clone repository
-
-```bash
-git clone <repository-url>
-cd licia
-```
-
-## 2. Pastikan Node benar
-
-```bash
-node -v
-npm -v
-```
-
-Target:
-
-```text
-Node 22.x
-npm 10+
-```
-
-## 3. Install dependency
-
-```bash
-npm ci
-```
-
-`npm ci` lebih disarankan daripada `npm install` untuk checkout production/reproducible karena menggunakan lockfile.
-
-## 4. Siapkan environment
-
-```bash
-cp .env.example .env.local
-```
-
-Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
-Isi minimal variable wajib sebelum build production.
-
-## 5. Preflight development
-
-```bash
-npm run preflight:dev
-```
-
-## 6. Jalankan development
-
-```bash
-npm run dev
-```
-
-Default:
-
-```text
-http://localhost:3000
-```
-
-## 7. Typecheck
-
-```bash
-npm run typecheck
-```
-
-## 8. Build production
-
-```bash
-npm run build
-```
-
-Build menjalankan prebuild/preflight terlebih dahulu.
-
-## 9. Start production lokal
-
-```bash
-npm run start
-```
-
----
-
-# 🔐 Environment variables
-
-Template lengkap berada di `.env.example`.
-
-## Wajib
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-OPENAI_API_KEY=
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
-
-### Penjelasan
-
-| Variable | Fungsi | Public? |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL client | Ya |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase public/anon key | Ya* |
-| `SUPABASE_URL` | Supabase URL server | Tidak perlu diekspos |
-| `SUPABASE_SERVICE_ROLE_KEY` | Admin/server-side DB operation | **Rahasia** |
-| `OPENAI_API_KEY` | akses AI server-side | **Rahasia** |
-| `NEXT_PUBLIC_SITE_URL` | origin utama app | Ya |
-
-\* Walaupun anon/publishable key memang dimaksudkan untuk client, akses sebenarnya tetap dibatasi RLS.
-
----
-
-## 🤖 AI
-
-```env
-LICIA_AI_MODEL=
-LICIA_AI_HEAVY_MODEL=
-LICIA_AI_TOOL_MODEL=
-LICIA_AI_FALLBACK_MODEL=
-LICIA_AI_OMIT_TEMPERATURE=true
-LICIA_AI_REASONING_EFFORT=none
-LICIA_AI_DAILY_TOKEN_LIMIT=0
-LICIA_CHAT_STREAM=true
-```
-
-### Rekomendasi konfigurasi hemat
-
-Untuk mengontrol biaya, tentukan model secara eksplisit daripada bergantung pada default source:
-
-```env
-LICIA_AI_MODEL=gpt-4o-mini
-```
-
-Nilai tersebut hanyalah contoh konfigurasi. Gunakan model yang memang tersedia dan sesuai akun/API environment Anda.
-
-Untuk tool calling, bila diperlukan:
-
-```env
-LICIA_AI_TOOL_MODEL=<model-compatible-tool-calling>
-```
-
-Untuk fallback:
-
-```env
-LICIA_AI_FALLBACK_MODEL=<backup-model>
-```
-
-### Generation compatibility
-
-Default project:
-
-```env
-LICIA_AI_OMIT_TEMPERATURE=true
-LICIA_AI_REASONING_EFFORT=none
-```
-
-Runtime dapat mencoba ulang sekali jika provider menolak parameter generation tertentu seperti `temperature` atau `reasoning_effort`.
-
-### AI token budget
-
-```env
-LICIA_AI_DAILY_TOKEN_LIMIT=0
-```
-
-`0` berarti tidak mengaktifkan limit aplikasi. Bila ingin membatasi:
-
-```env
-LICIA_AI_DAILY_TOKEN_LIMIT=50000
-```
-
-Gunakan angka sesuai kebutuhan dan budget Anda.
-
----
-
-## 🔔 Web Push & reminder
-
-```env
-VAPID_PUBLIC_KEY=
-VAPID_PRIVATE_KEY=
-VAPID_SUBJECT=mailto:you@example.com
-
-LICIA_CRON_SECRET=
-LICIA_REMINDER_WORKER_INTERVAL_MS=60000
-LICIA_REMINDER_MAX_DELIVERY_ATTEMPTS=5
-LICIA_REMINDER_MAX_OVERDUE_MS=86400000
-```
-
----
-
-## 🛡️ Security / network
-
-```env
-LICIA_ALLOW_MISSING_ORIGIN=false
-LICIA_URL=http://localhost:3000
-LICIA_INTERNAL_URL=
-LICIA_CONTEXT_CACHE_TTL_MS=
-LICIA_SYNC_CONFLICT_RETENTION_DAYS=30
-LICIA_DEV_ORIGINS=
-DEV_TUNNEL_ORIGIN=
-```
-
-### `LICIA_INTERNAL_URL`
-
-Pada VPS yang menjalankan web dan worker pada mesin yang sama, nilai yang nyaman biasanya:
-
-```env
-LICIA_INTERNAL_URL=http://127.0.0.1:3000
-```
-
-Dengan ini worker berbicara langsung ke Next.js tanpa perlu melewati Nginx.
-
----
-
-# 🗄️ Setup Supabase
-
-## Fresh database
-
-File baseline yang dikonsolidasikan adalah:
-
-```text
-supabase/schema_all.sql
-```
-
-File tersebut idempotent pada bagian-bagian yang menggunakan `if not exists` / `drop policy if exists` dan dirancang sebagai baseline schema gabungan.
-
-## Incremental migrations
-
-Source saat ini juga membawa migration lanjutan. Untuk database yang sudah mengikuti baseline lama, terapkan migration secara berurutan sesuai kebutuhan versi:
-
-```text
-schema_v34_1_ai_execution.sql
-schema_v34_sync_robustness.sql
-schema_v35_1_1_ai_pending_transition.sql
-schema_v35_1_finance_wallet.sql
-schema_v35_ai_experience.sql
-schema_v36_intelligence.sql
-schema_v37_unified_workspaces.sql
-schema_v38_ai_feedback.sql
-schema_ai_chat_history.sql
-```
-
-### Chat history server-side
-
-Untuk penyimpanan riwayat chat lintas perangkat, jalankan:
-
-```text
-supabase/schema_ai_chat_history.sql
-```
-
-Tabel utama:
-
-```text
-public.ai_chat_messages
-```
-
-Client tetap dapat menggunakan cache localStorage untuk responsivitas UI, tetapi server database menjadi sumber riwayat yang dapat dipulihkan lintas device setelah migration diterapkan.
-
-## Pending AI action migration
-
-Database lama yang membawa trigger status transition lama perlu memastikan migration:
-
-```text
-supabase/schema_v35_1_1_ai_pending_transition.sql
-```
-
-sudah diterapkan agar status seperti:
-
-```text
-pending → applied
-pending → applied_with_errors
-pending → cancelled
-pending → expired
-```
-
-diterima oleh trigger terbaru.
-
----
-
-# 🔔 Setup Web Push
-
-Cara paling sederhana untuk membuat VAPID keys:
-
-```bash
-npm run setup:push
-```
-
-Script akan membantu membuat:
-
-```env
-VAPID_PUBLIC_KEY=...
-VAPID_PRIVATE_KEY=...
-VAPID_SUBJECT=mailto:admin@example.com
-LICIA_CRON_SECRET=...
-```
-
-Script juga mengingatkan bahwa `SUPABASE_SERVICE_ROLE_KEY` harus diisi secara manual dari Supabase server-side credentials.
-
-### Setelah setup
-
-Restart aplikasi/worker agar environment baru terbaca.
-
-Contoh PM2:
-
-```bash
-pm2 reload ecosystem.config.cjs
-```
-
-atau saat pertama kali:
-
-```bash
-pm2 start ecosystem.config.cjs
-```
-
-### Cek di UI
-
-Buka:
-
-```text
-/settings
-/system
-```
-
-Pada status push, Licia mengecek komponen penting seperti:
-
-```text
-VAPID
-Service role
-Worker auth / cron secret
-```
-
-Jika salah satu belum tersedia, UI akan memberikan status yang jelas.
-
----
-
-# ⏰ Reminder production
-
-## Option A — PM2 worker, direkomendasikan
-
-`ecosystem.config.cjs` sudah mendefinisikan dua proses:
-
-```text
-licia
-licia-reminder-worker
-```
-
-Jalankan:
-
-```bash
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 status
-```
-
-Lihat log worker:
-
-```bash
-pm2 logs licia-reminder-worker --lines 100
-```
-
-### Proses web
-
-```text
-127.0.0.1:3000
-```
-
-### Proses worker
-
-```text
-scripts/reminder-worker.mjs
-```
-
-Worker memanggil dispatcher setiap interval:
-
-```text
-LICIA_REMINDER_WORKER_INTERVAL_MS
-```
-
-Default project:
-
-```text
-60000 ms = 60 detik
-```
-
----
-
-## Option B — system cron
-
-Bila Anda tidak menggunakan PM2 worker, tersedia:
-
-```bash
-node scripts/reminder-cron.mjs
-```
-
-Cron/systemd harus memanggil script ini sesuai interval yang Anda pilih.
-
-> Jangan mengaktifkan scheduler yang berulang secara paralel tanpa memahami konsekuensinya. Gunakan satu sumber scheduling untuk dispatcher production.
-
----
-
-# 🏭 Production & VPS
-
-Licia dapat dijalankan dengan pola:
-
-```text
-Internet
-   ↓
-Nginx / HTTPS
-   ↓
-127.0.0.1:3000
-   ↓
-Next.js / PM2
-
-PM2 ───────────────→ reminder worker
-                       ↓
-                  /api/reminders/dispatch
-```
-
-## 1. Server requirements
-
-- Ubuntu/Linux server
-- Node 22.x
-- npm 10+
-- PM2
-- Nginx
-- domain + HTTPS untuk deployment publik
-- Supabase
-- OpenAI API key
-
-## 2. Clone
-
-```bash
-cd ~
-git clone <repository-url> licia
-cd licia
-```
-
-## 3. Install
-
-```bash
-npm ci
-```
-
-## 4. Environment production
-
-Contoh minimum:
-
-```env
-NODE_ENV=production
-PORT=3000
-
-NEXT_PUBLIC_SITE_URL=https://domain-kamu.example
-LICIA_URL=https://domain-kamu.example
-LICIA_INTERNAL_URL=http://127.0.0.1:3000
-
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=...
-
-OPENAI_API_KEY=...
-
-VAPID_PUBLIC_KEY=...
-VAPID_PRIVATE_KEY=...
-VAPID_SUBJECT=mailto:you@example.com
-
-LICIA_CRON_SECRET=...
-```
-
-## 5. Verify
-
-```bash
-npm run preflight
-npm run typecheck
-npm run test:unit
-npm run build
-```
-
-## 6. Start PM2
-
-```bash
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 status
-```
-
-## 7. Health check
-
-Bila `LICIA_URL` sudah menunjuk ke domain yang dapat diakses server:
-
-```bash
-npm run health
-```
-
-Endpoint health:
-
-```text
-/api/health
-```
-
-## 8. Nginx
-
-Template tersedia di:
-
-```text
-deploy/nginx-licia.conf
-```
-
-Service example:
-
-```text
-deploy/licia.service.example
-deploy/licia-reminder-worker.service.example
-```
-
-Untuk setup HTTPS, pastikan reverse proxy meneruskan request ke:
-
-```text
-http://127.0.0.1:3000
-```
-
----
-
-# 🔄 Update deployment
-
-Pola update yang cocok untuk VPS dengan storage terbatas:
-
-```bash
-cd ~
-rm -rf licia
-git clone <repository-url> licia
-cd licia
-npm ci
-npm run build
-pm2 start ecosystem.config.cjs
-pm2 save
-```
-
-Bila instance PM2 lama masih aktif, gunakan:
-
-```bash
-pm2 delete licia licia-reminder-worker
-pm2 start ecosystem.config.cjs
-pm2 save
-```
-
-Untuk update tanpa menghapus proses:
-
-```bash
-npm ci
-npm run build
-pm2 reload ecosystem.config.cjs
-pm2 save
-```
-
-> Jangan lupa mempertahankan `.env.local`/environment produksi. Secret tidak boleh berasal dari repository Git.
-
----
-
-# 🧪 Quality checks
-
-## Build
-
-```bash
-npm run build
-```
-
-## TypeScript
-
-```bash
-npm run typecheck
-```
-
-## Lint
-
-```bash
-npm run lint
-```
-
-## Unit tests
-
-```bash
-npm run test:unit
-```
-
-## Full project test suite
-
-```bash
-npm test
-```
-
-`npm test` menggabungkan beberapa pemeriksaan, termasuk unit test, i18n check, contrast audit, serta regression scripts yang berasal dari beberapa versi fitur terbaru.
-
-## CI shortcut
-
-```bash
-npm run ci
-```
-
-Saat ini menjalankan:
-
-```text
-npm run typecheck
-npm run lint
-npm run test:unit
-```
-
-## i18n
-
-```bash
-npm run i18n:build
-npm run i18n:check
-```
-
-## Contrast / accessibility
-
-```bash
-npm run a11y:contrast
-```
-
-## Audit
-
-```bash
-npm run audit
-```
-
-## AI evaluation
-
-```bash
-npm run eval
-```
-
-Dry run:
-
-```bash
-npm run eval:dry
-```
-
-Golden cases tersedia pada:
-
-```text
-evals/golden.json
-```
-
----
-
-# 🧪 Testing philosophy
-
-Licia tidak hanya memeriksa apakah halaman dapat dirender. Test dan verification scripts digunakan untuk menjaga beberapa kontrak penting:
-
-### AI
-
-- tool routing
-- smart parse
-- fallback model
-- pending action
-- action history
-- AI UX
-- model compatibility
-
-### Data
-
-- CRUD
-- finance
-- sync
-- conflict
-- domain verification
-
-### UI
-
-- shortcut
-- command palette
-- list navigation
-- dashboard layout
-- progress/date helpers
-
-### Security/quality
-
-- i18n consistency
-- contrast
-- syntax/build checks
-
----
-
-# 🔌 API overview
-
-Route API utama saat ini dikelompokkan sebagai berikut.
-
-## Core
-
-```text
-/api/chat
-/api/search
-/api/activity
-/api/health
-/api/backup
-/api/export-data
-/api/onboarding
-/api/estimate-nutrition
-/api/weekly-planner
-```
-
-## AI
-
-```text
-/api/ai/history
-/api/ai/undo
-/api/ai/batch
-/api/intelligence
-/api/intelligence/context
-/api/intelligence/daily-snapshot
-/api/proactive/evaluate
-/api/inbox/triage
-/api/tasks/assist
-```
-
-## Push / notification / reminder
-
-```text
-/api/notifications
-/api/push/subscribe
-/api/push/test
-/api/push/vapid-public
-/api/reminders/dispatch
-/api/reminders/sync-defaults
-/api/reminders/test
-```
-
-## Sync
-
-```text
-/api/sync/status
-/api/sync/register-device
-/api/sync/pull
-/api/sync/mutation
-/api/sync/conflicts
-/api/sync/resolve
-/api/sync/preferences
-```
-
-## V35 / V36 intelligence
-
-```text
-/api/v35/brain
-/api/v35/features
-/api/v35/health
-/api/v35/insights
-/api/v35/review
-/api/v35/watchers
-/api/v35/what-if
-
-/api/v36/copilot
-/api/v36/evidence
-/api/v36/feedback
-/api/v36/plan
-/api/v36/review
-/api/v36/search
-/api/v36/temporal
-```
-
-## V38 / daily intelligence
-
-```text
-/api/v38/daily-plan
-/api/v38/daily-review
-/api/v38/feedback
-```
-
-> API tidak semuanya intended untuk dipanggil langsung oleh browser. Beberapa route adalah internal server workflow dan menggunakan session, service-role access, atau secret header.
-
----
-
-# 🔄 Workflow contoh
-
-## 1. Ide → Task
-
-```text
-"Belajar TypeScript 30 menit besok jam 8 malam"
-              ↓
-          Smart Parse
-              ↓
-      tanggal + waktu + title
-              ↓
-             Task
-```
-
-Parsing cepat dilakukan di perangkat pada input yang sesuai, sehingga tidak selalu memerlukan AI.
-
-## 2. Inbox → struktur
+Licia bukan hanya chatbot dan bukan sekadar to-do list. Modul-modulnya terhubung sehingga informasi dari satu area dapat menjadi konteks bagi area lain.
 
 ```text
 Capture
   ↓
 Smart Inbox
   ↓
-AI triage
-  ├── Task
-  ├── Note
-  ├── Memory
-  ├── Expense
-  └── Other domain
+Task / Note / Decision / Learning
+  ↓
+Project / Goal / Calendar
+  ↓
+Focus / Habit / Health / Finance
+  ↓
+Timeline / Analytics / Insights / Review
+  ↓
+AI Context Engine
+  ↓
+Rekomendasi atau tindakan nyata
 ```
 
-## 3. Agenda → reminder
+Prinsip utama:
+
+> **Data nyata → konteks relevan → tindakan terkontrol → hasil yang dapat ditelusuri.**
+
+## 🛡️ AI Reliability & Context Intelligence
+
+Licia memisahkan intent pesan saat ini dari konteks percakapan lama. Sistem mengenali pergantian topik, follow-up, referensi entitas, dan operasi data sebelum memilih konteks serta tool.
+
+Untuk mutation, runtime menerapkan alur `UNDERSTAND → ROUTE → VALIDATE → ACT → VERIFY → RESPOND`. Jawaban sukses diblokir apabila tidak ada mutation terverifikasi. Argumen function tool divalidasi server sebelum `executeTool`, dan target konfirmasi destruktif dapat disimpan sebagai pending action milik user di database.
+
+Riwayat chat dapat dipulihkan dari server melalui tabel `ai_chat_messages`; `localStorage` dipakai sebagai cache UI agar percakapan tetap nyaman ketika offline atau migrasi belum diterapkan.
+
+---
+
+# 🚀 Fitur Utama
+
+## 🤖 AI Licia
+
+### Chat Licia — `/chat`
+
+Pintu utama AI untuk bertanya, mencari data, merencanakan pekerjaan, dan menjalankan tindakan nyata tanpa perlu memahami struktur database.
+
+Contoh:
 
 ```text
-Calendar event
-      ↓
-Reminder offset
-      ↓
-reminders
-      ↓
+"Apa yang harus saya kerjakan hari ini?"
+
+"Tinjau agenda minggu ini dan buatkan task persiapan untuk meeting yang belum punya task."
+
+"Ingatkan saya berangkat jam 11 karena saya harus ke akademik."
+```
+
+### Context Engine
+
+Licia memilih konteks berdasarkan kebutuhan. Sistem dapat memakai context modul tertentu, `search_life_os`, `get_life_snapshot`, atau `get_unified_life_snapshot` untuk permintaan lintas modul.
+
+```text
+Pertanyaan finance  → Finance context
+Pertanyaan agenda   → Calendar + Task context
+Pertanyaan luas     → Unified Life Snapshot
+Pencarian item      → Search Life OS
+```
+
+### AI Tool Calling
+
+AI memiliki tool layer untuk membaca dan memutasi data nyata, termasuk:
+
+- Task, Subtask, Project, Area, Goal, Milestone
+- Calendar/Schedule dan Focus/Pomodoro
+- Smart Inbox dan Notes
+- Habit dan Learning/Skills
+- Reading
+- Finance, Account, Budget, Subscription
+- Health
+- Memory dan Vault
+- Decision
+- Automation
+- Reminder
+- Pencarian lintas Life OS
+- Unified snapshot dan batch operation
+
+### Model Router
+
+Model AI default:
+
+```text
+gpt-6-luna
+```
+
+Untuk mengganti model melalui environment, gunakan `LICIA_AI_MODEL`. Jalur kompleks dapat memakai `LICIA_AI_HEAVY_MODEL`, sedangkan panggilan yang membutuhkan function tools dapat diarahkan ke `LICIA_AI_TOOL_MODEL`. Tanpa konfigurasi tambahan, router menggunakan model utama yang dipilih aplikasi.
+
+### Migrasi database terbaru
+
+Untuk mengaktifkan riwayat chat lintas perangkat, jalankan sekali:
+
+```text
+supabase/schema_ai_chat_history.sql
+```
+
+Migration ini aman terhadap data lama karena tabel dibuat dengan `create table if not exists`. Bila belum dijalankan, chat tetap bekerja menggunakan cache riwayat lokal dan fitur pending action lama tetap kompatibel.
+
+### AI Safety
+
+Operasi destruktif dan operasi massal memiliki guardrail. AI diarahkan untuk mencari ID nyata, melakukan operasi yang sesuai, meminta konfirmasi saat diperlukan, dan melaporkan hasil berdasarkan output tool.
+
+---
+
+# 🧭 Modul Life OS
+
+| Modul | Route | Fungsi utama |
+|---|---|---|
+| 🏠 Beranda | `/dashboard` | Ringkasan lintas Life OS dan jalur cepat ke sumber data |
+| ✨ Hari Ini | `/today` | Agenda, task, focus, dan aktivitas hari berjalan |
+| ⚡ Life Command | `/command` | Menjalankan tujuan multi-langkah lewat natural language |
+| 📥 Capture Studio | `/capture` | Menangkap teks/input sebelum dirapikan |
+| 📥 Smart Inbox | `/inbox` | Menampung item mentah dan AI triage |
+| ✅ Tugas | `/tasks` | Task, prioritas, deadline, estimasi, project, subtasks |
+| 📅 Kalender | `/calendar` | Agenda dan komitmen berbasis waktu |
+| 🧠 Weekly Planner | `/planner` | Menyusun rencana mingguan berbasis data nyata |
+| ⏱️ Focus | `/focus` | Sesi kerja terukur yang dapat terhubung ke task |
+| 🍅 Pomodoro | `/pomodoro` | Sesi Pomodoro dan histori fokus |
+| 📁 Projects | `/projects` | Wadah pekerjaan multi-langkah |
+| 🎯 Goals | `/goals` | Target, progress, milestone, next step, review cycle |
+| 🗒️ Notes | `/notes` | Catatan pribadi dan sumber context |
+| 📚 Reading | `/reading` | Bacaan, progress, sesi, rating, notes, takeaways |
+| 🔁 Habits | `/habits` | Rutinitas dan check-in berulang |
+| 🎓 Learning | `/learning` | Skill tracker dan hubungan dengan Focus/Goal |
+| 🧠 Memory | `/memory` | Informasi yang sengaja disimpan untuk context jangka panjang |
+| 🔐 Vault | `/vault` | Knowledge base pribadi untuk note, link, dokumen, tag |
+| 💰 Finance | `/finance` | Account, income, expense, budget, saldo, arus kas |
+| 🔁 Subscriptions | `/subscriptions` | Billing berulang dan reminder renewals |
+| ❤️ Health | `/health` | Log kesehatan dan ringkasan kondisi |
+| 🗺️ Life Map | `/life-map` | Hubungan Area → Goal → Project → Task → Calendar/Focus |
+| 🕸️ Life Graph | `/life-graph` | Graph Goal, Project, Task dan orphan signal |
+| 🕒 Timeline | `/timeline` | Audit pribadi berbasis aktivitas dan perubahan |
+| 📊 Analytics | `/analytics` | Pola task, focus, finance, reading, movement, goal, project |
+| 💡 Insights | `/insights` | Insight berbasis data nyata |
+| 🌊 Life Pulse | `/pulse` | Snapshot cepat kondisi Life OS |
+| 📝 Decisions | `/decisions` | Jurnal proses dan hasil pengambilan keputusan |
+| 📰 Brief & Review | `/brief` | Ringkasan dan review hari/minggu |
+| ⚙️ Automations | `/automations` | Trigger → condition → action → result |
+| 🔔 Reminders | `/reminders` | Reminder custom, task-bound, schedule-bound, retry |
+| 🧠 AI Action Log | `/ai-history` | Audit operasi AI, batch, dan undo |
+| 🔎 Search | `/search` | Pencarian lintas data Life OS |
+| 🩺 System Center | `/system` | Diagnosis database, AI, push, reminder, telemetry |
+| 📖 Guide | `/guide` | Panduan penggunaan setiap workflow |
+| ⚙️ Settings | `/settings` | Tema, font, AI, workspace, notifikasi, PWA, data |
+
+---
+
+# 🔔 Reminder & Notification Engine
+
+Reminder Licia dirancang sebagai data yang persistent, bukan hanya timer browser.
+
+### Kapabilitas
+
+- Custom reminder
+- Reminder berbasis task
+- Reminder berbasis agenda
+- Default reminder agenda
+- Retry reminder gagal
+- Recovery untuk status `processing` yang macet
+- Dedupe sebelum push delivery
+- Histori event pada `notification_events`
+- Push subscription management
+- Dispatcher server dan worker heartbeat
+
+### Arsitektur
+
+```text
+Task / Calendar
+       ↓
+ Reminder Engine
+       ↓
 notification_events
-      ↓
-Web Push
+       ↓
+Browser Notification / Web Push
+       ↓
+Delivery telemetry
 ```
 
-## 4. AI → mutation aman
+Production menyediakan worker:
 
 ```text
-User request
-      ↓
-Understand intent
-      ↓
-Choose context
-      ↓
-Choose tool/model
-      ↓
-Validate arguments
-      ↓
-Execute mutation
-      ↓
-Read back / verify
-      ↓
-Record action history
-      ↓
-Respond
+licia-reminder-worker
 ```
 
-## 5. Offline → sync
+atau dispatcher cron melalui:
 
 ```text
-User action
-   ↓
-Offline queue
-   ↓
-Connection returns
-   ↓
-Sync mutation
-   ├── success → remove queue
-   └── conflict → Conflict Center
+scripts/reminder-cron.mjs
 ```
+
+> Jangan menjalankan dua dispatcher production yang sama secara bersamaan.
 
 ---
 
-# 🩺 System Center
+# 📱 PWA & Offline
 
-Route:
+Licia dapat dipasang sebagai **Progressive Web App** dan memiliki fondasi offline.
 
-```text
-/system
-```
+Komponen:
 
-System Center ditujukan sebagai titik diagnosis saat production mengalami masalah.
+- `public/manifest.webmanifest`
+- `public/sw.js`
+- `public/offline.html`
+- icon 192×192
+- icon 512×512
+- PWA registration
+- offline capture queue
 
-Area yang relevan antara lain:
-
-- service configuration,
-- AI configuration,
-- push configuration,
-- worker authentication,
-- sync status,
-- diagnostics,
-- runtime/telemetry.
-
-Untuk masalah reminder/web push, tiga komponen paling sering diperiksa adalah:
-
-```text
-VAPID keys
-SUPABASE_SERVICE_ROLE_KEY
-LICIA_CRON_SECRET
-```
-
-Kemudian periksa worker:
-
-```bash
-pm2 status
-pm2 logs licia-reminder-worker --lines 100
-```
+Saat offline, Capture dapat menyimpan input secara lokal dan memproses antrean ketika koneksi kembali tersedia.
 
 ---
 
-# 🐛 Troubleshooting
+# 🎨 UI / UX
 
-## `VAPID + service role belum lengkap. Worker cron belum dikonfigurasi.`
+Licia dirancang untuk desktop dan mobile.
 
-Periksa:
+### Pengaturan tampilan
+
+- Light / Dark mode
+- Accent presets
+- Background presets
+- **Pilihan font**
+- Density
+- Text scale
+
+### Mobile
+
+- Bottom navigation
+- Quick Search mobile
+- Overlay/sheet viewport-aware
+- Mobile account action
+- Responsive cards dan grid
+- Touch target yang aman
+
+### Motion & device
+
+- Page animation
+- Motion intensity
+- Reduced motion
+- Haptic feedback
+- Sound feedback
+- Browser notifications
+- Offline capture
+
+### Smart Capture & pintasan keyboard (v0.56)
+
+- **Simpan Cepat** (`Ctrl/Cmd+Shift+L` atau `n`) mengenali penanda alami saat mode **Tugas**: `besok jam 7 malam`, `jumat`, `3 hari lagi`, `tanggal 20`, `12/10`, `!1`/`p2`/`prioritas rendah`, serta nominal `47k`/`1,5jt`. Hasilnya tampil sebagai chip sebelum disimpan. Logika ada di `lib/text/smartParse.ts` dan berjalan di perangkat.
+- **Pintasan**: `g` lalu `d`/`p`/`c`/`t`/`a`/`f`/`g`/`k`/`m`/`w`/`i`/`s`/`/` untuk berpindah halaman; `?` menampilkan daftar lengkap. Definisi ada di `lib/shortcuts.ts`.
+- **Aksesibilitas**: skip link, fokus keyboard yang jelas, dan dukungan reduced-motion/forced-colors.
+- **Fallback model AI**: isi `LICIA_AI_FALLBACK_MODEL` agar chat tetap menjawab saat model utama overload.
+
+---
+
+# 💾 Backup, Export & Undo
+
+## Data Export
+
+Pengguna dapat membuat arsip HTML yang mudah dibaca dan dicetak menjadi PDF.
+
+## Backup JSON
+
+Backup API membuat data terstruktur dari tabel yang diizinkan.
+
+## Restore Merge
+
+Restore menggunakan pola merge:
+
+- ID yang sama di-upsert
+- `user_id` dipaksa mengikuti user authenticated
+- data yang tidak ada di backup tidak ikut dihapus
+- payload dibatasi
+- jalur restore tetap melalui pemeriksaan security
+
+## AI Action History
+
+`/ai-history` mencatat operasi AI yang benar-benar dijalankan:
+
+- create/update/delete
+- tool
+- tabel
+- jumlah record
+- batch ID
+- waktu
+- status undo
+
+Aksi yang memiliki snapshot dapat dipulihkan melalui Undo.
+
+---
+
+# 🔐 Security & Privacy
+
+## Supabase RLS
+
+Schema menggunakan **Row Level Security** sehingga data pengguna dibatasi pada akun yang terautentikasi sesuai policy.
+
+## Server-side service role
+
+Operasi tertentu membutuhkan:
 
 ```env
-VAPID_PUBLIC_KEY=...
-VAPID_PRIVATE_KEY=...
-VAPID_SUBJECT=mailto:...
 SUPABASE_SERVICE_ROLE_KEY=...
-LICIA_CRON_SECRET=...
 ```
 
-Kemudian jalankan:
+Key ini hanya untuk server.
 
-```bash
-npm run setup:push
-```
+**Jangan pernah:**
 
-Lalu restart:
+- memakai prefix `NEXT_PUBLIC_` untuk service role,
+- menaruhnya di frontend,
+- commit ke Git,
+- memasukkannya ke ZIP publik,
+- menampilkannya pada screenshot/log.
 
-```bash
-pm2 reload ecosystem.config.cjs
-```
+## AI Privacy
 
-Dan cek:
+Context Engine mengambil data sesuai kebutuhan. Pengaturan AI juga menyediakan kontrol untuk akses konteks lintas Life OS, auto-link, proactive suggestion, dan konfirmasi aksi.
 
-```bash
-pm2 status
-pm2 logs licia-reminder-worker --lines 100
-```
+## Memory Privacy
+
+Memory ditujukan untuk informasi yang memang ingin disimpan jangka panjang, bukan otomatis menyimpan seluruh percakapan.
 
 ---
 
-## Worker langsung mati
+# 🏗️ Arsitektur
 
-Pesan umum:
+```mermaid
+flowchart TD
+    U[User] --> PWA[Next.js Web / PWA]
+    PWA --> UI[React UI]
+    UI --> API[Next.js Route Handlers]
+
+    API --> AUTH[Supabase Auth]
+    API --> AI[AI Runtime]
+    API --> DOMAIN[Domain Services]
+    API --> PUSH[Notification / Web Push]
+
+    AI --> CE[Context Engine]
+    AI --> MR[Model Router]
+    AI --> TR[Tool Router]
+    TR --> DB[(Supabase PostgreSQL)]
+
+    DOMAIN --> EVENTS[Life OS Event Bus]
+    DOMAIN --> REM[Reminder Engine]
+    REM --> DB
+    REM --> PUSH
+
+    DB --> RLS[Row Level Security]
+    AI --> LOG[AI Action History]
+    API --> SYS[System Center Diagnostics]
+```
+
+## Layer kode
 
 ```text
-LICIA_INTERNAL_URL/APP_URL/NEXT_PUBLIC_SITE_URL dan LICIA_CRON_SECRET wajib tersedia.
-```
-
-Pastikan:
-
-```env
-LICIA_INTERNAL_URL=http://127.0.0.1:3000
-LICIA_CRON_SECRET=...
-```
-
-Kemudian restart worker.
-
----
-
-## Reminder tidak terkirim
-
-Urutan pemeriksaan:
-
-```text
-1. Reminder ada dan enabled?
-2. remind_at sudah waktunya?
-3. Supabase service role tersedia?
-4. VAPID lengkap?
-5. Browser sudah memberi permission notification?
-6. Push subscription masih valid?
-7. Worker hidup?
-8. /api/reminders/dispatch merespons 2xx?
-```
-
-Coba endpoint test dari UI atau gunakan log worker.
-
----
-
-## `Invalid Refresh Token: Refresh Token Not Found`
-
-Biasanya berkaitan dengan session/cookie Supabase yang tidak lagi valid pada browser tertentu.
-
-Langkah aman:
-
-1. logout dari Licia,
-2. hapus session/cookie domain aplikasi bila diperlukan,
-3. login kembali,
-4. pastikan domain HTTPS dan origin konsisten,
-5. jangan mencampur origin dev tunnel, localhost, dan domain production dalam satu sesi browser.
-
-Untuk production, usahakan:
-
-```text
-NEXT_PUBLIC_SITE_URL = domain HTTPS yang sebenarnya
-LICIA_URL            = domain HTTPS yang sebenarnya
-```
-
-Dan gunakan `LICIA_INTERNAL_URL` untuk komunikasi worker internal bila diinginkan.
-
----
-
-## AI function tools ditolak provider/model
-
-Gunakan model tool yang kompatibel:
-
-```env
-LICIA_AI_TOOL_MODEL=<compatible-model>
-```
-
-Untuk kestabilan generation:
-
-```env
-LICIA_AI_OMIT_TEMPERATURE=true
-LICIA_AI_REASONING_EFFORT=none
-```
-
-Runtime memiliki retry compatibility untuk parameter generation tertentu, tetapi model yang benar-benar tidak mendukung tool calling tetap harus diganti/di-route ke model yang sesuai.
-
----
-
-## Chat streaming bermasalah
-
-Matikan streaming sementara:
-
-```env
-LICIA_CHAT_STREAM=false
-```
-
-Restart server.
-
-Jika streaming diaktifkan:
-
-```env
-LICIA_CHAT_STREAM=true
-```
-
-Chat menggunakan SSE dan mengenal event seperti:
-
-```text
-status
-tool_start
-tool_done
-final
-error
+app/                 Presentation + routes
+app/api/             Server/API routes
+components/          Reusable UI
+lib/ai/              Context, prompt, runtime, tools, routing
+lib/domain/          Domain lifecycle
+lib/events/          Life OS event bus
+lib/reminders/       Scheduling logic
+lib/notifications/   Delivery logic
+lib/pwa/             Offline queue
+lib/supabase/        Client/server/admin access
+supabase/            Database schema & migrations
+scripts/             Build, audit, verify, test, worker
 ```
 
 ---
 
-## Build TypeScript gagal
+# 🗃️ Database Domain
 
-Bersihkan artefak Next.js:
-
-```powershell
-Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
-```
-
-atau Linux:
-
-```bash
-rm -rf .next
-```
-
-Lalu:
-
-```bash
-npm run typecheck
-npm run build
-```
-
-Jika error berasal dari file test lama, periksa `tsconfig.json` dan pastikan konfigurasi typecheck sesuai dengan target build project sebelum menghapus atau mengabaikan test secara sembarangan.
-
----
-
-## i18n gagal
-
-Jalankan:
-
-```bash
-npm run i18n:build
-npm run i18n:check
-```
-
-Periksa:
-
-```text
-i18n-src/en.json
-i18n-src/keys.json
-lib/i18n.ts
-lib/i18n/en.ts
-```
-
----
-
-## PWA tidak update setelah deploy
-
-Service worker memiliki cache version.
-
-Bila browser tetap memakai asset lama:
-
-1. reload penuh,
-2. unregister service worker di DevTools bila perlu,
-3. clear site data,
-4. buka ulang aplikasi.
-
-Jangan mengedit cache key service worker tanpa alasan; lakukan perubahan cache secara sengaja saat versioning PWA.
-
----
-
-## Push hanya bekerja setelah browser dibuka
-
-Browser notification dan Web Push harus dibedakan dari local timer client.
-
-Production reminder mengandalkan server dispatcher + push subscription.
-
-Periksa worker terlebih dahulu, bukan hanya tab browser.
-
----
-
-# 📊 Observability & operational notes
-
-Licia memiliki beberapa titik observability sederhana di level aplikasi.
-
-### Build/runtime
-
-```bash
-npm run build
-npm run health
-pm2 status
-pm2 logs licia
-pm2 logs licia-reminder-worker
-```
-
-### AI
-
-Runtime mencatat informasi seperti:
-
-- fallback model,
-- circuit breaker,
-- unsupported generation parameter retry,
-- completion truncated oleh token limit.
-
-### Reminder
-
-Worker mencatat setiap tick dispatcher dengan timestamp dan status HTTP/body.
-
-### Sync
-
-Sync conflict dipisahkan dari local offline queue sehingga perubahan yang benar-benar bertabrakan dapat ditinjau pengguna.
-
----
-
-# 🗂️ Database & data ownership
-
-Licia menerapkan pola ownership:
-
-```text
-auth.users
-    ↓
-public.users
-    ↓
-user-owned tables
-```
-
-Hampir semua domain memiliki `user_id` dan policy RLS sendiri.
-
-Contoh tabel/domain yang digunakan source saat ini meliputi:
+Baseline database mencakup domain seperti:
 
 ```text
 users
@@ -2055,258 +416,748 @@ accounts
 expenses
 incomes
 budgets
-subscriptions
 
-areas
-projects
-goals
-goal_milestones
 tasks
 subtasks
+projects
+areas
+goals
+goal_milestones
 schedule_blocks
 pomodoro_sessions
+
+daily_plans
+brain_dump_notes
+smart_inbox_items
+journal_entries
+
 habits
 habit_checkins
-
-smart_inbox_items
-notes
-memory
-vault
+skills
 reading_logs
 reading_sessions
-skills
 
 health_metrics
-sleep_logs
 hydration_logs
+caffeine_logs
 meal_logs
+medication_logs
+fatigue_logs
+sleep_logs
 movement_logs
+
+subscriptions
+social_relations
+social_interactions
+
+decisions
+user_memories
+automations
+vault_items
+
+ai_function_call_logs
+ai_action_history
+ai_pending_actions
+ai_usage_events
+life_os_events
 
 reminders
 notification_events
 push_subscriptions
-
-ai_action_history
-ai_pending_actions
-ai_action_plans
-ai_watchers
-ai_what_if_runs
-ai_insight_feedback
-ai_chat_messages
-
-sync / conflict related tables
-automation related tables
+system_health_heartbeats
 ```
 
-Nama/kolom dapat bertambah melalui migration baru; jangan mengasumsikan schema statis hanya berdasarkan daftar README.
-
----
-
-# 🧱 Prinsip pengembangan
-
-## 1. Jangan pecahkan domain untuk fitur kecil
-
-Fitur baru sebaiknya menggunakan domain service/context/tool yang sudah ada bila memungkinkan.
-
-## 2. Server adalah sumber kebenaran untuk mutation
-
-UI boleh optimistic/offline, tetapi hasil akhir mutation harus diverifikasi pada server saat sinkronisasi memungkinkan.
-
-## 3. AI harus dapat diaudit
-
-Setiap mutation AI yang penting idealnya memiliki jejak action, result, atau snapshot yang memungkinkan pengguna memahami apa yang terjadi.
-
-## 4. Jangan simpan secret di frontend
-
-Service role, cron secret, VAPID private key, dan API key adalah server-side secrets.
-
-## 5. Mobile adalah first-class citizen
-
-UI harus tetap dapat dipakai pada portrait/landscape tanpa overflow yang tidak disengaja.
-
-## 6. Perubahan besar harus melalui migration + verification
-
-Untuk perubahan database:
+Schema bootstrap V30 + V31:
 
 ```text
-Code
-  +
-Migration
-  +
-Test / verify
-  +
-Build
+supabase/schema_all_v30.sql
 ```
 
-## 7. Hindari fitur duplikat
-
-Licia mempunyai banyak modul. Fitur baru sebaiknya memperkuat workflow yang ada daripada membuat halaman lain dengan fungsi yang sama.
-
----
-
-# 📌 Release v0.57.1
-
-`v0.57.1` fokus pada stabilitas build di lapisan aplikasi.
-
-Perubahan utama yang tercatat:
-
-- perbaikan direktif client pada `app/global-error.tsx`,
-- perbaikan penggunaan `components/v36/AIModeGuide.tsx` agar sesuai dengan client-side language context,
-- kompatibilitas build tetap dijaga pada Next.js 16.3.6 / TypeScript 5.9.
-
-`v0.57.0` membawa beberapa upgrade besar:
-
-- bilingual Indonesia/English,
-- smart chips pada Inbox/Notes/Calendar,
-- command palette yang lebih kuat,
-- focus trap untuk overlay/sheet/modal,
-- overlay + z-index system yang konsisten,
-- minimum typography floor,
-- undo pada lebih banyak quick actions,
-- onboarding checklist,
-- dashboard customization,
-- drag-and-drop task views,
-- WCAG AA contrast audit,
-- keyboard list shortcuts.
-
----
-
-# 🧭 Roadmap pengembangan
-
-Arah pengembangan Licia berfokus pada kualitas integrasi, bukan sekadar menambah jumlah halaman.
+Core intelligence migration:
 
 ```text
-Phase A
-  UI / UX / i18n
-       ↓
-Phase B
-  Reliable AI + Tool Calling
-       ↓
-Phase C
-  Sync + Offline + Conflict Resolution
-       ↓
-Phase D
-  Reminder + Push + Event-driven automation
-       ↓
-Phase E
-  Proactive Intelligence + Knowledge
-       ↓
-Phase F
-  Deeper personalization + observability
+supabase/schema_v30_core_intelligence.sql
+supabase/schema_v31_sync.sql
 ```
 
-Prioritas yang sehat untuk perubahan berikutnya:
-
-1. reliability,
-2. data correctness,
-3. AI safety,
-4. mobile UX,
-5. performance,
-6. observability,
-7. baru kemudian fitur baru.
+> Terapkan migration sesuai kondisi database. Jangan menjalankan semua file phase secara membabi buta pada database production yang sudah memiliki data.
 
 ---
 
-# 🤝 Kontribusi
+# 🧰 Tech Stack
 
-Sebelum membuat perubahan:
+| Teknologi | Versi / Peran |
+|---|---|
+| Next.js | 16.3.6 |
+| React | 19.2.8 |
+| TypeScript | 5.9.x |
+| Supabase JS | 2.117.1 |
+| Supabase SSR | 0.12.7 |
+| OpenAI SDK | 4.67.3 |
+| Tailwind CSS | 3.4.17 |
+| Web Push | 3.6.7 |
+| Lucide React | UI icons |
+| ESLint | 9.35.0 |
+| Node.js | 22.x |
+| npm | 10+ |
+
+Project menetapkan engine:
+
+```text
+Node >=22 <23
+npm >=10
+```
+
+---
+
+# 📦 Instalasi
+
+## 1. Install dependency
+
+```bash
+npm install
+```
+
+## 2. Preflight development
+
+```bash
+npm run preflight:dev
+```
+
+## 3. Verification
+
+```bash
+npm run verify
+npm run audit
+npm run test
+```
+
+## 4. Jalankan development
+
+```bash
+npm run dev
+```
+
+Buka:
+
+```text
+http://localhost:3000
+```
+
+---
+
+# 🔐 Environment Variables
+
+Buat:
+
+```text
+.env.local
+```
+
+Minimal:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_PUBLIC_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+```
+
+Untuk production / Web Push:
+
+```env
+NEXT_PUBLIC_SITE_URL=https://example.com
+APP_URL=https://example.com
+LICIA_URL=https://example.com
+LICIA_INTERNAL_URL=https://example.com
+
+LICIA_AI_MODEL=
+LICIA_AI_HEAVY_MODEL=
+
+VAPID_SUBJECT=mailto:admin@example.com
+VAPID_PUBLIC_KEY=YOUR_VAPID_PUBLIC_KEY
+VAPID_PRIVATE_KEY=YOUR_VAPID_PRIVATE_KEY
+
+LICIA_CRON_SECRET=YOUR_CRON_SECRET
+LICIA_REMINDER_WORKER_INTERVAL_MS=60000
+
+DEV_TUNNEL_ORIGIN=
+```
+
+| Variable | Fungsi |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public/anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Akses admin server-side |
+| `OPENAI_API_KEY` | AI runtime |
+| `LICIA_AI_MODEL` | Model utama eksplisit |
+| `LICIA_AI_HEAVY_MODEL` | Model berat opsional |
+| `VAPID_SUBJECT` | Identitas Web Push |
+| `VAPID_PUBLIC_KEY` | Public VAPID |
+| `VAPID_PRIVATE_KEY` | Private VAPID |
+| `LICIA_CRON_SECRET` | Secret dispatcher |
+| `LICIA_REMINDER_WORKER_INTERVAL_MS` | Interval worker |
+| `NEXT_PUBLIC_SITE_URL` | URL publik |
+| `APP_URL` | URL server-side |
+
+Jika muncul:
+
+```text
+Supabase service-role belum dikonfigurasi di server.
+```
+
+pastikan `SUPABASE_SERVICE_ROLE_KEY` ada di environment server dan restart aplikasi.
+
+---
+
+# 🗄️ Setup Supabase
+
+1. Buat project Supabase.
+2. Salin URL dan public key ke `.env.local`.
+3. Terapkan schema sesuai baseline database.
+4. Pastikan RLS dan policy aktif.
+5. Konfigurasikan Auth provider yang digunakan.
+6. Masukkan service role key hanya ke environment server.
+
+Schema utama:
+
+```text
+supabase/schema_all_v30.sql
+supabase/schema_v30_core_intelligence.sql
+```
+
+---
+
+# 🔔 Setup Web Push
+
+Generate VAPID:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Isi:
+
+```env
+VAPID_SUBJECT=mailto:admin@example.com
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+```
+
+Lalu:
+
+1. Login.
+2. Buka **Pengaturan**.
+3. Aktifkan browser notification / push.
+4. Beri izin notification pada browser.
+5. Jalankan test push.
+6. Cek `/system`.
+
+Production Web Push membutuhkan HTTPS, service worker, subscription perangkat, VAPID, dan dispatcher yang benar.
+
+---
+
+# ⏰ Reminder Production
+
+Dua mekanisme yang tersedia:
+
+### PM2 Worker
+
+```text
+scripts/reminder-worker.mjs
+ecosystem.config.cjs
+```
+
+### Cron
+
+```text
+scripts/reminder-cron.mjs
+```
+
+Gunakan **satu jalur dispatcher** untuk job yang sama agar tidak terjadi duplicate processing.
+
+---
+
+# 🏭 Production Build
 
 ```bash
 npm ci
-npm run typecheck
-npm run lint
-npm run test:unit
+npm run preflight
+npm run verify
+npm run audit
+npm run test
 npm run build
 ```
 
-Untuk perubahan i18n:
+Jalankan:
 
 ```bash
-npm run i18n:check
+npm run start
 ```
 
-Untuk perubahan accessibility/theme:
+atau PM2:
 
 ```bash
-npm run a11y:contrast
+pm2 start ecosystem.config.cjs
+pm2 save
 ```
 
-Untuk perubahan AI:
-
-```bash
-npm run eval
-npm run test:ai-ux
-```
-
-### Checklist pull request
+Panduan VPS tambahan tersedia di:
 
 ```text
-[ ] Tidak ada secret
-[ ] Tidak merusak mobile
-[ ] Tidak memecahkan i18n
-[ ] TypeScript bersih
-[ ] Lint bersih
-[ ] Regression test relevan berjalan
-[ ] Migration database disertakan jika perlu
-[ ] Dokumentasi diperbarui jika behavior berubah
+DEPLOY_VPS.md
 ```
 
 ---
 
-# 📚 Dokumentasi internal yang paling penting
+# 🩺 System Center
 
-| File | Kegunaan |
-|---|---|
-| `.env.example` | daftar environment terbaru |
-| `CHANGELOG.md` | riwayat perubahan versi |
-| `DEPLOY_VPS.md` | panduan deployment server |
-| `package.json` | scripts, dependency, engine |
-| `ecosystem.config.cjs` | proses PM2 web + reminder worker |
-| `scripts/setup-push.mjs` | generate VAPID + cron secret |
-| `scripts/reminder-worker.mjs` | reminder worker |
-| `scripts/reminder-cron.mjs` | alternatif scheduler |
-| `scripts/healthcheck.mjs` | health probe |
-| `scripts/preflight.mjs` | validasi environment/build |
-| `next.config.js` | security headers + runtime config |
-| `lib/ai/modelRouter.ts` | AI model selection |
-| `lib/ai/runtime.ts` | AI generation, retry, fallback |
-| `lib/ai/tools.ts` | tool definitions |
-| `lib/ai/contextEngine.ts` | context selection |
-| `lib/reminders/` | reminder scheduling |
-| `lib/notifications/` | notification/push |
-| `lib/sync/` | sync/conflict |
-| `lib/crypto/vaultCrypto.ts` | Vault encryption |
-| `supabase/schema_all.sql` | baseline schema |
-| `supabase/schema_ai_chat_history.sql` | server chat history |
+Route: `/system`
+
+System Center memantau:
+
+- database health,
+- schema V30,
+- reminder worker heartbeat,
+- overdue/stuck/orphan reminder,
+- notification events,
+- push devices/subscriptions,
+- service worker,
+- browser online state,
+- AI usage telemetry.
+
+Gunakan halaman ini setelah deployment, migration, atau perubahan environment.
 
 ---
 
-# 🧾 Lisensi
+# 🧪 Quality Assurance
 
-Project ini menggunakan konfigurasi repository internal/private sebagaimana diatur oleh pemilik project. Tambahkan file lisensi terbuka hanya bila project memang akan dipublikasikan dengan lisensi tersebut.
+Script yang tersedia:
+
+```bash
+npm run preflight
+npm run preflight:dev
+npm run verify
+npm run audit
+npm run test
+npm run typecheck
+npm run health
+npm run build
+```
+
+`verify`, `audit`, dan `test` adalah bagian penting dari validasi sebelum deploy.
+
+---
+
+# 🔌 API Utama
+
+```text
+/api/chat
+/api/ai/batch
+/api/ai/undo
+/api/intelligence
+/api/intelligence/context
+
+/api/weekly-planner
+/api/search
+/api/activity
+/api/inbox/triage
+
+/api/reminders/dispatch
+/api/reminders/test
+/api/reminders/sync-defaults
+
+/api/notifications
+/api/push/subscribe
+/api/push/test
+/api/push/vapid-public
+
+/api/calendar/ics
+/api/backup
+/api/export-data
+/api/health
+/api/system/diagnostics
+/api/automations/evaluate
+/api/estimate-nutrition
+/api/onboarding
+```
+
+---
+
+# 🔄 Contoh Workflow
+
+## Ide → Task
+
+```text
+Capture
+  ↓
+Smart Inbox
+  ↓
+AI triage
+  ↓
+Task
+  ↓
+Project / Goal
+  ↓
+Calendar
+  ↓
+Focus
+```
+
+## Agenda → Task
+
+```text
+get_schedule
+   ↓
+create_task_from_schedule
+   ↓
+Task baru
+   ↓
+update_schedule_block
+   ↓
+agenda terhubung ke task
+```
+
+## Agenda → Reminder
+
+```text
+Calendar
+  ↓
+create_schedule_reminder
+  ↓
+Reminder Center
+  ↓
+notification_events
+  ↓
+Browser / Web Push
+```
+
+## AI Action → Undo
+
+```text
+User request
+    ↓
+Context
+    ↓
+Tool selection
+    ↓
+Confirmation
+    ↓
+Database mutation
+    ↓
+AI Action History
+    ↓
+Undo jika snapshot tersedia
+```
+
+---
+
+# 🛡️ Production Checklist
+
+```text
+[ ] Node 22.x tersedia
+[ ] npm dependency terpasang
+[ ] Supabase URL benar
+[ ] Supabase anon key benar
+[ ] Service role tersedia di server
+[ ] VAPID subject/public/private tersedia
+[ ] LICIA_CRON_SECRET tersedia
+[ ] Reminder worker PM2 aktif
+[ ] Sync Core V31 sudah dimigrasikan
+[ ] OpenAI API key tersedia
+[ ] Database schema siap
+[ ] RLS aktif
+[ ] HTTPS aktif
+[ ] VAPID siap jika memakai Web Push
+[ ] Reminder dispatcher hanya satu jalur
+[ ] npm run preflight lulus
+[ ] npm run verify lulus
+[ ] npm run audit lulus
+[ ] npm run test lulus
+[ ] npm run build lulus
+[ ] System Center menunjukkan service penting OK
+```
+
+---
+
+# 🗺️ Evolusi Arsitektur
+
+Licia 2.0 merupakan hasil evolusi beberapa milestone internal:
+
+```text
+V20  → UI polish & stabilization
+V21  → Auth / mobile improvements
+V22  → Build fixes
+V23  → Platform upgrade
+V24  → UI + AI refresh
+V25  → Information-first UI
+V27  → Full Life OS overhaul
+V28  → Intelligence + reminder + Web Push
+V29  → Dashboard + Reminder + System Center
+V30  → Context Engine + AI routing + reliability + observability
+V31  → Web Push hardening + Reminder Worker + Sync Core + Offline mutation idempotency
+```
+
+**Licia 2.0** adalah nama produk/dokumentasi.
+
+**V31** adalah baseline engineering terbaru yang menjadi fondasi implementasi ini.
+
+---
+
+# 📚 Dokumentasi Internal
+
+Repository menyimpan catatan engineering berikut:
+
+```text
+V20_POLISH_NOTES.md
+V20_RELEASE_NOTES.md
+V21_BATCH5_AUTH_MOBILE_FIXES.md
+V22.2_BUILD_FIX_NOTES.md
+V23.1_BUILD_FIX.md
+V23_MAJOR_UPGRADE.md
+V24.1_UI_REFRESH_NOTES.md
+V24.2_MAJOR_UI_AI_REFRESH.md
+V25_UI_REFRESH_NOTES.md
+V27_FULL_OVERHAUL_NOTES.md
+V28_FULL_INTELLIGENCE_NOTES.md
+V29_DASHBOARD_REMINDER_SYSTEM_NOTES.md
+V30_RELEASE_NOTES.md
+V31_RELEASE_NOTES.md
+```
+
+Dokumen tersebut adalah histori engineering; README ini menjadi dokumentasi produk dan operasional utama.
+
+---
+
+# 🐛 Troubleshooting
+
+### `Supabase service-role belum dikonfigurasi di server.`
+
+Tambahkan:
+
+```env
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+ke environment server lalu restart.
+
+### Build TypeScript gagal
+
+```bash
+npm run typecheck
+```
+
+Periksa file dan line yang dilaporkan sebelum menjalankan build lagi.
+
+### Build CSS gagal
+
+Periksa selector CSS/Tailwind yang memakai karakter khusus dan jalankan kembali:
+
+```bash
+npm run build
+```
+
+### Web Push tidak terkirim
+
+Periksa rantai:
+
+```text
+System Center
+↓
+Push server
+↓
+Push subscription
+↓
+Service Worker
+↓
+Reminder worker / dispatcher
+```
+
+### Reminder berhenti saat browser ditutup
+
+Pastikan worker/cron server berjalan. Browser polling bukan pengganti dispatcher production.
+
+---
+
+# 🤝 Pengembangan
+
+Prinsip engineering Licia:
+
+- pertahankan TypeScript strictness,
+- jaga RLS dan isolasi user,
+- jangan expose service-role credential,
+- jangan membuat AI mengklaim data tanpa verifikasi tool,
+- pertahankan audit trail untuk mutasi AI yang relevan,
+- pertahankan timezone-aware date handling,
+- uji mobile layout untuk route baru,
+- jalankan verification sebelum production deployment.
+
+---
+
+# 📜 Lisensi
+
+Project saat ini dikonfigurasi sebagai private package:
+
+```json
+"private": true
+```
+
+Tambahkan lisensi open-source terpisah apabila project nantinya akan dipublikasikan secara open-source.
 
 ---
 
 # 🌙 Penutup
 
-Licia dirancang sebagai sistem pribadi yang menyatukan **capture, organize, understand, decide, dan act**.
+Licia 2.0 dirancang sebagai satu tempat untuk:
 
 ```text
-┌──────────────────────────────────────────────┐
-│                  YOUR LIFE                   │
-├──────────────────────────────────────────────┤
-│ Capture      →  ide, input, inbox             │
-│ Organize     →  task, project, goal           │
-│ Schedule     →  calendar, focus, reminder     │
-│ Understand   →  analytics, insights, AI       │
-│ Remember     →  memory, notes, vault          │
-│ Improve      →  review, learning, wellbeing   │
-│ Automate     →  events, reminders, actions    │
-└──────────────────────────────────────────────┘
+🧠 Berpikir
+📝 Mencatat
+✅ Mengerjakan
+📅 Menjadwalkan
+🎯 Mencapai target
+📚 Belajar
+❤️ Menjaga kesehatan
+💰 Mengelola keuangan
+🔔 Mengingat
+📊 Melihat pola
+🤖 Meminta bantuan AI
+🔐 Menjaga data
 ```
 
-> **Licia bukan sekadar tempat menyimpan data. Licia adalah lapisan operasional di atas data kehidupan pribadi Anda.**
+**Licia adalah Personal Life OS yang menghubungkan konteks, data, tindakan, dan refleksi dalam satu sistem.**
 
-<p align="center">
-  <strong>🌙 Licia — Your life, connected.</strong>
-</p>
+<p align="center"><strong>🌙 Licia 2.0 — Your life, connected.</strong></p>
+
+
+## Licia V31 — Reliability & Sync Upgrade
+
+Licia V31 menambahkan lapisan sinkronisasi multi-perangkat berbasis mutation idempotency, device registry, event cursor, versioning, tombstone delete, dan offline replay. Web Push dan reminder worker kini mempunyai pemeriksaan konfigurasi eksplisit untuk VAPID, Supabase service-role, serta `LICIA_CRON_SECRET`.
+
+### Environment production
+
+Gunakan `npm run setup:push` untuk membuat VAPID key pair dan cron secret di VPS. Secret tidak boleh dimasukkan ke Git/ZIP. Jalankan `supabase/schema_v31_sync.sql` pada Supabase sebelum memakai sync core.
+
+## Licia V33 — Complete Sync, Performance & Experience
+
+V33 melanjutkan V31/V32 dengan satu alur yang lebih konsisten untuk perangkat, AI, offline queue, konflik, dan pengalaman mobile.
+
+### Sinkronisasi & konflik
+
+- Pusat Sinkronisasi (`/sync`) untuk melihat perangkat, status, antrean, dan konflik.
+- Universal mutation flow untuk task, agenda, project, goal, note, Inbox, reminder, memory, habit, health, finance, learning, reading, automation, vault, dan relasi Life Graph.
+- Mutation ID untuk idempotency sehingga request yang terkirim ulang tidak membuat duplikasi.
+- Versioning dan conflict resolver dengan strategi `server`, `latest`, `manual`, dan `smart`.
+- Tombstone/event delete dan deteksi history gap untuk resync.
+- Supabase Realtime sebagai invalidation layer lintas perangkat.
+- Preferensi akun ikut disinkronkan; perangkat baru mengambil pengaturan terbaru saat bootstrap.
+- Service Worker dapat melakukan replay antrean offline ketika koneksi kembali.
+
+### Performance
+
+- Dashboard memakai cache server per pengguna dengan TTL pendek agar perpindahan halaman tidak selalu mengulang puluhan query sekaligus.
+- Cache context AI diinvalidasi setelah mutasi sehingga AI tidak mempertahankan context lama.
+- Index tambahan pada domain yang paling sering dipakai Sync Core, dashboard, reminder, task, project, goal, Inbox, finance, health, dan habit.
+- Search dan proactive evaluation menggunakan cache singkat serta batas query agar tetap responsif.
+- Daily snapshot menyimpan ringkasan harian untuk fitur intelligence yang tidak membutuhkan query penuh setiap kali.
+
+### Animasi & mobile experience
+
+- Animation System V33: page transition, bottom-sheet, ripple, success state, stagger, breathe effect, dan reduced-motion support.
+- Haptic feedback dapat dikontrol melalui Settings.
+- Global Quick Capture dapat dipanggil dari seluruh aplikasi.
+- Voice Capture menggunakan Web Speech API dengan pilihan bahasa.
+- Status sinkronisasi tampil juga pada layar mobile.
+- Offline state, queued changes, conflict, dan reconnect dibuat terlihat sehingga pengguna tahu apa yang sedang terjadi.
+
+### AI yang lebih proaktif
+
+- Proactive Insight membaca event/context yang tersedia dan memberikan saran yang dapat ditindaklanjuti.
+- Daily snapshot untuk menjaga ringkasan keadaan harian tetap cepat diakses.
+- Life Graph memiliki relasi Goal → Project → Task serta entity links lintas modul.
+- Universal Search dapat mencari lintas task, agenda, project, goal, catatan, Inbox, memory, vault, automation, bacaan, keputusan, dan pembelajaran.
+
+### Pengaturan
+
+Settings kini mencakup pengaturan sinkronisasi, strategi konflik, jaringan/visibility sync, voice capture, Life Graph links, daily snapshot, smart planner, proactive assistant, quick capture, haptic, motion intensity, reduced motion, dan perilaku Enter pada Chat.
+
+Perilaku Chat:
+
+```text
+Enter aktif
+  Enter          → Kirim
+  Shift + Enter  → Baris baru
+
+Enter nonaktif
+  Enter          → Baris baru
+  Ctrl/Cmd+Enter → Kirim
+```
+
+### Licia V34 — Sync Robustness & Complete Experience
+
+V34 menyelesaikan lapisan reliabilitas yang diperlukan agar Sync Core benar-benar aman dipakai lintas perangkat. Event sinkronisasi sekarang menyimpan `changed_fields`, sehingga strategi `smart` dapat membedakan perubahan pada field yang sama dengan perubahan pada field yang berbeda. Konflik yang belum dapat dipastikan aman tetap dikirim ke Conflict Center, sedangkan mutation yang targetnya sudah hilang tidak dibiarkan berstatus `processing`.
+
+V34 juga memperkuat pengalaman mobile dan interaksi: motion system memiliki mode lengkap/halus/mati, reduced motion, haptic, Voice Capture, Global Quick Capture, proactive insight, status offline/sync, serta cache PWA baru.
+
+### Migration order
+
+```text
+V30 core/intelligence
+      ↓
+V31 sync core
+      ↓
+V32 sync experience/conflicts/preferences
+      ↓
+V33 life os / entity links / snapshots / indexes
+      ↓
+V34 sync robustness / smart conflict history
+```
+
+Setelah migration, jalankan:
+
+```bash
+npm run verify
+npm test
+npm run audit
+```
+
+Untuk production, konfigurasi `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `LICIA_CRON_SECRET`, `APP_URL`, dan `NEXT_PUBLIC_SITE_URL` pada environment server. Jangan pernah memasukkan `.env.local` berisi secret ke repository atau ZIP release.
+
+## V35.1.1 AI Pending Actions Migration
+
+Jika muncul:
+
+```text
+invalid ai_pending_actions status transition: pending -> applied
+```
+
+jalankan sekali:
+
+```text
+supabase/schema_v35_1_1_ai_pending_transition.sql
+```
+
+Migration ini memperbaiki trigger legacy pada database dan me-reload schema cache PostgREST.
+
+---
+
+## Licia 0.38.0
+
+V38 menambahkan **Smart Daily Plan**, **End-of-Day Review**, deterministic temporal guard, metadata context AI, structured AI feedback, dan short-lived smart context caching. Lihat `V38_UPGRADE.md` untuk detail perubahan dan `Licia-v0.38.0-Supabase-Migration.sql` untuk migration gabungan V37+V38.
+
+---
+
+# 📱 Native Android
+
+Project native Android tersedia di `native/android`.
+
+Aplikasi menggunakan native Android shell + WebView dan terhubung ke instance Licia online. Backend tetap dideploy di VPS, sehingga AI, Supabase, reminder worker, authentication, dan data tetap terpusat.
+
+Lihat `NATIVE_APP_GUIDE.md` untuk build APK/AAB dan deployment 24/7.
+
+### Dwibahasa penuh & UI Kategori A (v0.57)
+- **Bahasa**: Pengaturan → Bahasa (Indonesia/English). Cookie `licia-language` dibaca server & API. Di komponen klien pakai `const { tr, locale } = useLanguage()`; di komponen server `const { tr, locale } = await getServerI18n()`. Kunci `tr("…")` = teks Indonesia; padanan Inggris ada di `i18n-src/en.json` → `npm run i18n:build`. Tambah teks baru lalu jalankan `npm run i18n:check` (gagal bila ada `tr()` tanpa terjemahan).
+- **Overlay**: gunakan `components/ui/Overlay` (atau `ActionDialog`/`BottomSheet`) dan token `z-modal|sheet|palette|toast|…`; fokus ditangani `OverlayGuard` secara otomatis.
+- **Urungkan**: `notifyUndo({ title, undoLabel, onUndo })` dari `@/components/ui`.
+- **Daftar**: tandai baris dengan `data-list-item` dan tombol dengan `data-list-action="toggle|edit|open"` agar J/K/X/E/Enter bekerja.
+- **Kontras**: `npm run a11y:contrast` (WCAG AA untuk semua preset tema).
