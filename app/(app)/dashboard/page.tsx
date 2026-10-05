@@ -120,8 +120,9 @@ export default async function DashboardPage() {
   const widgets: Record<WidgetId, React.ReactNode> = {
     onboarding: <OnboardingNudge />,
     header: (
-    <header className="relative overflow-hidden rounded-[1.75rem] border border-accent/15 bg-gradient-to-br from-surface via-surface to-accent/5 p-4 shadow-sm sm:p-5">
-      <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-accent/10 blur-3xl animate-licia-float" />
+    <header className="relative overflow-hidden rounded-2xl border border-accent/15 bg-gradient-to-br from-surface via-surface to-accent/5 p-4 shadow-sm sm:rounded-[1.75rem] sm:p-5">
+
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-accent/10 blur-3xl animate-licia-float" />
       <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-accent/15 bg-bg shadow-sm sm:h-16 sm:w-16">
@@ -138,31 +139,31 @@ export default async function DashboardPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/chat" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><MessageCircle size={14}/> {tr("Tanya Licia")}</Link>
-          <Link href="/capture" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-bg px-3.5 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent/25 hover:text-accent"><Zap size={14}/> {tr("Tangkap cepat")}</Link>
+          <Link href="/chat" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><MessageCircle size={14}/> {tr("Tanya Licia")}</Link>
+          <Link href="/capture" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-bg px-3.5 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent/25 hover:text-accent"><Zap size={14}/> {tr("Tangkap cepat")}</Link>
         </div>
       </div>
     </header>
     ),
     overview: (
-    <section className="dashboard-top-overview grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <Link href="/today" className="dashboard-overview-card rounded-2xl border border-accent/15 bg-accent/5 p-4 transition hover:-translate-y-1 hover:shadow-lg">
+    <section className="dashboard-top-overview grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+      <Link href="/today" className="dashboard-overview-card min-w-0 rounded-2xl border border-accent/15 bg-accent/5 p-3 transition hover:-translate-y-1 hover:shadow-lg sm:p-4">
         <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.14em] text-accent"><CalendarDays size={13}/> {tr("Jadwal hari ini")}</div><ArrowRight size={13} className="text-accent"/></div>
         <p className="mt-3 font-display text-2xl text-text">{todayAgenda.length}</p>
         <p className="mt-1 line-clamp-2 text-[10px] text-textMuted">{todayAgenda.length ? (nextAgenda ? `${time(nextAgenda.start_time)} · ${nextAgenda.title}` : tr("Agenda hari ini sudah tersusun.")) : tr("Belum ada agenda untuk hari ini.")}</p>
       </Link>
-      <Link href="/finance" className="dashboard-overview-card rounded-2xl border border-border bg-surface p-4 transition hover:-translate-y-1 hover:shadow-lg">
+      <Link href="/finance" className="dashboard-overview-card min-w-0 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-1 hover:shadow-lg sm:p-4">
         <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.14em] text-success"><Wallet size={13}/> {tr("Keuangan")}</div><ArrowRight size={13} className="text-textMuted"/></div>
         <p className="mt-3 text-base font-semibold text-text">{rupiah(balance, locale)}</p>
         <p className="mt-1 text-[10px] text-textMuted">{tr("Net bulan ini")} {rupiah(signedNet, locale)}</p>
       </Link>
-      <Link href="/goals-projects" className="dashboard-overview-card rounded-2xl border border-border bg-surface p-4 transition hover:-translate-y-1 hover:shadow-lg">
+      <Link href="/goals-projects" className="dashboard-overview-card min-w-0 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-1 hover:shadow-lg sm:p-4">
         <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.14em] text-accent"><Target size={13}/> {tr("Target & proyek")}</div><ArrowRight size={13} className="text-textMuted"/></div>
         <p className="mt-3 text-base font-semibold text-text">{avgGoal}{tr("% rata-rata target")}</p>
         <p className="mt-1 text-[10px] text-textMuted">{activeGoals.length} {tr("target aktif ·")} {(projects.data ?? []).length} {tr("proyek aktif")}</p>
       </Link>
-      <Link href="/wellbeing" className="dashboard-overview-card rounded-2xl border border-border bg-surface p-4 transition hover:-translate-y-1 hover:shadow-lg">
-        <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.14em] text-accent"><HeartPulse size={13}/> {tr("Kondisi hari ini")}</div><ArrowRight size={13} className="text-textMuted"/></div>
+      <Link href="/wellbeing" className="dashboard-overview-card min-w-0 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-1 hover:shadow-lg sm:p-4">
+        <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5 text-[9px] font-bold uppercase tracking-[.08em] text-accent sm:gap-2 sm:tracking-[.14em]"><HeartPulse size={13} className="shrink-0"/><span className="truncate">{tr("Kondisi hari ini")}</span></div><ArrowRight size={13} className="shrink-0 text-textMuted"/></div>
         <p className="mt-3 text-base font-semibold text-text">{(water / 1000).toFixed(1)} {tr("L hidrasi")}</p>
         <p className="mt-1 text-[10px] text-textMuted">{movement} {tr("menit gerak")}{fatigue ? tr(" · kelelahan {0}/5", [fatigue]) : ""}</p>
       </Link>
