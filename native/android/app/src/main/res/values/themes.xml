@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.Licia" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/licia_background</item>
+        <item name="android:navigationBarColor">@color/licia_background</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:colorAccent">@color/licia_accent</item>
+    </style>
+</resources>

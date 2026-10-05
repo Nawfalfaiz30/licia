@@ -1,0 +1,16 @@
+[Unit]
+Description=Licia 2.0 Next.js
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/licia
+Environment=NODE_ENV=production
+EnvironmentFile=/var/www/licia/.env.local
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

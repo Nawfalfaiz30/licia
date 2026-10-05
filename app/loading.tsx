@@ -1,0 +1,3 @@
+import { getServerI18n } from "@/lib/i18n/server";
+export default async function Loading() {
+  const { tr } = await getServerI18n(); return <main className="licia-main flex min-h-[70vh] items-center justify-center"><div className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 licia-card-motion"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent"/><span className="text-sm text-textMuted">{tr("Menyiapkan Licia…")}</span></div></main>; }

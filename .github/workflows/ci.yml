@@ -1,0 +1,18 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      # `npm install` (bukan `npm ci`) karena package-lock.json perlu diperbarui
+      # sekali setelah vitest/prettier ditambahkan di V55.
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: node scripts/test-v54-2.mjs && node scripts/test-v54.mjs && node scripts/test-v53.mjs

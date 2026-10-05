@@ -1,0 +1,110 @@
+## moduleLevel (83)
+app/(app)/guide/page.tsx: Beranda
+app/(app)/guide/page.tsx: Ringkasan pribadi untuk agenda, keuangan, target & proyek, dan sinyal 
+app/(app)/guide/page.tsx: Rencana
+app/(app)/guide/page.tsx: Pusat aktivitas berbasis waktu: tugas, kalender, fokus, perencana, Inb
+app/(app)/guide/page.tsx: Target & Proyek
+app/(app)/guide/page.tsx: Satu ruang untuk tujuan, proyek, progres, dan pekerjaan yang mengarah 
+app/(app)/guide/page.tsx: Knowledge & Belajar
+app/(app)/guide/page.tsx: Semua pengetahuan pribadi berada di satu tempat, termasuk catatan, mem
+app/(app)/guide/page.tsx: Kesehatan & Rutinitas
+app/(app)/guide/page.tsx: Hub gabungan untuk kesehatan, aktivitas, tidur, nutrisi, dan rutinitas
+app/(app)/guide/page.tsx: Keuangan
+app/(app)/guide/page.tsx: Transaksi, anggaran, dompet, dan langganan berada dalam satu pusat keu
+app/(app)/guide/page.tsx: Tangkap
+app/(app)/guide/page.tsx: Masukkan teks atau gambar lalu biarkan Licia membantu menempatkannya d
+app/(app)/guide/page.tsx: Chat Licia
+app/(app)/guide/page.tsx: Tempat bercakap dan meminta bantuan yang membutuhkan konteks. Aksi yan
+app/(app)/guide/page.tsx: Insights
+app/(app)/guide/page.tsx: Pusat wawasan untuk review, pola, peta, aktivitas, dan otomasi.
+app/(app)/guide/page.tsx: Sistem, Privasi & Perangkat
+app/(app)/guide/page.tsx: Kontrol teknis disederhanakan agar pengguna tidak perlu memilih antara
+app/(app)/guide/page.tsx: Lainnya di ponsel
+app/(app)/guide/page.tsx: Lainnya adalah katalog tujuan aktif di ponsel. Workspace yang sudah di
+app/(app)/guide/page.tsx: Privasi AI
+app/(app)/guide/page.tsx: Tentukan bagian data mana yang boleh dibaca Licia.
+app/(app)/guide/page.tsx: Pengaturan
+app/(app)/guide/page.tsx: Satu tempat untuk tampilan, workspace, AI, interaksi, perangkat, notif
+app/(app)/guide/page.tsx: Pencarian
+app/(app)/guide/page.tsx: Cari lintas workspace tanpa perlu mengetahui asal fitur sebelumnya.
+app/(app)/guide/page.tsx: Ekspor & Backup
+app/(app)/guide/page.tsx: Simpan salinan data pribadi untuk arsip atau pemulihan.
+app/(app)/inbox/page.tsx: Belum dipilah
+app/(app)/inbox/page.tsx: Tugas
+app/(app)/inbox/page.tsx: Catatan
+app/(app)/inbox/page.tsx: Ide
+app/(app)/inbox/page.tsx: Keputusan
+app/(app)/inbox/page.tsx: Belajar
+app/(app)/knowledge/page.tsx: Belajar & Keahlian
+app/(app)/knowledge/page.tsx: Skill, materi, level, target belajar, dan sesi latihan yang kamu bangu
+app/(app)/knowledge/page.tsx: Catatan
+app/(app)/knowledge/page.tsx: Hal yang kamu tulis sendiri dan ingin dicatat.
+app/(app)/knowledge/page.tsx: Memori Licia
+app/(app)/knowledge/page.tsx: Fakta dan preferensi yang sengaja kamu minta Licia ingat.
+app/(app)/knowledge/page.tsx: Vault
+app/(app)/knowledge/page.tsx: Dokumen, referensi, dan bahan pengetahuan pribadi.
+app/(app)/knowledge/page.tsx: Bacaan
+app/(app)/knowledge/page.tsx: Daftar bacaan, progres, rating, dan sesi membaca.
+app/(app)/notes/page.tsx: Ide
+app/(app)/notes/page.tsx: Ide baru
+app/(app)/notes/page.tsx: Belajar
+app/(app)/notes/page.tsx: Catatan belajar
+app/(app)/notes/page.tsx: Agenda
+app/(app)/notes/page.tsx: Catatan agenda
+app/(app)/settings/page.tsx: Tampilan
+app/(app)/settings/page.tsx: Workspace
+app/(app)/settings/page.tsx: AI & Privasi
+app/(app)/settings/page.tsx: Interaksi
+app/(app)/settings/page.tsx: Perangkat & Notifikasi
+app/(app)/settings/page.tsx: Data & Akun
+app/(app)/tasks/page.tsx: Berikutnya
+app/(app)/tasks/page.tsx: Dikerjakan
+app/(app)/tasks/page.tsx: Selesai
+app/(app)/wellbeing/page.tsx: Kesehatan
+app/(app)/wellbeing/page.tsx: Metrik tubuh, nutrisi, tidur, aktivitas, dan ringkasan kesehatan priba
+app/(app)/wellbeing/page.tsx: Rutinitas
+app/(app)/wellbeing/page.tsx: Kebiasaan harian, checklist, streak, dan ritme yang ingin kamu bangun.
+app/privacy/page.tsx: Privasi · Licia
+app/privacy/page.tsx: Informasi privasi dan pengelolaan data Licia 2.0.
+components/settings/ThemeModeControl.tsx: Terang
+components/settings/ThemeModeControl.tsx: Selalu terang
+components/settings/ThemeModeControl.tsx: Gelap
+components/settings/ThemeModeControl.tsx: Selalu gelap
+components/settings/ThemeModeControl.tsx: Sesuai sistem
+components/settings/ThemeModeControl.tsx: Ikuti perangkat
+components/sync/ConflictCenter.tsx: Catatan
+components/v36/AIModeGuide.tsx: Sekarang
+components/v36/AIModeGuide.tsx: Life Copilot
+components/v36/AIModeGuide.tsx: Membaca kondisi saat ini: risiko, agenda, prioritas, evidence, dan lan
+components/v36/AIModeGuide.tsx: 7 hari ke depan
+components/v36/AIModeGuide.tsx: Perencana Mingguan AI
+components/v36/AIModeGuide.tsx: Menyusun usulan minggu berdasarkan task, deadline, agenda, rutinitas, 
+components/v36/AIModeGuide.tsx: 7 hari terakhir
+components/v36/AIModeGuide.tsx: Review Mingguan
+components/v36/AIModeGuide.tsx: Meninjau apa yang sudah terjadi: progres, fokus, inbox, pola, dan hal 
+
+## helper (16)
+app/(app)/dashboard/page.tsx: Tanpa waktu
+app/(app)/goals/page.tsx: Tanpa target
+app/(app)/health/page.tsx: Berat
+app/(app)/health/page.tsx: Ringan
+app/(app)/health/page.tsx: Sedang
+app/(app)/tasks/page.tsx: {0} mnt terlambat
+app/(app)/tasks/page.tsx: {0} mnt lagi
+app/(app)/tasks/page.tsx: {0} jam terlambat
+app/(app)/tasks/page.tsx: {0} jam lagi
+app/(app)/tasks/page.tsx: {0} hari terlambat
+app/(app)/tasks/page.tsx: {0} hari lagi
+components/chat/ChatWidget.tsx: [Gambar dari percakapan sebelumnya]
+components/intelligence/DailyIntelligence.tsx: Tanpa tenggat
+components/intelligence/NotificationCenter.tsx: Pengingat Licia yang perlu diperhatikan.
+components/intelligence/NotificationCenter.tsx: Tidak ada detail tambahan.
+components/sync/ConflictCenter.tsx: Perubahan data
+
+## serverNonAsync (0)
+
+
+## entity (0)
+
+
+## noScope (0)

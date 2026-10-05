@@ -1,0 +1,15 @@
+[Unit]
+Description=Licia Reminder Worker
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/licia
+EnvironmentFile=/var/www/licia/.env.local
+ExecStart=/usr/bin/node scripts/reminder-worker.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

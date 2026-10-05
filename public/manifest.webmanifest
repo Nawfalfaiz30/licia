@@ -1,0 +1,118 @@
+{
+  "name": "Licia — Personal OS",
+  "short_name": "Licia",
+  "description": "Personal Life OS AI untuk rencana, chat, capture, insights, tasks, kalender, goals, knowledge, dan otomasi.",
+  "lang": "id-ID",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101424",
+  "theme_color": "#3d5fd9",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Rencana",
+      "short_name": "Rencana",
+      "url": "/plan",
+      "icons": [
+        {
+          "src": "/icon-maskable-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Chat Licia",
+      "short_name": "Chat",
+      "url": "/chat",
+      "icons": [
+        {
+          "src": "/icon-maskable-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Tangkap",
+      "short_name": "Tangkap",
+      "url": "/capture",
+      "icons": [
+        {
+          "src": "/icon-maskable-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Insights",
+      "short_name": "Insights",
+      "url": "/insights",
+      "icons": [
+        {
+          "src": "/icon-maskable-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Target & Proyek",
+      "short_name": "Target",
+      "url": "/goals-projects",
+      "icons": [
+        {
+          "src": "/icon-maskable-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/capture",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

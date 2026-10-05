@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Minimal launcher: Android Studio can generate the Gradle wrapper files.
+# This file delegates to installed gradle when available.
+set -e
+if command -v gradle >/dev/null 2>&1; then
+  exec gradle "$@"
+fi
+echo "Gradle is not installed. Open native/android in Android Studio to install/sync the Gradle wrapper, then run ./gradlew again." >&2
+exit 1
