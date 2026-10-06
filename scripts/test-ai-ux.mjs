@@ -25,6 +25,7 @@ assert(context.includes("select(\"id,amount,category,note,occurred_at\")") && co
 assert(route.includes("recentAssistantText") && route.includes("ENTITY_UUID_RE"), "chat route continuity/entity validation missing");
 assert(convo.includes("assistantMutationProposalPattern") && convo.includes("confirmsRecentMutationProposal"), "confirmation-to-mutation continuity missing");
 assert(route.includes("confirmationRoutingHint") && route.includes("[konfirmasi aksi: ubah]"), "confirmed mutation routing hint missing");
+assert(route.includes("taskCompletionFollowUp") && route.includes("update_tasks_bulk"), "deterministic task completion continuity missing");
 assert(tools.includes('name: "get_life_os_capabilities"') && tools.includes('case "get_life_os_capabilities"'), "Life OS capability discovery tool missing");
 assert(tools.includes('"smart_inbox_item"') && tools.includes('"memory"'), "fallback CRUD does not expose Smart Inbox/Memory entities");
 assert(tools.includes('name: "update_tasks_bulk"') && tools.includes("case \"update_tasks_bulk\""), "bulk task update surface missing");
