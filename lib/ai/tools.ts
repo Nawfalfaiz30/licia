@@ -2668,6 +2668,23 @@ async function updateTasksBulk(ctx: HandlerCtx, args: any) {
 
   if (!ids.length) return { ok: false, status: "no_match", error: "Tidak ada target tugas yang jelas. Berikan nama atau kata kunci tugas terlebih dahulu." };
 
+  const { data: existingTargets, error: targetError } = await ctx.supabase
+    .from("tasks")
+    .select("id,title,status,priority,due_at")
+    .eq("user_id", ctx.userId)
+    .in("id", ids);
+  if (targetError) return { ok: false, error: targetError.message };
+  if ((existingTargets ?? []).length !== ids.length) {
+    const found = new Set((existingTargets ?? []).map((row: any) => String(row.id)));
+    return {
+      ok: false,
+      status: "target_changed",
+      requested_count: ids.length,
+      found_count: found.size,
+      missing_ids: ids.filter((id: string) => !found.has(id)),
+      error: "Sebagian target tugas sudah tidak tersedia. Tidak ada perubahan yang diterapkan.",
+    };
+  }
   const patch: Record<string, any> = {};
   if (args.status) patch.status = args.status;
   if (args.priority) patch.priority = args.priority;
