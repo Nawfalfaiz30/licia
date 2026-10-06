@@ -733,10 +733,9 @@ button, a { touch-action: manipulation; }
 @media (max-width: 767px) {
   .finance-page { animation: none !important; }
   .finance-tabs { top: .5rem; }
-  .finance-summary-row { display: flex; gap: .5rem; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
-  .finance-summary-row::-webkit-scrollbar { display: none; }
-  .finance-summary-row > * { flex: 0 0 min(72vw, 18rem); min-width: 0; scroll-snap-align: start; }
-  .finance-summary-row > :first-child { flex-basis: min(80vw, 21rem); }
+  .finance-summary-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+  .finance-summary-row > * { min-width: 0; }
+  .finance-summary-row > :first-child { grid-column: 1 / -1; }
   .finance-tabs { scroll-padding-inline: .25rem; }
   .finance-tabs button { min-height: 44px; }
   .finance-tabs button:focus-visible { outline-offset: -3px; }
