@@ -1,7 +1,7 @@
 export type AiDomain =
   | "overview" | "tasks" | "calendar" | "focus" | "finance" | "health"
   | "goals" | "notes" | "inbox" | "decisions" | "learning" | "reading"
-  | "habits" | "subscriptions" | "memory" | "vault" | "automations" | "reminders" | "notifications" | "projects" | "all";
+  | "habits" | "subscriptions" | "memory" | "vault" | "automations" | "reminders" | "notifications" | "projects" | "journal" | "relations" | "all";
 
 const domainKeywords: Record<AiDomain, string[]> = {
   all: ["semua data", "seluruh data", "semua yang saya punya", "semua modul", "life os", "gambaran besar", "hubungkan semua"],
@@ -25,6 +25,8 @@ const domainKeywords: Record<AiDomain, string[]> = {
   reminders: ["pengingat", "ingatkan", "reminder", "diingatkan", "sebelum agenda"],
   notifications: ["notifikasi", "notification", "riwayat notifikasi", "pusat notifikasi", "hapus notifikasi", "notifikasi push"],
   projects: ["project", "proyek", "pekerjaan besar", "milestone project"],
+  journal: ["jurnal", "journal", "catatan harian"],
+  relations: ["relasi", "hubungan", "kontak", "interaksi", "crm"],
 };
 
 const readTools: Partial<Record<AiDomain, string[]>> = {
@@ -32,13 +34,14 @@ const readTools: Partial<Record<AiDomain, string[]>> = {
   finance: ["get_expense_summary", "get_incomes", "get_budgets", "get_accounts", "get_net_worth", "get_subscriptions"], health: ["get_health_summary", "get_life_module_data"], goals: ["get_goals"], notes: ["get_notes", "get_life_module_data"],
   inbox: ["get_today_overview", "get_life_module_data"], decisions: ["get_decisions"], learning: ["get_skills"], reading: ["get_reading_list", "get_life_module_data"], habits: ["get_habits", "get_life_module_data"], subscriptions: ["get_subscriptions"], memory: ["get_memories"], vault: ["get_vault_items"], automations: ["get_automation_rules", "get_ai_watchers"], reminders: ["get_reminders"], projects: ["get_projects", "get_life_module_data"],
   notifications: ["get_notifications"],
+  journal: ["get_life_module_data"], relations: ["get_life_module_data"],
   all: ["get_unified_life_snapshot", "get_life_module_data", "get_daily_brain", "get_ai_watchers", "search_life_os", "get_notifications"],
 };
 
 const writeTools: Partial<Record<AiDomain, string[]>> = {
   overview: [], tasks: ["create_task_with_subtasks", "create_task_dependency", "delete_task_dependency", "update_task", "update_tasks_bulk", "delete_task", "delete_tasks_bulk", "delete_subtask", "create_task_from_schedule", "create_task_from_inbox", "create_task_from_note", "create_task_from_project", "create_task_from_goal", "create_schedule_from_task", "create_schedule_reminder"], calendar: ["create_daily_schedule", "update_schedule_block", "delete_schedule_block", "delete_schedule_blocks_bulk", "create_schedule_from_task", "create_task_from_schedule", "create_schedule_reminder"], focus: ["log_pomodoro_session", "delete_pomodoro_session", "update_task"],
   finance: ["log_expense", "delete_expense", "log_expenses_batch", "update_expense", "log_income", "update_income", "delete_income", "create_budget", "update_budget", "delete_budget", "create_account", "update_account", "delete_account", "transfer_money", "get_account_transactions", "get_net_worth", "create_subscription", "update_subscription", "delete_subscription"], health: ["log_health", "delete_health_log"],
-  goals: ["create_goal", "update_goal", "delete_goal", "create_task_from_goal"], notes: ["create_note", "update_note", "delete_note", "create_task_from_note"], inbox: ["capture_inbox_item", "create_task_from_inbox"], decisions: ["log_decision", "update_decision", "delete_decision"], learning: ["create_skill", "update_skill", "delete_skill"], reading: ["log_reading", "update_reading", "delete_reading"], habits: ["create_habit", "update_habit", "checkin_habit", "uncheckin_habit", "delete_habit"], subscriptions: ["create_subscription", "update_subscription", "delete_subscription"], memory: ["save_memory", "delete_memory"], vault: ["create_vault_item", "update_vault_item", "delete_vault_item"], automations: ["create_automation", "update_automation", "delete_automation", "create_ai_watcher", "update_ai_watcher", "delete_ai_watcher", "create_schedule_reminder", "create_reminder", "update_reminder", "delete_reminder"], reminders: ["create_reminder", "update_reminder", "delete_reminder", "create_schedule_reminder"], projects: ["create_project", "update_project", "delete_project", "create_task_from_project"],
+  goals: ["create_goal", "update_goal", "delete_goal", "create_task_from_goal"], notes: ["create_note", "update_note", "delete_note", "create_task_from_note"], inbox: ["capture_inbox_item", "create_task_from_inbox"], decisions: ["log_decision", "update_decision", "delete_decision"], learning: ["create_skill", "update_skill", "delete_skill"], reading: ["log_reading", "update_reading", "delete_reading"], habits: ["create_habit", "update_habit", "checkin_habit", "uncheckin_habit", "delete_habit"], subscriptions: ["create_subscription", "update_subscription", "delete_subscription"], memory: ["save_memory", "delete_memory"], vault: ["create_vault_item", "update_vault_item", "delete_vault_item"], automations: ["create_automation", "update_automation", "delete_automation", "create_ai_watcher", "update_ai_watcher", "delete_ai_watcher", "create_schedule_reminder", "create_reminder", "update_reminder", "delete_reminder"], reminders: ["create_reminder", "update_reminder", "delete_reminder", "create_schedule_reminder"], projects: ["create_project", "update_project", "delete_project", "create_task_from_project"], notifications: ["mark_notification_read", "delete_notification", "delete_all_notifications"], journal: ["manage_life_os_data"], relations: ["manage_life_os_data"],
 };
 
 const deletePattern = /\b(hapus|delete|buang|hilangkan|hapuskan)\b/i;
