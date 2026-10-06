@@ -32,6 +32,12 @@ assert(/notifications:\s*\["mark_notification_read",\s*"delete_notification"/.te
 assert(routing.includes("journal: [") && routing.includes("relations: ["), "journal/relations routing missing");
 assert(convo.includes('"journal", "relations"'), "conversation domain set missing journal/relations");
 assert(tools.includes('name: "update_tasks_bulk"') && tools.includes("case \"update_tasks_bulk\""), "bulk task update surface missing");
+assert(tools.includes('name: "get_life_graph"') && tools.includes("case \"get_life_graph\""), "Life Graph tooling missing");
+assert(tools.includes("due_on") && tools.includes("due_from") && tools.includes("due_to") && tools.includes("due_after"), "task bulk scope fields missing");
+assert(route.includes("resolveActionScope") && route.includes("taskScope"), "action scope enforcement missing");
+assert(route.includes("conversationalUndoIntent") && route.includes("undoActionGroup"), "conversational undo missing");
+assert(verify.includes("MANAGED_ENTITY_TABLES") && verify.includes("database-readback-managed"), "managed CRUD verification missing");
+assert(fs.existsSync(path.join(root, "lib/ai/actionScope.test.ts")), "action scope unit test file missing");
 assert(routing.includes("tandai|centang|selesaikan"), "completion verbs are not routed as update mutations");
 assert(verify.includes('update_tasks_bulk: "tasks"') && verify.includes('capture_inbox_item: "smart_inbox_items"'), "CRUD verification map incomplete");
 assert(tools.includes("INVALID_ENTITY_ID") && tools.includes("expenseId"), "invalid UUID guard missing for expense update");
