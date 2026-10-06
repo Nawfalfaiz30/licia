@@ -795,7 +795,19 @@ async function handleChatPost(req: Request) {
   }
   if (!domainsSet.size) domainsSet.add("overview");
   const domains = [...domainsSet] as AiDomain[];
-  const routingText = effectiveMessage.trim();
+  const rawRoutingText = effectiveMessage.trim();
+  const confirmationRoutingHint = isExplicitConfirmation(String(message || ""))
+    && conversationDecision.mutationExpected
+    && conversationDecision.currentOperation !== "read"
+    ? ({
+        create: " [konfirmasi aksi: buat]",
+        update: " [konfirmasi aksi: ubah]",
+        delete: " [konfirmasi aksi: hapus]",
+        link: " [konfirmasi aksi: hubungkan]",
+        plan: " [konfirmasi aksi: jalankan rencana]",
+      } as Record<string, string>)[conversationDecision.currentOperation] || " [konfirmasi aksi: jalankan]"
+    : "";
+  const routingText = rawRoutingText + confirmationRoutingHint;
   const temporalGuard = buildTemporalGuard(effectiveMessage, continuityReference, timezone);
   const preferredMode = typeof profilePreferences.defaultAiMode === "string" ? profilePreferences.defaultAiMode : "assistant";
   const preferredStyle = typeof profilePreferences.aiResponseStyle === "string" ? profilePreferences.aiResponseStyle : "normal";
