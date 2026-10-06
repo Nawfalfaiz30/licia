@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { isMutationToolName } from "./agent";
 
 const TABLES: Record<string, string> = {
-  create_task: "tasks", create_task_with_subtasks: "tasks", update_task: "tasks", delete_task: "tasks",
+  create_task: "tasks", create_task_with_subtasks: "tasks", update_task: "tasks", update_tasks_bulk: "tasks", delete_task: "tasks", delete_tasks_bulk: "tasks",
   create_task_from_inbox: "tasks", create_task_from_note: "tasks", create_task_from_project: "tasks", create_task_from_goal: "tasks", create_task_from_schedule: "tasks",
   create_note: "brain_dump_notes", update_note: "brain_dump_notes", delete_note: "brain_dump_notes",
   create_project: "projects", update_project: "projects", delete_project: "projects",
@@ -21,7 +21,11 @@ const TABLES: Record<string, string> = {
   create_vault_item: "vault_items", update_vault_item: "vault_items", delete_vault_item: "vault_items",
   log_decision: "decisions", update_decision: "decisions", delete_decision: "decisions",
   log_reading: "reading_logs", update_reading: "reading_logs", delete_reading: "reading_logs",
-  mark_notification_read: "notification_events", transfer_money: "account_transfers",
+  mark_notification_read: "notification_events", delete_notification: "notification_events", transfer_money: "account_transfers",
+  create_account: "accounts", update_account: "accounts", delete_account: "accounts",
+  log_pomodoro_session: "pomodoro_sessions", delete_pomodoro_session: "pomodoro_sessions",
+  capture_inbox_item: "smart_inbox_items",
+  checkin_habit: "habit_checkins",
   create_skill: "skills", update_skill: "skills", delete_skill: "skills",
 };
 
@@ -29,7 +33,7 @@ function findId(result: any) {
   if (!result || typeof result !== "object") return null;
   if (typeof result.deleted === "string") return { id: result.deleted, deleted: true };
   if (result.deleted && typeof result.deleted === "object" && typeof result.deleted.id === "string") return { id: result.deleted.id, deleted: true };
-  const candidates = ["record", "task", "note", "project", "goal", "reminder", "schedule", "subscription", "watcher", "dependency", "expense", "income", "budget", "habit", "automation", "memory", "vault", "decision", "skill", "notification", "transfer", "block", "created", "updated"];
+  const candidates = ["record", "task", "note", "project", "goal", "reminder", "schedule", "subscription", "watcher", "dependency", "expense", "income", "budget", "habit", "checkin", "automation", "memory", "vault", "decision", "skill", "notification", "transfer", "block", "session", "item", "log", "created", "updated"];
   for (const key of candidates) {
     const value = result[key];
     if (value && typeof value === "object" && typeof value.id === "string") return { id: value.id, deleted: false };
@@ -91,6 +95,17 @@ function expectedMatchesRow(tool: string, args: Record<string, any>, row: Record
     if (args.start_time && String(row.start_time).slice(0, 8) !== String(args.start_time).slice(0, 8)) return false;
     if (args.end_time && String(row.end_time).slice(0, 8) !== String(args.end_time).slice(0, 8)) return false;
   }
+  if (tool === "update_task" || tool === "update_tasks_bulk") {
+    if (args.status && normalize(row.status) !== normalize(args.status)) return false;
+    if (args.priority && normalize(row.priority) !== normalize(args.priority)) return false;
+    if (args.due_at && !sameTimestamp(row.due_at, args.due_at)) return false;
+  }
+  if (tool === "capture_inbox_item") {
+    if (args.content && normalize(row.content) !== normalize(args.content)) return false;
+  }
+  if (tool === "mark_notification_read") {
+    if (!row.read_at) return false;
+  }
   return true;
 }
 
@@ -102,6 +117,82 @@ export async function verifyMutationResult(
   expectedArgs: Record<string, any> = {},
 ) {
   if (!isMutationToolName(tool) || !result?.ok) return { ...result, verified: false, verification: "tool-contract" };
+
+  if (tool === "manage_life_os_data" && String(result?.operation || "") === "read") {
+    return result;
+  }
+
+  if (tool === "manage_life_os_data") {
+    const entityType = String(result?.entity_type || expectedArgs?.entity_type || "").trim();
+    const table = MANAGED_ENTITY_TABLES[entityType];
+    const target = findId(result);
+    if (!table || !target) return { ...result, verified: false, verification: "unmapped-managed-mutation" };
+    try {
+      const { data, error } = await supabase.from(table).select("*").eq("user_id", userId).eq("id", target.id).maybeSingle();
+      if (error) return { ...result, verified: false, verification: "query-error", verificationError: error.message };
+      const exists = Boolean(data);
+      const deleted = String(result?.operation || "") === "delete";
+      const verified = deleted ? !exists : exists && managedValuesMatch(data as Record<string, any>, expectedArgs?.data);
+      return { ...result, verified, verification: verified ? "database-readback-managed" : "database-mismatch" };
+    } catch (error) {
+      return { ...result, verified: false, verification: "query-error", verificationError: error instanceof Error ? error.message : "verification failed" };
+    }
+  }
+
+  if (tool === "update_tasks_bulk" && Array.isArray(result.updated)) {
+    const ids = result.updated.map((x: any) => x?.id).filter(Boolean);
+    if (!ids.length) return { ...result, verified: false, verification: "database-mismatch" };
+    const { data, error } = await supabase.from("tasks").select("id,status,priority,due_at").eq("user_id", userId).in("id", ids);
+    if (error) return { ...result, verified: false, verification: "query-error", verificationError: error.message };
+    const rows = data ?? [];
+    const byId = new Map(rows.map((row: any) => [String(row.id), row]));
+    const verified = rows.length === ids.length && ids.every((id: string) => {
+      const row = byId.get(String(id));
+      return Boolean(row) && expectedMatchesRow("update_tasks_bulk", expectedArgs, row);
+    });
+    return { ...result, verified, verification: verified ? "database-readback-batch-update" : "database-mismatch" };
+  }
+
+  if (tool === "delete_tasks_bulk" && Array.isArray(result.deleted)) {
+    const ids = result.deleted.map((x: any) => x?.id).filter(Boolean);
+    if (!ids.length) return { ...result, verified: false, verification: "database-mismatch" };
+    const { data, error } = await supabase.from("tasks").select("id").eq("user_id", userId).in("id", ids);
+    if (error) return { ...result, verified: false, verification: "query-error", verificationError: error.message };
+    const verified = (data ?? []).length === 0;
+    return { ...result, verified, verification: verified ? "database-readback-bulk-delete" : "database-mismatch" };
+  }
+
+  if (tool === "uncheckin_habit") {
+    const habitId = String(expectedArgs?.habit_id || "").trim();
+    const checkinDate = String(result?.uncheckedDate || expectedArgs?.checkin_date || "").trim();
+    if (!habitId || !checkinDate) return { ...result, verified: false, verification: "missing-verification-target" };
+    const { data, error } = await supabase.from("habit_checkins").select("id").eq("user_id", userId).eq("habit_id", habitId).eq("checkin_date", checkinDate).maybeSingle();
+    if (error) return { ...result, verified: false, verification: "query-error", verificationError: error.message };
+    return { ...result, verified: !data, verification: !data ? "database-readback-uncheckin" : "database-mismatch" };
+  }
+
+  if (tool === "log_health") {
+    const kind = String(expectedArgs?.kind || "").trim();
+    const healthTables: Record<string, string> = { hydration: "hydration_logs", caffeine: "caffeine_logs", meal: "meal_logs", medication: "medication_logs", energy: "fatigue_logs" };
+    const table = healthTables[kind];
+    const target = findId(result);
+    if (!table || !target) return { ...result, verified: false, verification: "missing-health-result-id" };
+    const { data, error } = await supabase.from(table).select("*").eq("user_id", userId).eq("id", target.id).maybeSingle();
+    if (error) return { ...result, verified: false, verification: "query-error", verificationError: error.message };
+    const verified = Boolean(data);
+    return { ...result, verified, verification: verified ? "database-readback-health" : "database-mismatch" };
+  }
+
+  if (tool === "delete_health_log") {
+    const kind = String(expectedArgs?.kind || "").trim();
+    const healthTables: Record<string, string> = { hydration: "hydration_logs", caffeine: "caffeine_logs", meal: "meal_logs", medication: "medication_logs", energy: "fatigue_logs" };
+    const table = healthTables[kind];
+    const target = findId(result);
+    if (!table || !target) return { ...result, verified: false, verification: "missing-health-delete-target" };
+    const { data, error } = await supabase.from(table).select("id").eq("user_id", userId).eq("id", target.id).maybeSingle();
+    if (error) return { ...result, verified: false, verification: "query-error", verificationError: error.message };
+    return { ...result, verified: !data, verification: !data ? "database-readback-health-delete" : "database-mismatch" };
+  }
 
   if (tool === "create_daily_schedule" && Array.isArray(result.blocks)) {
     const ids = result.blocks.map((x: any) => x?.id).filter(Boolean).slice(0, 30);
@@ -148,6 +239,28 @@ export async function verifyMutationResult(
     const verified = result.ok === true && expectedDeleted > 0 && remaining === 0;
     return { ...result, remaining, verified, verification: verified ? "database-readback-bulk-delete" : "database-mismatch" };
   }
+
+const MANAGED_ENTITY_TABLES: Record<string, string> = {
+  area: "areas", expense: "expenses", income: "incomes", account: "accounts", budget: "budgets", subscription: "subscriptions",
+  journal_entry: "journal_entries", relation: "social_relations", interaction: "social_interactions", sleep: "sleep_logs",
+  hydration: "hydration_logs", caffeine: "caffeine_logs", meal: "meal_logs", medication: "medication_logs", fatigue: "fatigue_logs",
+  movement: "movement_logs", health_metric: "health_metrics", daily_plan: "daily_plans", reading_session: "reading_sessions",
+  milestone: "goal_milestones", link: "life_os_entity_links", notification_event: "notification_events", smart_inbox_item: "smart_inbox_items",
+  memory: "user_memories",
+};
+
+function managedValuesMatch(row: Record<string, any>, data: unknown) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+  for (const [key, expected] of Object.entries(data as Record<string, unknown>)) {
+    const actual = row[key];
+    if (Array.isArray(expected) || (expected && typeof expected === "object")) {
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) return false;
+    } else if (actual != expected) {
+      return false;
+    }
+  }
+  return true;
+}
 
   const table = TABLES[tool];
   const target = findId(result);
