@@ -896,6 +896,55 @@ async function handleChatPost(req: Request) {
   const wantsActionContext = (aiProactive && (domains.includes("overview") || selectedMode !== "assistant" || /\b(analisis|review|evaluasi|rencanakan|prioritas|apa yang harus|saran)\b/i.test(effectiveMessage))) || /\b(buat|buatkan|jadwalkan|atur|rapikan|ubah|hapus|selesaikan|kerjakan|jalankan|ingatkan)\b/i.test(effectiveMessage);
   const connectedContext = await buildConnectedContext(supabase, user.id, timezone, domains);
   const actionableContext = wantsActionContext ? await buildActionableContext(supabase, user.id, timezone) : { signals: [] as any[] };
+
+  const taskCompletionFollowUp = conversationDecision.state.activeDomain === "tasks"
+    && conversationDecision.state.activeEntityIds.length > 0
+    && /\b(?:tandai|centang|selesaikan|jadikan)\b/i.test(String(message || ""))
+    && /\b(?:selesai|done)\b/i.test(String(message || ""))
+    && (
+      conversationDecision.state.activeEntityIds.length === 1
+      || /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(String(message || ""))
+      || /\b(tandai|centang|selesaikan)\b[\s\S]{0,100}\b(keduanya|kedua|dua tugas|semua|selesai)\b/i.test(recentAssistantText)
+    );
+
+  if (taskCompletionFollowUp) {
+    const taskIds = conversationDecision.state.activeEntityIds.slice(0, 30);
+    const execution = await executeAndVerifyMutation({
+      supabase,
+      userId: user.id,
+      timezone,
+      tool: "update_tasks_bulk",
+      args: { task_ids: taskIds, status: "done" },
+    });
+    const updatedCount = Number(execution.result?.count || 0);
+    const reply = execution.applied
+      ? String(updatedCount) + " tugas sudah ditandai selesai dan diverifikasi."
+      : "Aku belum berhasil menandai tugas-tugas itu sebagai selesai. " + String(execution.result?.error || execution.result?.message || "Perubahan tidak terverifikasi.");
+    const returnedState: ConversationState = {
+      ...conversationDecision.state,
+      activeDomain: "tasks",
+      activeOperation: "update",
+      activeEntityIds: taskIds,
+      lastActionTools: execution.applied ? ["update_tasks_bulk"] : conversationDecision.state.lastActionTools,
+      updatedAt: Date.now(),
+    };
+    await saveServerChatTurn(supabase, user.id, "assistant", reply, typeof turnId === "string" ? turnId.slice(0, 120) : null, { domains: ["tasks"], mode: selectedMode, verifiedActions: execution.applied ? 1 : 0 });
+    return NextResponse.json({
+      reply,
+      turnMessages: [{ role: "assistant", content: reply }],
+      domains: ["tasks"],
+      pendingAction: null,
+      pendingActionId: null,
+      pendingBulkAction: null,
+      pendingScheduleImport: pendingScheduleImport || null,
+      visionUsed: Boolean(imageDataUrl),
+      mode: selectedMode,
+      actions: [{ tool: "update_tasks_bulk", ok: execution.applied, label: actionLabel("update_tasks_bulk", execution.result) }],
+      undoActionId: execution.undoActionId || null,
+      conversationState: returnedState,
+      aiMeta: { model: selectedAiModel, contextMode: aiReadAllData ? "all" : "smart", domains: ["tasks"], deniedDomains, temporalGuard: temporalGuard.active, topicSwitched: conversationDecision.topicSwitched, followUp: true, activeDomain: "tasks", operation: "update", mutationExpected: true, verifiedActions: execution.applied ? 1 : 0 },
+    });
+  }
   const intelligenceContext = [
     connectedContext,
     "CONTEXT SINYAL V30 (urut prioritas, gunakan sebagai petunjuk terverifikasi; detail tetap ambil lewat tool):",
