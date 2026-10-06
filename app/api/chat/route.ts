@@ -491,7 +491,7 @@ function plannedActionDetail(tool: string, rawArgs: string) {
 
 function actionLabel(tool:string, result:any){
   const map:Record<string,string>={
-    create_task_with_subtasks:"Membuat tugas",create_task_from_schedule:"Mengubah agenda menjadi tugas",create_task_from_inbox:"Mengubah Inbox menjadi tugas",create_task_from_note:"Mengubah catatan menjadi tugas",create_task_from_project:"Mengubah project menjadi tugas",create_task_from_goal:"Mengubah target menjadi tugas",create_schedule_from_task:"Menjadwalkan tugas",create_schedule_reminder:"Membuat pengingat agenda",update_task:"Memperbarui tugas",delete_task:"Menghapus tugas",delete_tasks_bulk:"Menghapus banyak tugas",create_project:"Membuat proyek",update_project:"Memperbarui proyek",delete_project:"Menghapus proyek",create_goal:"Membuat target",update_goal:"Memperbarui target",delete_goal:"Menghapus target",log_expense:"Mencatat pengeluaran",update_expense:"Memperbarui pengeluaran",delete_expense:"Menghapus pengeluaran",log_income:"Mencatat pemasukan",update_income:"Memperbarui pemasukan",delete_income:"Menghapus pemasukan",create_daily_schedule:"Membuat agenda",update_schedule_block:"Memperbarui agenda",delete_schedule_block:"Menghapus agenda", delete_schedule_blocks_bulk:"Menghapus banyak agenda",capture_inbox_item:"Menambahkan ke Inbox",create_note:"Membuat catatan",update_note:"Memperbarui catatan",delete_note:"Menghapus catatan",save_memory:"Menyimpan memory",delete_memory:"Menghapus memory",create_vault_item:"Membuat item Vault",update_vault_item:"Memperbarui Vault",delete_vault_item:"Menghapus item Vault",create_automation:"Membuat otomasi",update_automation:"Memperbarui otomasi",delete_automation:"Menghapus otomasi",create_habit:"Membuat rutinitas",update_habit:"Memperbarui rutinitas",checkin_habit:"Check-in rutinitas",create_subscription:"Membuat langganan",update_subscription:"Memperbarui langganan",delete_subscription:"Menghapus langganan",log_decision:"Mencatat keputusan",update_decision:"Memperbarui keputusan",delete_decision:"Menghapus keputusan",create_skill:"Membuat skill",update_skill:"Memperbarui skill",delete_skill:"Menghapus skill",create_reminder:"Membuat pengingat",update_reminder:"Memperbarui pengingat",delete_reminder:"Membatalkan pengingat",get_notifications:"Membaca riwayat notifikasi",delete_notification:"Menghapus notifikasi",delete_all_notifications:"Menghapus semua riwayat notifikasi",mark_notification_read:"Menandai notifikasi terbaca",delete_all_reminders:"Menghapus semua pengingat"};
+    create_task_with_subtasks:"Membuat tugas",create_task_from_schedule:"Mengubah agenda menjadi tugas",create_task_from_inbox:"Mengubah Inbox menjadi tugas",create_task_from_note:"Mengubah catatan menjadi tugas",create_task_from_project:"Mengubah project menjadi tugas",create_task_from_goal:"Mengubah target menjadi tugas",create_schedule_from_task:"Menjadwalkan tugas",create_schedule_reminder:"Membuat pengingat agenda",update_task:"Memperbarui tugas",update_tasks_bulk:"Memperbarui beberapa tugas",delete_task:"Menghapus tugas",delete_tasks_bulk:"Menghapus banyak tugas",create_project:"Membuat proyek",update_project:"Memperbarui proyek",delete_project:"Menghapus proyek",create_goal:"Membuat target",update_goal:"Memperbarui target",delete_goal:"Menghapus target",log_expense:"Mencatat pengeluaran",update_expense:"Memperbarui pengeluaran",delete_expense:"Menghapus pengeluaran",log_income:"Mencatat pemasukan",update_income:"Memperbarui pemasukan",delete_income:"Menghapus pemasukan",create_daily_schedule:"Membuat agenda",update_schedule_block:"Memperbarui agenda",delete_schedule_block:"Menghapus agenda", delete_schedule_blocks_bulk:"Menghapus banyak agenda",capture_inbox_item:"Menambahkan ke Inbox",create_note:"Membuat catatan",update_note:"Memperbarui catatan",delete_note:"Menghapus catatan",save_memory:"Menyimpan memory",delete_memory:"Menghapus memory",create_vault_item:"Membuat item Vault",update_vault_item:"Memperbarui Vault",delete_vault_item:"Menghapus item Vault",create_automation:"Membuat otomasi",update_automation:"Memperbarui otomasi",delete_automation:"Menghapus otomasi",create_habit:"Membuat rutinitas",update_habit:"Memperbarui rutinitas",checkin_habit:"Check-in rutinitas",create_subscription:"Membuat langganan",update_subscription:"Memperbarui langganan",delete_subscription:"Menghapus langganan",log_decision:"Mencatat keputusan",update_decision:"Memperbarui keputusan",delete_decision:"Menghapus keputusan",create_skill:"Membuat skill",update_skill:"Memperbarui skill",delete_skill:"Menghapus skill",create_reminder:"Membuat pengingat",update_reminder:"Memperbarui pengingat",delete_reminder:"Membatalkan pengingat",get_notifications:"Membaca riwayat notifikasi",delete_notification:"Menghapus notifikasi",delete_all_notifications:"Menghapus semua riwayat notifikasi",mark_notification_read:"Menandai notifikasi terbaca",delete_all_reminders:"Menghapus semua pengingat"};
   return map[tool] || (result?.ok ? "Menjalankan aksi" : "Gagal menjalankan aksi");
 }
 
@@ -1253,11 +1253,30 @@ async function handleChatPost(req: Request) {
 
     for (const call of msg.tool_calls) {
       if (finalText) break;
+      const rawToolName = String(call.function.name || "");
+      let executionToolName = rawToolName;
       let parsedArgs: any = {}; try { parsedArgs = JSON.parse(call.function.arguments || "{}"); } catch {}
-      parsedArgs = await enrichFinanceAccountArgs(supabase, user.id, call.function.name, parsedArgs, message || "");
+      parsedArgs = await enrichFinanceAccountArgs(supabase, user.id, rawToolName, parsedArgs, message || "");
+
+      const activeEntityIds = conversationDecision.state.activeEntityIds;
+      const activeDomain = conversationDecision.state.activeDomain;
+      const completionRequest = /\b(?:tandai|centang|selesaikan|sudah selesai|jadikan selesai)\b/i.test(String(effectiveMessage || ""));
+      const multiTaskReference = activeDomain === "tasks" && activeEntityIds.length > 1 && (
+        completionRequest
+        || /\b(keduanya|kedua|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(String(message || ""))
+        || /\b(keduanya|kedua|dua tugas|semua tugas|selesai)\b/i.test(recentAssistantText)
+      );
+      if (rawToolName === "update_task" && !parsedArgs.task_id && activeDomain === "tasks" && activeEntityIds.length === 1) {
+        parsedArgs.task_id = activeEntityIds[0];
+      } else if (rawToolName === "update_task" && !parsedArgs.task_id && multiTaskReference) {
+        executionToolName = "update_tasks_bulk";
+        parsedArgs = { ...parsedArgs, task_ids: activeEntityIds.slice(0, 30), status: parsedArgs.status || (completionRequest ? "done" : undefined) };
+        if (!parsedArgs.status) delete parsedArgs.status;
+      }
+
       call.function.arguments = JSON.stringify(parsedArgs);
       const normalizedArgs = JSON.stringify(parsedArgs, Object.keys(parsedArgs).sort());
-      const signature = `${call.function.name}:${normalizedArgs}`;
+      const signature = `${executionToolName}:${normalizedArgs}`;
       const cachedExecution = toolExecutionCache.get(signature);
       if (cachedExecution) {
         if (cachedExecution.lastOk) {
@@ -1307,16 +1326,16 @@ async function handleChatPost(req: Request) {
           continue;
         }
       }
-      const beforeSnapshot = await captureBeforeAction(supabase, user.id, call.function.name, parsedArgs);
+      const beforeSnapshot = await captureBeforeAction(supabase, user.id, executionToolName, parsedArgs);
       let result: any;
-      emitProgress({ type: "tool_start", name: call.function.name, label: toolLabel(call.function.name) });
-      try { result = await executeTool({ supabase, userId: user.id, timezone }, call.function.name, call.function.arguments); } catch (error) {
-        console.error(`Licia tool ${call.function.name} failed`, error);
+      emitProgress({ type: "tool_start", name: executionToolName, label: toolLabel(executionToolName) });
+      try { result = await executeTool({ supabase, userId: user.id, timezone }, executionToolName, call.function.arguments); } catch (error) {
+        console.error(`Licia tool ${executionToolName} failed`, error);
         result = { ok: false, error: "Aksi gagal karena kesalahan sistem. Tidak ada asumsi perubahan yang dibuat.", retryable: true };
       }
-      emitProgress({ type: "tool_done", name: call.function.name, ok: Boolean(result?.ok) });
-      if (result?.ok && isMutationToolName(call.function.name)) {
-        result = await verifyMutationResult(supabase, user.id, call.function.name, result);
+      emitProgress({ type: "tool_done", name: executionToolName, ok: Boolean(result?.ok) });
+      if (result?.ok && isMutationToolName(executionToolName)) {
+        result = await verifyMutationResult(supabase, user.id, executionToolName, result, parsedArgs);
         result.confidence = agentConfidenceFromResult(result);
       }
       result = decorateTemporalToolResult(result, timezone);
@@ -1324,33 +1343,33 @@ async function handleChatPost(req: Request) {
       if (referencedIdsFromResult.length) {
         latestActionEntityIds = uniqueStrings([...latestActionEntityIds, ...referencedIdsFromResult]).slice(-12);
       }
-      const applied = mutationApplied(call.function.name, result);
+      const applied = mutationApplied(executionToolName, result);
       const awaitingConfirmation = result?.status === "single_candidate_needs_confirmation" || result?.status === "multiple_candidates";
       toolExecutionCache.set(signature, { result, attempts: awaitingConfirmation ? 999 : (cachedExecution?.attempts ?? 0) + 1, lastOk: applied });
-      if (isMutationToolName(call.function.name)) {
-        performedActions.push({ tool: call.function.name, ok: applied, label: actionLabel(call.function.name, result) });
+      if (isMutationToolName(executionToolName)) {
+        performedActions.push({ tool: executionToolName, ok: applied, label: actionLabel(executionToolName, result) });
         if (applied) latestActionEntityIds = uniqueStrings([...latestActionEntityIds, ...collectResultEntityIds(result)]).slice(-12);
       }
       if (applied) {
         invalidateUserContext(user.id);
-        const undo = buildUndoRecord(call.function.name, result, beforeSnapshot);
+        const undo = buildUndoRecord(executionToolName, result, beforeSnapshot);
         if (undo?.undoable && undo.record_ids?.length) {
           const saved = await supabase.from("ai_action_history").insert({
-            user_id: user.id, batch_id: actionBatchId, tool_name: call.function.name, label: actionLabel(call.function.name, result), operation: undo.operation, table_name: undo.table_name, record_ids: undo.record_ids, before_snapshot: undo.before_snapshot, after_snapshot: undo.after_snapshot, undoable: true,
+            user_id: user.id, batch_id: actionBatchId, tool_name: executionToolName, label: actionLabel(executionToolName, result), operation: undo.operation, table_name: undo.table_name, record_ids: undo.record_ids, before_snapshot: undo.before_snapshot, after_snapshot: undo.after_snapshot, undoable: true,
           }).select("id").single();
           if (!saved.error && saved.data?.id) undoActionIds.push(saved.data.id);
         }
       }
-      const confirmField = DELETE_CONFIRM_FIELDS[call.function.name];
+      const confirmField = DELETE_CONFIRM_FIELDS[executionToolName];
       if (confirmField && result?.status === "single_candidate_needs_confirmation" && result?.candidate?.id) {
         const pendingArgs = { [confirmField]: String(result.candidate.id) };
-        const pendingPreview = `Konfirmasi ${actionLabel(call.function.name, result)} untuk ${labelCandidate(result.candidate)}.`;
+        const pendingPreview = `Konfirmasi ${actionLabel(executionToolName, result)} untuk ${labelCandidate(result.candidate)}.`;
         const pendingExpiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
         const savedPending = await supabase.from("ai_pending_actions").insert({
           user_id: user.id,
           user_text: String(message || "").slice(0, 1200),
           timezone,
-          actions: [{ tool: call.function.name, arguments: JSON.stringify(pendingArgs), preview: pendingPreview }],
+          actions: [{ tool: executionToolName, arguments: JSON.stringify(pendingArgs), preview: pendingPreview }],
           status: "pending",
           expires_at: pendingExpiry,
         }).select("id,created_at,expires_at,actions").single();
@@ -1374,7 +1393,7 @@ async function handleChatPost(req: Request) {
             confidence_reason: "Target tunggal sudah ditemukan; target final disimpan di server dan menunggu konfirmasi eksplisit.",
             evidence: [{ sourceType: "pending_action", sourceId: String(result.candidate.id), label: labelCandidate(result.candidate), detail: pendingPreview }],
             risk: "destructive",
-            actions: [{ tool: call.function.name, arguments: JSON.stringify(pendingArgs), preview: pendingPreview }],
+            actions: [{ tool: executionToolName, arguments: JSON.stringify(pendingArgs), preview: pendingPreview }],
             result: { pendingActionId: pendingId },
             expires_at: pendingExpiry,
           });
@@ -1387,9 +1406,9 @@ async function handleChatPost(req: Request) {
       await supabase.from("ai_function_call_logs").insert({
         user_id: user.id,
         raw_user_text: message?.trim() || (imageDataUrl ? "[gambar]" : ""),
-        function_name: call.function.name,
+        function_name: executionToolName,
         arguments: call.function.arguments,
-        status: isMutationToolName(call.function.name) ? (applied ? "success" : "error") : (result?.ok ? "success" : "error"),
+        status: isMutationToolName(executionToolName) ? (applied ? "success" : "error") : (result?.ok ? "success" : "error"),
       });
       const toolMsg: RawMsg = { role: "tool", tool_call_id: call.id, content: JSON.stringify(compactToolResult(result)) ?? "{}" };
       messages.push(toolMsg);
