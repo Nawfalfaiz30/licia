@@ -44,6 +44,11 @@ assert(tools.includes('name: "update_tasks_bulk"') && tools.includes("case \"upd
 assert(tools.includes('name: "get_life_graph"') && tools.includes("case \"get_life_graph\""), "Life Graph tooling missing");
 assert(tools.includes("due_on") && tools.includes("due_from") && tools.includes("due_to") && tools.includes("due_after"), "task bulk scope fields missing");
 assert(route.includes("resolveActionScope") && route.includes("taskScope"), "action scope enforcement missing");
+assert(route.includes("currentTaskScope") && route.includes("state.activeScope") && route.includes("activeTaskScope"), "task scope inheritance missing");
+assert(route.includes("explicitMultiTaskReference") && route.includes("inheritedScopeArgs"), "bulk task guard must require explicit target or inherited scope");
+assert(route.includes("due_on: activeTaskScope.fromDate") && route.includes("due_after: activeTaskScope.toDate"), "active task scope must constrain model-generated bulk updates");
+assert(actionUndo.includes("verifyRestoredAction") && actionUndo.includes("Status task belum kembali"), "undo must verify restored task state");
+assert(fs.readFileSync(path.join(root, "tests/actionScope.test.ts"), "utf8").includes("setelah hari ini collapse to today") && fs.readFileSync(path.join(root, "tests/actionScope.test.ts"), "utf8").includes("sebelum hari ini collapse to today"), "relative scope regression tests missing");
 assert(route.includes("conversationalUndoIntent") && route.includes("undoActionGroup"), "conversational undo missing");
 assert(verify.includes("MANAGED_ENTITY_TABLES") && verify.includes("database-readback-managed"), "managed CRUD verification missing");
 assert(fs.existsSync(path.join(root, "tests/actionScope.test.ts")), "action scope unit test file missing");
