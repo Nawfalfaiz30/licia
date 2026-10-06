@@ -420,6 +420,22 @@ export const toolDefs: ToolDef[] = [
   {
     type: "function",
     function: {
+      name: "get_life_graph",
+      description: "Buka satu entity Life OS beserta relasi terdekat yang nyata, secara ringkas. Gunakan saat pengguna meminta hubungan antar task/project/goal/agenda/focus atau ingin memahami satu entity lintas modul. Wajib memakai UUID nyata.",
+      parameters: {
+        type: "object",
+        properties: {
+          entity_type: { type: "string", enum: ["task","project","goal","schedule","note","inbox","habit","subscription","account","expense","income","memory","decision","reading"] },
+          entity_id: { type: "string", description: "UUID nyata dari hasil tool baca/search." },
+          depth: { type: "number", description: "1 atau 2; default 1. Depth 2 hanya untuk relasi penting, tetap ringkas." },
+        },
+        required: ["entity_type","entity_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_life_module_data",
       description: "Baca detail modul Life OS tertentu ketika snapshot ringkas belum cukup. Gunakan hanya modul yang relevan dan tetap verifikasi hasil sebelum mengambil kesimpulan.",
       parameters: {
@@ -2111,6 +2127,109 @@ async function createTaskFromSchedule(ctx: HandlerCtx, args: any) {
     return { ok: false, error: linkError.message };
   }
   return { ok: true, task, schedule: block, linked: true };
+}
+
+async function getLifeGraph(ctx: HandlerCtx, args: any) {
+  const entityType = String(args?.entity_type || "").trim();
+  const entityId = String(args?.entity_id || "").trim();
+  const depth = Math.min(2, Math.max(1, Number(args?.depth || 1)));
+  if (!entityId || !isUuid(entityId)) return { ok: false, code: "INVALID_ENTITY_ID", error: "entity_id wajib berupa UUID nyata." };
+
+  const baseConfig: Record<string, { table: string; select: string }> = {
+    task: { table: "tasks", select: "id,title,status,priority,due_at,description,project_id,area_id" },
+    project: { table: "projects", select: "id,name,status,target_date,goal_id" },
+    goal: { table: "goals", select: "id,title,status,progress,target_date,next_step" },
+    schedule: { table: "schedule_blocks", select: "id,title,block_date,start_time,end_time,location,task_id,project_id" },
+    note: { table: "brain_dump_notes", select: "id,title,content,tags,pinned,updated_at" },
+    inbox: { table: "smart_inbox_items", select: "id,content,kind,status,linked_task_id,linked_note_id,created_at" },
+    habit: { table: "habits", select: "id,name,target_per_week,goal_id" },
+    subscription: { table: "subscriptions", select: "id,name,amount,billing_cycle,next_billing_date,active" },
+    account: { table: "accounts", select: "id,name,starting_balance,account_type,is_default" },
+    expense: { table: "expenses", select: "id,amount,category,note,occurred_at,account_id" },
+    income: { table: "incomes", select: "id,amount,source,note,occurred_at,account_id" },
+    memory: { table: "user_memories", select: "id,category,memory_key,memory_value,enabled,updated_at" },
+    decision: { table: "decisions", select: "id,title,decision,review_date,outcome,updated_at" },
+    reading: { table: "reading_logs", select: "id,title,status,progress,rating,updated_at" },
+  };
+  const config = baseConfig[entityType];
+  if (!config) return { ok: false, error: "Entity type tidak didukung oleh Life Graph." };
+
+  const { data: root, error: rootError } = await ctx.supabase.from(config.table).select(config.select).eq("user_id", ctx.userId).eq("id", entityId).maybeSingle();
+  if (rootError) return { ok: false, error: rootError.message };
+  if (!root) return { ok: false, status: "not_found", error: "Entity tidak ditemukan." };
+
+  const graph: Record<string, unknown> = { entity: { type: entityType, data: root }, relations: [] as unknown[] };
+  const relations: any[] = [];
+  const push = (type: string, data: unknown) => { if (Array.isArray(data) ? data.length : data) relations.push({ type, data }); };
+
+  if (entityType === "task") {
+    if (root.project_id) {
+      const { data } = await ctx.supabase.from("projects").select("id,name,status,target_date,goal_id").eq("user_id", ctx.userId).eq("id", root.project_id).maybeSingle();
+      push("project", data);
+      if (depth >= 2 && data?.goal_id) {
+        const { data: goal } = await ctx.supabase.from("goals").select("id,title,status,progress,target_date,next_step").eq("user_id", ctx.userId).eq("id", data.goal_id).maybeSingle();
+        push("goal", goal);
+      }
+    }
+    const [schedules, focus, subtasks] = await Promise.all([
+      ctx.supabase.from("schedule_blocks").select("id,title,block_date,start_time,end_time,project_id").eq("user_id", ctx.userId).eq("task_id", entityId).order("block_date", { ascending: true }).limit(4),
+      ctx.supabase.from("pomodoro_sessions").select("id,focus_minutes,started_at,completed").eq("user_id", ctx.userId).eq("task_id", entityId).order("started_at", { ascending: false }).limit(6),
+      ctx.supabase.from("subtasks").select("id,title,status").eq("user_id", ctx.userId).eq("task_id", entityId).limit(12),
+    ]);
+    push("schedule", schedules.data); push("focus", focus.data); push("subtasks", subtasks.data);
+  } else if (entityType === "project") {
+    if (root.goal_id) {
+      const { data } = await ctx.supabase.from("goals").select("id,title,status,progress,target_date,next_step").eq("user_id", ctx.userId).eq("id", root.goal_id).maybeSingle();
+      push("goal", data);
+    }
+    const [tasks, schedules] = await Promise.all([
+      ctx.supabase.from("tasks").select("id,title,status,priority,due_at,project_id").eq("user_id", ctx.userId).eq("project_id", entityId).order("due_at", { ascending: true, nullsFirst: false }).limit(12),
+      ctx.supabase.from("schedule_blocks").select("id,title,block_date,start_time,end_time,task_id").eq("user_id", ctx.userId).eq("project_id", entityId).order("block_date", { ascending: true }).limit(8),
+    ]);
+    push("tasks", tasks.data); push("schedule", schedules.data);
+  } else if (entityType === "goal") {
+    const [projects, milestones] = await Promise.all([
+      ctx.supabase.from("projects").select("id,name,status,target_date,goal_id").eq("user_id", ctx.userId).eq("goal_id", entityId).limit(8),
+      ctx.supabase.from("goal_milestones").select("id,title,status,target_date,position").eq("user_id", ctx.userId).eq("goal_id", entityId).order("position", { ascending: true }).limit(12),
+    ]);
+    push("projects", projects.data); push("milestones", milestones.data);
+    if (depth >= 2 && projects.data?.length) {
+      const projectIds = projects.data.map((project: any) => project.id).filter(isUuid);
+      if (projectIds.length) {
+        const { data: tasks } = await ctx.supabase.from("tasks").select("id,title,status,priority,due_at,project_id").eq("user_id", ctx.userId).in("project_id", projectIds).order("due_at", { ascending: true, nullsFirst: false }).limit(20);
+        push("tasks", tasks);
+      }
+    }
+  } else if (entityType === "schedule") {
+    if (root.task_id) {
+      const { data } = await ctx.supabase.from("tasks").select("id,title,status,priority,due_at,project_id").eq("user_id", ctx.userId).eq("id", root.task_id).maybeSingle();
+      push("task", data);
+    }
+    if (root.project_id) {
+      const { data } = await ctx.supabase.from("projects").select("id,name,status,target_date,goal_id").eq("user_id", ctx.userId).eq("id", root.project_id).maybeSingle();
+      push("project", data);
+    }
+    const { data: reminders } = await ctx.supabase.from("reminders").select("id,title,remind_at,status,enabled,offset_minutes").eq("user_id", ctx.userId).eq("target_type", "schedule").eq("target_id", entityId).limit(6);
+    push("reminders", reminders);
+  } else if (entityType === "inbox") {
+    if (root.linked_task_id) {
+      const { data } = await ctx.supabase.from("tasks").select("id,title,status,priority,due_at,project_id").eq("user_id", ctx.userId).eq("id", root.linked_task_id).maybeSingle();
+      push("task", data);
+    }
+    if (root.linked_note_id) {
+      const { data } = await ctx.supabase.from("brain_dump_notes").select("id,title,content,tags,updated_at").eq("user_id", ctx.userId).eq("id", root.linked_note_id).maybeSingle();
+      push("note", data);
+    }
+  } else if (entityType === "habit" && root.goal_id) {
+    const { data } = await ctx.supabase.from("goals").select("id,title,status,progress,target_date,next_step").eq("user_id", ctx.userId).eq("id", root.goal_id).maybeSingle();
+    push("goal", data);
+  } else if ((entityType === "expense" || entityType === "income") && root.account_id) {
+    const { data } = await ctx.supabase.from("accounts").select("id,name,account_type,is_default").eq("user_id", ctx.userId).eq("id", root.account_id).maybeSingle();
+    push("account", data);
+  }
+
+  graph.relations = relations;
+  return { ok: true, depth, graph };
 }
 
 async function getLifeModuleData(ctx: HandlerCtx, args: any) {
@@ -4678,6 +4797,8 @@ export async function executeTool(
       return deleteAllNotifications(ctx, args);
     case "mark_notification_read":
       return markNotificationRead(ctx, args);
+    case "get_life_graph":
+      return getLifeGraph(ctx, args);
     case "get_life_module_data":
       return getLifeModuleData(ctx, args);
     case "manage_life_os_data":
