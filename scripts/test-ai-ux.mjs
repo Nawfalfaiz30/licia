@@ -37,7 +37,7 @@ assert(tools.includes("due_on") && tools.includes("due_from") && tools.includes(
 assert(route.includes("resolveActionScope") && route.includes("taskScope"), "action scope enforcement missing");
 assert(route.includes("conversationalUndoIntent") && route.includes("undoActionGroup"), "conversational undo missing");
 assert(verify.includes("MANAGED_ENTITY_TABLES") && verify.includes("database-readback-managed"), "managed CRUD verification missing");
-assert(fs.existsSync(path.join(root, "lib/ai/actionScope.test.ts")), "action scope unit test file missing");
+assert(fs.existsSync(path.join(root, "tests/actionScope.test.ts")), "action scope unit test file missing");
 assert(routing.includes("tandai|centang|selesaikan"), "completion verbs are not routed as update mutations");
 assert(verify.includes('update_tasks_bulk: "tasks"') && verify.includes('capture_inbox_item: "smart_inbox_items"'), "CRUD verification map incomplete");
 assert(tools.includes("INVALID_ENTITY_ID") && tools.includes("expenseId"), "invalid UUID guard missing for expense update");
