@@ -2254,7 +2254,7 @@ async function getAccounts(ctx: HandlerCtx) {
   if (accountResult.error) {
     const legacy = await ctx.supabase.from("accounts").select("id,name,starting_balance,account_type,is_default,created_at").eq("user_id", ctx.userId).order("is_default", { ascending: false }).order("created_at", { ascending: true });
     if (legacy.error) return { ok: false, error: legacy.error.message };
-    accounts = legacy.data;
+    accounts = legacy.data ?? [];
   }
   const incomes = incomeResult.data;
   const expenses = expenseResult.data;
