@@ -142,7 +142,7 @@ async function getAccountBalance(ctx: HandlerCtx, accountId: string) {
     ctx.supabase.from("account_transfers").select("amount").eq("user_id", ctx.userId).eq("to_account_id", accountId),
     ctx.supabase.from("account_transfers").select("amount").eq("user_id", ctx.userId).eq("from_account_id", accountId),
   ]);
-  let account = accountResult.data;
+  let account: any = accountResult.data;
   if (accountResult.error) {
     const legacy = await ctx.supabase.from("accounts").select("id,name,starting_balance,account_type,is_default").eq("id", accountId).eq("user_id", ctx.userId).maybeSingle();
     account = legacy.data;
@@ -2250,7 +2250,7 @@ async function getAccounts(ctx: HandlerCtx) {
     ctx.supabase.from("expenses").select("amount,account_id").eq("user_id", ctx.userId).not("account_id", "is", null),
     ctx.supabase.from("account_transfers").select("amount,from_account_id,to_account_id").eq("user_id", ctx.userId),
   ]);
-  let accounts = accountResult.data;
+  let accounts: any[] = accountResult.data ?? [];
   if (accountResult.error) {
     const legacy = await ctx.supabase.from("accounts").select("id,name,starting_balance,account_type,is_default,created_at").eq("user_id", ctx.userId).order("is_default", { ascending: false }).order("created_at", { ascending: true });
     if (legacy.error) return { ok: false, error: legacy.error.message };
@@ -2357,7 +2357,7 @@ async function getNetWorth(ctx: HandlerCtx) {
     ctx.supabase.from("incomes").select("amount").eq("user_id", ctx.userId),
     ctx.supabase.from("expenses").select("amount").eq("user_id", ctx.userId),
   ]);
-  let accounts = accountResult.data;
+  let accounts: any[] = accountResult.data ?? [];
   if (accountResult.error) {
     const legacy = await ctx.supabase.from("accounts").select("starting_balance").eq("user_id", ctx.userId);
     accounts = legacy.data;
