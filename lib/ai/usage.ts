@@ -24,11 +24,29 @@ export function dailyTokenLimit(): number {
 
 export async function getDailyTokenUsage(supabase: SupabaseClient, userId: string): Promise<number> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const pageSize = 1000;
+  let offset = 0;
+  let total = 0;
   try {
-    const { data } = await supabase.from("ai_usage_events").select("total_tokens").eq("user_id", userId).gte("created_at", since).limit(5000);
-    return (data ?? []).reduce((sum: number, row: { total_tokens?: number | null }) => sum + Number(row.total_tokens || 0), 0);
-  } catch {
-    return 0; // gagal membaca kuota tidak boleh memblokir pengguna
+    while (true) {
+      const { data, error } = await supabase
+        .from("ai_usage_events")
+        .select("id,total_tokens")
+        .eq("user_id", userId)
+        .gte("created_at", since)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + pageSize - 1);
+      if (error) throw error;
+      const rows = data ?? [];
+      total += rows.reduce((sum: number, row: { total_tokens?: number | null }) => sum + Number(row.total_tokens || 0), 0);
+      if (rows.length < pageSize) return total;
+      offset += pageSize;
+      if (offset >= 100_000) return Number.MAX_SAFE_INTEGER;
+    }
+  } catch (error) {
+    console.warn("Licia AI usage quota read failed", error);
+    return Number.MAX_SAFE_INTEGER;
   }
 }
 

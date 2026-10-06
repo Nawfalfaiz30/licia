@@ -482,6 +482,14 @@ Schema bootstrap V30 + V31:
 supabase/schema_all_v30.sql
 ```
 
+Stabilization migration terbaru:
+
+```text
+supabase/schema_v39_stabilization.sql
+```
+
+> Setelah deploy kode stabilization, terapkan migration V39 di Supabase SQL Editor sebelum mengaktifkan jalur transfer atomik.
+
 Core intelligence migration:
 
 ```text
@@ -556,6 +564,8 @@ http://localhost:3000
 ---
 
 # 🔐 Environment Variables
+
+> **Security:** `.env.local` hanya untuk mesin/deployment environment dan tidak boleh di-commit. Jika credential rahasia pernah masuk Git, segera rotate credential tersebut dan hapus secret dari branch aktif.
 
 Buat:
 

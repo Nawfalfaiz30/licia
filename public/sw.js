@@ -1,8 +1,8 @@
-const CACHE = 'licia-v49-3-pwa-r1';
+const CACHE = 'licia-v57-pwa-r2';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/licia-avatar.png'];
 const DB_NAME = 'licia-pwa';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const ACTIONS = 'offline_actions';
 const CONFLICTS = 'sync_conflicts';
 

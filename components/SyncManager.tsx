@@ -71,7 +71,7 @@ export function SyncManager() {
     window.dispatchEvent(new CustomEvent("licia:sync-status", { detail: { state: "syncing" } }));
     try {
       const id = getDeviceId();
-      await fetch("/api/sync/register-device", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ deviceId: id, deviceName: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? "Licia Mobile" : "Licia Desktop", platform: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile-web" : "desktop-web", appVersion: "0.35.0" }) });
+      await fetch("/api/sync/register-device", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ deviceId: id, deviceName: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? "Licia Mobile" : "Licia Desktop", platform: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile-web" : "desktop-web", appVersion: APP_VERSION }) });
       const saved = Number(localStorage.getItem(CURSOR_KEY) || 0);
       cursorRef.current = Number.isFinite(saved) ? saved : 0;
       // Bootstrap account-level settings only for a fresh device. Existing devices

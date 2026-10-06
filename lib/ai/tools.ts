@@ -2240,7 +2240,7 @@ async function getLifeGraph(ctx: HandlerCtx, args: any) {
 }
 
 async function getLifeModuleData(ctx: HandlerCtx, args: any) {
-  const module = String(args.module || "").trim();
+  const moduleName = String(args.module || "").trim();
   const limit = Math.min(30, Math.max(1, Number(args.limit) || 12));
   const keyword = String(args.keyword || "").trim();
   const like = keyword ? `%${keyword.replace(/[%_]/g, "\\$&" )}%` : null;
@@ -2249,50 +2249,50 @@ async function getLifeModuleData(ctx: HandlerCtx, args: any) {
       let query: any = ctx.supabase.from(table).select(select).eq("user_id", ctx.userId);
       return query;
     };
-    if (module === "inbox") {
+    if (moduleName === "inbox") {
       let query = q("smart_inbox_items", "id,content,kind,status,ai_suggestion,linked_task_id,linked_note_id,created_at,processed_at");
       if (keyword) query = query.ilike("content", like);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(limit);
       if (error) return { ok: false, error: error.message };
-      return { ok: true, module, items: data ?? [] };
+      return { ok: true, module: moduleName, items: data ?? [] };
     }
-    if (module === "journal") {
+    if (moduleName === "journal") {
       let query = q("journal_entries", "id,mood_score,content,created_at");
       if (keyword) query = query.ilike("content", like);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(limit);
       if (error) return { ok: false, error: error.message };
-      return { ok: true, module, items: data ?? [] };
+      return { ok: true, module: moduleName, items: data ?? [] };
     }
-    if (module === "relations") {
+    if (moduleName === "relations") {
       let query = q("social_relations", "id,contact_name,importance,contact_frequency_days,birthday,notes,created_at");
       if (keyword) query = query.ilike("contact_name", like);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(limit);
       if (error) return { ok: false, error: error.message };
-      return { ok: true, module, items: data ?? [] };
+      return { ok: true, module: moduleName, items: data ?? [] };
     }
-    if (module === "interactions") {
+    if (moduleName === "interactions") {
       const { data, error } = await q("social_interactions", "id,relation_id,note,occurred_at").order("occurred_at", { ascending: false }).limit(limit);
       if (error) return { ok: false, error: error.message };
-      return { ok: true, module, items: data ?? [] };
+      return { ok: true, module: moduleName, items: data ?? [] };
     }
-    if (module === "anime") {
+    if (moduleName === "anime") {
       let query = q("anime_watchlist", "id,title,status,watched_episodes,total_episodes,score,broadcast_day_wib,broadcast_time_wib,updated_at");
       if (keyword) query = query.ilike("title", like);
       const { data, error } = await query.order("updated_at", { ascending: false }).limit(limit);
       if (error) return { ok: false, error: error.message };
-      return { ok: true, module, items: data ?? [] };
+      return { ok: true, module: moduleName, items: data ?? [] };
     }
-    if (module === "reading_sessions") {
+    if (moduleName === "reading_sessions") {
       const { data, error } = await q("reading_sessions", "id,reading_id,minutes,pages_read,note,started_at,created_at").order("started_at", { ascending: false }).limit(limit);
       if (error) return { ok: false, error: error.message };
-      return { ok: true, module, items: data ?? [] };
+      return { ok: true, module: moduleName, items: data ?? [] };
     }
-    if (module === "habits") {
+    if (moduleName === "habits") {
       const { data, error } = await q("habits", "id,name,target_per_week,icon,created_at").order("created_at", { ascending: false }).limit(limit);
       if (error) return { ok: false, error: error.message };
-      return { ok: true, module, items: data ?? [] };
+      return { ok: true, module: moduleName, items: data ?? [] };
     }
-    if (module === "health") {
+    if (moduleName === "health") {
       const [sleep, hydration, caffeine, meals, medication, fatigue, movement, metrics] = await Promise.all([
         q("sleep_logs", "id,sleep_start,sleep_end,quality,created_at").order("sleep_end", { ascending: false }).limit(5),
         q("hydration_logs", "id,amount_ml,logged_at").order("logged_at", { ascending: false }).limit(8),
@@ -2303,9 +2303,9 @@ async function getLifeModuleData(ctx: HandlerCtx, args: any) {
         q("movement_logs", "id,activity,duration_minutes,intensity,note,logged_at").order("logged_at", { ascending: false }).limit(8),
         q("health_metrics", "id,weight_kg,systolic,diastolic,resting_hr,note,measured_at").order("measured_at", { ascending: false }).limit(5),
       ]);
-      return { ok: true, module, items: { sleep: sleep.data ?? [], hydration: hydration.data ?? [], caffeine: caffeine.data ?? [], meals: meals.data ?? [], medication: medication.data ?? [], fatigue: fatigue.data ?? [], movement: movement.data ?? [], metrics: metrics.data ?? [] } };
+      return { ok: true, module: moduleName, items: { sleep: sleep.data ?? [], hydration: hydration.data ?? [], caffeine: caffeine.data ?? [], meals: meals.data ?? [], medication: medication.data ?? [], fatigue: fatigue.data ?? [], movement: movement.data ?? [], metrics: metrics.data ?? [] } };
     }
-    if (module === "finance") {
+    if (moduleName === "finance") {
       const [expenses, incomes, accounts, transfers, budgets, subscriptions] = await Promise.all([
         q("expenses", "id,amount,category,note,occurred_at,account_id").order("occurred_at", { ascending: false }).limit(limit),
         q("incomes", "id,amount,source,note,occurred_at,account_id").order("occurred_at", { ascending: false }).limit(limit),
@@ -2314,9 +2314,9 @@ async function getLifeModuleData(ctx: HandlerCtx, args: any) {
         q("budgets", "id,category,limit_amount,period,created_at").order("created_at", { ascending: false }).limit(limit),
         q("subscriptions", "id,name,amount,billing_cycle,next_billing_date,category,active").order("next_billing_date", { ascending: true }).limit(limit),
       ]);
-      return { ok: true, module, items: { expenses: expenses.data ?? [], incomes: incomes.data ?? [], accounts: accounts.data ?? [], transfers: transfers.data ?? [], budgets: budgets.data ?? [], subscriptions: subscriptions.data ?? [] } };
+      return { ok: true, module: moduleName, items: { expenses: expenses.data ?? [], incomes: incomes.data ?? [], accounts: accounts.data ?? [], transfers: transfers.data ?? [], budgets: budgets.data ?? [], subscriptions: subscriptions.data ?? [] } };
     }
-    if (module === "productivity") {
+    if (moduleName === "productivity") {
       const [tasks, schedule, projects, goals, pomodoro, milestones] = await Promise.all([
         q("tasks", "id,title,status,priority,due_at,estimated_minutes,project_id,area_id").order("due_at", { ascending: true, nullsFirst: false }).limit(limit),
         q("schedule_blocks", "id,title,block_date,start_time,end_time,location,description,task_id,project_id").order("block_date", { ascending: true }).order("start_time", { ascending: true }).limit(limit),
@@ -2325,7 +2325,7 @@ async function getLifeModuleData(ctx: HandlerCtx, args: any) {
         q("pomodoro_sessions", "id,task_id,focus_minutes,started_at,completed").order("started_at", { ascending: false }).limit(limit),
         q("goal_milestones", "id,goal_id,title,status,target_date,position").order("position", { ascending: true }).limit(limit),
       ]);
-      return { ok: true, module, items: { tasks: tasks.data ?? [], schedule: schedule.data ?? [], projects: projects.data ?? [], goals: goals.data ?? [], pomodoro: pomodoro.data ?? [], milestones: milestones.data ?? [] } };
+      return { ok: true, module: moduleName, items: { tasks: tasks.data ?? [], schedule: schedule.data ?? [], projects: projects.data ?? [], goals: goals.data ?? [], pomodoro: pomodoro.data ?? [], milestones: milestones.data ?? [] } };
     }
     return { ok: false, error: "Modul tidak didukung." };
   } catch (error) {
@@ -4033,26 +4033,26 @@ async function transferMoney(ctx: HandlerCtx, args: any) {
   if (!from.account?.id || !to.account?.id) return { ok: false, error: "Sumber dan tujuan transfer wajib ditentukan." };
   if (from.account.id === to.account.id) return { ok: false, error: "Dompet sumber dan tujuan harus berbeda." };
 
-  const balance = await getAccountBalance(ctx, from.account.id);
-  if (!balance) return { ok: false, error: "Dompet sumber tidak ditemukan." };
-  if (Number(balance.current_balance) < amount) return { ok: false, status: "insufficient_funds", error: `Saldo ${from.account.name} tidak cukup. Saldo saat ini ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(balance.current_balance))}.` };
+  const occurredAt = ensureTimezoneOffset(args.occurred_at, ctx.timezone) ?? new Date().toISOString();
+  const { data, error } = await ctx.supabase.rpc("licia_transfer_money", {
+    p_from_account_id: from.account.id,
+    p_to_account_id: to.account.id,
+    p_amount: amount,
+    p_note: args.note ?? null,
+    p_occurred_at: occurredAt,
+  });
+  if (error) {
+    if (/saldo dompet sumber tidak cukup|insufficient_funds/i.test(error.message)) {
+      return { ok: false, status: "insufficient_funds", error: error.message };
+    }
+    return { ok: false, error: error.message };
+  }
 
-  const { data, error } = await ctx.supabase
-    .from("account_transfers")
-    .insert({
-      user_id: ctx.userId,
-      from_account_id: from.account.id,
-      to_account_id: to.account.id,
-      amount,
-      note: args.note ?? null,
-      occurred_at: ensureTimezoneOffset(args.occurred_at, ctx.timezone) ?? new Date().toISOString(),
-    })
-    .select()
-    .single();
-  if (error) return { ok: false, error: error.message };
-
-  const [fromBalance, toBalance] = await Promise.all([getAccountBalance(ctx, from.account.id), getAccountBalance(ctx, to.account.id)]);
-  return { ok: true, transfer: data, from_account: fromBalance, to_account: toBalance, message: `Transfer berhasil dari ${from.account.name} ke ${to.account.name}.` };
+  return {
+    ok: true,
+    ...(data as Record<string, unknown>),
+    message: `Transfer berhasil dari ${from.account.name} ke ${to.account.name}.`,
+  };
 }
 
 async function getAccountTransactions(ctx: HandlerCtx, args: any) {

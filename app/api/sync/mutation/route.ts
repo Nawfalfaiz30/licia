@@ -123,18 +123,6 @@ async function getServerChangedFields(
 }
 
 
-async function getAccountBalanceForMutation(supabase: any, userId: string, accountId: string) {
-  const [{ data: account }, { data: incomes }, { data: expenses }, { data: transfersIn }, { data: transfersOut }] = await Promise.all([
-    supabase.from("accounts").select("starting_balance").eq("id", accountId).eq("user_id", userId).maybeSingle(),
-    supabase.from("incomes").select("amount").eq("user_id", userId).eq("account_id", accountId),
-    supabase.from("expenses").select("amount").eq("user_id", userId).eq("account_id", accountId),
-    supabase.from("account_transfers").select("amount").eq("user_id", userId).eq("to_account_id", accountId),
-    supabase.from("account_transfers").select("amount").eq("user_id", userId).eq("from_account_id", accountId),
-  ]);
-  if (!account) return 0;
-  const sum = (rows: any[] | null | undefined) => (rows ?? []).reduce((n, row) => n + Number(row.amount || 0), 0);
-  return Number(account.starting_balance || 0) + sum(incomes) - sum(expenses) + sum(transfersIn) - sum(transfersOut);
-}
 
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req);
@@ -161,15 +149,21 @@ export async function POST(req: Request) {
   const supported = definition && ((operation === "create" && definition.create) || (operation === "update" && definition.update && entityId) || (operation === "delete" && definition.remove && entityId));
   if (!supported) return NextResponse.json({ error: "Mutation belum didukung untuk operasi ini." }, { status: 400 });
 
-  const { data: existing } = await admin.from("life_os_sync_mutations").select("mutation_id,status,response,error_message,created_at").eq("mutation_id", mutationId).eq("user_id", user.id).maybeSingle();
+  const { data: existing } = await admin.from("life_os_sync_mutations").select("mutation_id,status,response,error_message,created_at,updated_at").eq("mutation_id", mutationId).eq("user_id", user.id).maybeSingle();
   if (existing?.status === "done") return NextResponse.json({ ok: true, replayed: true, response: existing.response ?? null });
+  let reclaimed = false;
   if (existing?.status === "processing") {
-    const stale = Boolean(existing.created_at && Date.now() - new Date(existing.created_at).getTime() > 5 * 60_000);
-    if (!stale) return NextResponse.json({ ok: false, pending: true }, { status: 409 });
-    await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: "STALE_PROCESSING", completed_at: new Date().toISOString() });
+    const staleBefore = new Date(Date.now() - 5 * 60_000).toISOString();
+    const { data: claimed } = await admin.from("life_os_sync_mutations").update({ updated_at: new Date().toISOString() }).eq("mutation_id", mutationId).eq("user_id", user.id).eq("status", "processing").lt("updated_at", staleBefore).select("mutation_id").maybeSingle();
+    if (claimed?.mutation_id === mutationId) reclaimed = true;
+    else {
+      const { data: current } = await admin.from("life_os_sync_mutations").select("status,response").eq("mutation_id", mutationId).eq("user_id", user.id).maybeSingle();
+      if (current?.status === "done") return NextResponse.json({ ok: true, replayed: true, response: current.response ?? null });
+      return NextResponse.json({ ok: false, pending: true }, { status: 409 });
+    }
   }
 
-  const { error: claimError } = await admin.from("life_os_sync_mutations").insert({
+  const { error: claimError } = reclaimed ? { error: null } : await admin.from("life_os_sync_mutations").insert({
     mutation_id: mutationId,
     user_id: user.id,
     device_id: deviceId,
@@ -206,10 +200,19 @@ export async function POST(req: Request) {
         if (accountError) throw new Error(accountError.message);
         if ((ownedAccounts ?? []).length !== 2) throw new Error("Sumber dan tujuan transfer harus merupakan dompet milik pengguna.");
 
-        const balance = await getAccountBalanceForMutation(supabase, user.id, fromId);
-        if (balance < amount) throw new Error("Saldo dompet sumber tidak mencukupi.");
+        const { data: transferResult, error: transferError } = await supabase.rpc("licia_transfer_money", {
+          p_from_account_id: fromId,
+          p_to_account_id: toId,
+          p_amount: amount,
+          p_note: payload.note ?? null,
+          p_occurred_at: payload.occurred_at ? String(payload.occurred_at) : new Date().toISOString(),
+        });
+        if (transferError) throw new Error(transferError.message);
+        data = transferResult;
+        response = transferResult;
       }
-      const record = { ...(entityId ? { id: entityId } : {}), ...payload, user_id: user.id };
+      if (entityType !== "accountTransfer") {
+        const record = { ...(entityId ? { id: entityId } : {}), ...payload, user_id: user.id };
       const result = await supabase.from(definition.table).insert(record).select("*").single();
       if (result.error) throw new Error(result.error.message);
       data = result.data;

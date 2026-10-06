@@ -20,6 +20,12 @@ if(!sw.includes("push"))failures.push("service worker push listener missing");
 const push=fs.readFileSync(path.join(root,"lib/notifications/push.ts"),"utf8"), worker=fs.readFileSync(path.join(root,"scripts/reminder-worker.mjs"),"utf8");
 for(const token of ["VAPID_SUBJECT","SUPABASE_SERVICE_ROLE_KEY","LICIA_CRON_SECRET"])if(!push.includes(token))failures.push(`Push configuration guard missing ${token}`);
 if(!worker.includes("/api/reminders/dispatch"))failures.push("Reminder worker dispatcher call missing");
-const textFiles=[];function walk(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(["node_modules",".next",".git"].includes(ent.name))continue;const p=path.join(dir,ent.name);if(ent.isDirectory())walk(p);else if(/\.(ts|tsx|mjs|js|css|json|sql)$/.test(ent.name))textFiles.push(p)}}walk(root);
-for(const file of textFiles){const s=fs.readFileSync(file,"utf8");if(/\bsk-proj-[A-Za-z0-9_-]{20,}/.test(s)||/-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/.test(s))failures.push(`Possible secret in ${path.relative(root,file)}`);if(/localhost:3000|127\.0\.0\.1:3000/.test(s)&&!file.endsWith("preflight.mjs")&&!file.endsWith("healthcheck.mjs")&&!file.endsWith("audit.mjs")&&!file.endsWith("reminder-cron.mjs")&&!file.endsWith("reminder-worker.mjs"))failures.push(`Runtime localhost reference in ${path.relative(root,file)}`)}
+const textFiles=[];function walk(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(["node_modules",".next",".git"].includes(ent.name))continue;const p=path.join(dir,ent.name);if(ent.isDirectory())walk(p);else if(/\.(ts|tsx|mjs|js|css|json|sql)$/.test(ent.name)||ent.name.startsWith(".env"))textFiles.push(p)}}walk(root);
+for(const file of textFiles){
+  const s=fs.readFileSync(file,"utf8");
+  const relative=path.relative(root,file);
+  const secretPatterns=/\bsk-proj-[A-Za-z0-9_-]{20,}|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----|^VAPID_PRIVATE_KEY=(?!YOUR_)[A-Za-z0-9_-]{30,}|^SUPABASE_SERVICE_ROLE_KEY=(?!YOUR_).+|^OPENAI_API_KEY=(?!YOUR_|sk-your)[A-Za-z0-9_-]{20,}|^LICIA_CRON_SECRET=(?!YOUR_).{12,}/mi;
+  if(secretPatterns.test(s)) failures.push(`Possible secret in ${relative}`);
+  if(/localhost:3000|127\.0\.0\.1:3000/.test(s)&&!file.endsWith("preflight.mjs")&&!file.endsWith("healthcheck.mjs")&&!file.endsWith("audit.mjs")&&!file.endsWith("reminder-cron.mjs")&&!file.endsWith("reminder-worker.mjs"))failures.push(`Runtime localhost reference in ${relative}`);
+}
 if(failures.length){console.error(`Licia audit FAILED (${failures.length})`);for(const x of failures)console.error(`- ${x}`);process.exit(1)}console.log(`Licia audit OK — ${textFiles.length} text files scanned, ${required.length} core files present, no obvious runtime secrets/origin leaks.`);

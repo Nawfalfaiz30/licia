@@ -45,6 +45,7 @@ function loadEnvFiles(forcedNodeEnv) {
 }
 
 const isProd = process.env.NODE_ENV === "production" || process.argv.includes("--production");
+const isCiBuildOnly = isProd && process.env.CI === "true" && process.env.LICIA_BUILD_ONLY === "1";
 const loadedEnvFiles = loadEnvFiles(isProd ? "production" : undefined);
 const errors = [];
 const warnings = [];
@@ -107,7 +108,7 @@ if (isProd) {
 if (isProd && fs.existsSync("package.json")) {
   try { await import("web-push"); } catch { errors.push("Dependency web-push belum terpasang. Jalankan npm install setelah memperbarui source/package.json."); }
 }
-if (isProd) {
+if (isProd && !isCiBuildOnly) {
   const productionRequired = ["SUPABASE_SERVICE_ROLE_KEY","VAPID_SUBJECT","VAPID_PUBLIC_KEY","VAPID_PRIVATE_KEY","LICIA_CRON_SECRET"];
   for (const key of productionRequired) if (!process.env[key]?.trim()) errors.push(`${key} belum diisi. Jalur Web Push + reminder worker belum siap.`);
   const interval = Number(process.env.LICIA_REMINDER_WORKER_INTERVAL_MS || 60000);

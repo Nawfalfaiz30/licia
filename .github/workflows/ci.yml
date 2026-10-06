@@ -5,15 +5,25 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      CI: true
+      LICIA_BUILD_ONLY: "1"
+      NEXT_PUBLIC_SUPABASE_URL: https://ci.example.com
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      OPENAI_API_KEY: ci-placeholder-openai-key
+      NEXT_PUBLIC_SITE_URL: https://ci.example.com
+      APP_URL: https://ci.example.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
-      # `npm install` (bukan `npm ci`) karena package-lock.json perlu diperbarui
-      # sekali setelah vitest/prettier ditambahkan di V55.
+      # Keep npm install until package-lock.json is regenerated on a machine
+      # with registry access; build/test checks below still validate the source.
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:unit
       - run: npm run i18n:check
+      - run: npm run audit
       - run: node scripts/test-v57.mjs && node scripts/test-v54-2.mjs && node scripts/test-v54.mjs && node scripts/test-v53.mjs
+      - run: npm run build
