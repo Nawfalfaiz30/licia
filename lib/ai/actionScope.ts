@@ -32,10 +32,9 @@ export function resolveActionScope(message: string, now = new Date(), timezone =
   if (!text) return { kind: "none", label: "tanpa scope waktu", explicit: false };
   const today = dateStrInTimezone(now, timezone);
 
-  if (/\b(hari ini|today)\b/i.test(text)) {
-    const bounds = isoBounds(today, today, timezone);
-    return { kind: "day", label: "hari ini", fromDate: today, toDate: today, explicit: true, ...bounds };
-  }
+  // More specific relative scopes must be checked before the generic "hari ini"
+  // token, otherwise "setelah hari ini" / "sebelum hari ini" would be misread as
+  // a one-day scope.
   if (/\b(?:setelah|sesudah)\s+hari\s+ini\b|\bbesok\s+dan\s+seterusnya\b|\bsetelah\s+hari\s+ini\s+dan\s+seterusnya\b/i.test(text)) {
     const bounds = isoBounds(today, today, timezone);
     return { kind: "after", label: "setelah hari ini", fromDate: today, toDate: today, explicit: true, ...bounds };
@@ -44,6 +43,10 @@ export function resolveActionScope(message: string, now = new Date(), timezone =
     const yesterday = shiftDate(today, -1);
     const bounds = isoBounds(yesterday, yesterday, timezone);
     return { kind: "before", label: "sebelum hari ini", fromDate: yesterday, toDate: yesterday, explicit: true, ...bounds };
+  }
+  if (/\b(hari ini|today)\b/i.test(text)) {
+    const bounds = isoBounds(today, today, timezone);
+    return { kind: "day", label: "hari ini", fromDate: today, toDate: today, explicit: true, ...bounds };
   }
   if (/\b(lusa)\b/i.test(text)) {
     const date = shiftDate(today, 2);
