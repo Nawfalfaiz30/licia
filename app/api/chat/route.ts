@@ -24,6 +24,7 @@ import { LICIA_AGENT_POLICY, agentConfidenceFromResult, agentRiskForTool, isMuta
 import { buildVisionSchedulePrompt, normalizeVisionScheduleBlocks, weekdayFromDate, type VisionScheduleBlock } from "@/lib/ai/visionSchedule";
 import { verifyMutationResult } from "@/lib/v35/verify";
 import { buildConversationDecision, type ConversationState } from "@/lib/ai/conversationIntelligence";
+import { resolveActionScope } from "@/lib/ai/actionScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -901,60 +902,107 @@ async function handleChatPost(req: Request) {
   const actionableContext = wantsActionContext ? await buildActionableContext(supabase, user.id, timezone) : { signals: [] as any[] };
 
   const recentAssistantTaskCompletionProposal = /\b(?:tandai|selesaikan|centang|bereskan|complete)\b[\s\S]{0,120}\b(?:selesai|done|beres)\b/i.test(String(recentAssistantText || ""));
-  const taskCompletionConfirmation = isExplicitConfirmation(String(message || "")) && recentAssistantTaskCompletionProposal;
-  const taskCompletionFollowUp = conversationDecision.state.activeDomain === "tasks"
-    && conversationDecision.state.activeEntityIds.length > 0
-    && (
-      (
-        /\b(?:tandai|centang|selesaikan|jadikan|bereskan|complete)\b/i.test(String(message || ""))
-        && /\b(?:selesai|done|beres)\b/i.test(String(message || ""))
-      )
-      || taskCompletionConfirmation
-    )
-    && (
-      conversationDecision.state.activeEntityIds.length === 1
-      || /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(String(message || ""))
-      || taskCompletionConfirmation
-      || /\b(tandai|centang|selesaikan)\b[\s\S]{0,100}\b(keduanya|kedua|dua tugas|semua|selesai)\b/i.test(recentAssistantText)
-    );
+  const taskStatusProposal = /\b(?:tandai|selesaikan|centang|bereskan|kembalikan|pulihkan|urungkan)\b[\s\S]{0,180}\b(?:selesai|done|beres|belum\s+selesai|todo|pending)\b/i.test(String(recentAssistantText || ""));
+  const taskStatusFollowUp = domains.includes("tasks") && (
+    /\b(?:tandai|selesaikan|centang|bereskan|jadikan)\b/i.test(String(message || ""))
+    || (isExplicitConfirmation(String(message || "")) && (recentAssistantTaskCompletionProposal || taskStatusProposal))
+  );
 
-  if (taskCompletionFollowUp) {
-    const taskIds = conversationDecision.state.activeEntityIds.slice(0, 30);
-    const execution = await executeAndVerifyMutation({
-      supabase,
-      userId: user.id,
-      timezone,
-      tool: "update_tasks_bulk",
-      args: { task_ids: taskIds, status: "done" },
-    });
-    const updatedCount = Number(execution.result?.count || 0);
-    const reply = execution.applied
-      ? String(updatedCount) + " tugas sudah ditandai selesai dan diverifikasi."
-      : "Aku belum berhasil menandai tugas-tugas itu sebagai selesai. " + String(execution.result?.error || execution.result?.message || "Perubahan tidak terverifikasi.");
-    const returnedState: ConversationState = {
-      ...conversationDecision.state,
-      activeDomain: "tasks",
-      activeOperation: "update",
-      activeEntityIds: taskIds,
-      lastActionTools: execution.applied ? ["update_tasks_bulk"] : conversationDecision.state.lastActionTools,
-      updatedAt: Date.now(),
-    };
-    await saveServerChatTurn(supabase, user.id, "assistant", reply, typeof turnId === "string" ? turnId.slice(0, 120) : null, { domains: ["tasks"], mode: selectedMode, verifiedActions: execution.applied ? 1 : 0 });
-    return NextResponse.json({
-      reply,
-      turnMessages: [{ role: "assistant", content: reply }],
-      domains: ["tasks"],
-      pendingAction: null,
-      pendingActionId: null,
-      pendingBulkAction: null,
-      pendingScheduleImport: pendingScheduleImport || null,
-      visionUsed: Boolean(imageDataUrl),
-      mode: selectedMode,
-      actions: [{ tool: "update_tasks_bulk", ok: execution.applied, label: actionLabel("update_tasks_bulk", execution.result) }],
-      undoActionId: execution.undoActionId || null,
-      conversationState: returnedState,
-      aiMeta: { model: selectedAiModel, contextMode: aiReadAllData ? "all" : "smart", domains: ["tasks"], deniedDomains, temporalGuard: temporalGuard.active, topicSwitched: conversationDecision.topicSwitched, followUp: true, activeDomain: "tasks", operation: "update", mutationExpected: true, verifiedActions: execution.applied ? 1 : 0 },
-    });
+  function extractTaskTitlesFromText(text: string) {
+    return [...String(text || "").matchAll(/(?:^|\n)\s*(?:[-•*])\s*\*\*([^*\n]{2,160})\*\*/g)]
+      .map((match) => String(match[1]).trim())
+      .filter(Boolean)
+      .slice(0, 20);
+  }
+
+  const taskStatusSource = isExplicitConfirmation(String(message || "")) && taskStatusProposal
+    ? String(recentAssistantText || "")
+    : String(message || "");
+  const taskScope = resolveActionScope(taskStatusSource, new Date(clientNowIso || Date.now()), timezone);
+  const taskStatusTarget = /\b(?:belum\s+selesai|todo|pending|kembali(?:kan)?\s+ke\s+belum)\b/i.test(taskStatusSource)
+    ? "todo"
+    : "done";
+
+  if (taskStatusFollowUp) {
+    let taskIds: string[] = [];
+    const activeIds = conversationDecision.state.activeEntityIds.slice(0, 30);
+
+    if (taskScope.explicit && taskScope.fromIso && taskScope.toIso) {
+      let targetQuery = supabase
+        .from("tasks")
+        .select("id,title,status,due_at")
+        .eq("user_id", user.id);
+      if (taskStatusTarget === "done") targetQuery = targetQuery.neq("status", "done");
+      else targetQuery = targetQuery.eq("status", "done");
+      if (taskScope.kind === "after") targetQuery = targetQuery.gt("due_at", taskScope.toIso);
+      else if (taskScope.kind === "before") targetQuery = targetQuery.lte("due_at", taskScope.toIso);
+      else targetQuery = targetQuery.gte("due_at", taskScope.fromIso).lte("due_at", taskScope.toIso);
+      const { data: scopedTasks, error: scopedError } = await targetQuery.order("due_at", { ascending: true, nullsFirst: false }).limit(30);
+      if (scopedError) {
+        return NextResponse.json({ error: scopedError.message }, { status: 500 });
+      }
+      taskIds = (scopedTasks ?? []).map((row: any) => String(row.id)).filter(Boolean);
+    } else {
+      const pluralReference = /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(taskStatusSource);
+      const titles = pluralReference ? extractTaskTitlesFromText(recentAssistantText) : [];
+      if (titles.length) {
+        const byTitle = new Map<string, string>();
+        for (const title of titles) {
+          const { data } = await supabase
+            .from("tasks")
+            .select("id,title,status")
+            .eq("user_id", user.id)
+            .ilike("title", title)
+            .limit(5);
+          for (const row of data ?? []) {
+            if (String(row.title || "").trim().toLocaleLowerCase("id-ID") === title.toLocaleLowerCase("id-ID")) byTitle.set(String(row.id), String(row.id));
+          }
+        }
+        taskIds = [...byTitle.keys()].slice(0, 30);
+      } else if (activeIds.length === 1 || (pluralReference && activeIds.length <= 2)) {
+        taskIds = activeIds;
+      }
+    }
+
+    if (taskIds.length) {
+      const execution = await executeAndVerifyMutation({
+        supabase,
+        userId: user.id,
+        timezone,
+        tool: "update_tasks_bulk",
+        args: { task_ids: taskIds, status: taskStatusTarget },
+      });
+      const count = Number(execution.result?.count || 0);
+      const label = taskStatusTarget === "done" ? "ditandai selesai" : "dikembalikan menjadi belum selesai";
+      const reply = execution.applied
+        ? `${count} tugas berhasil ${label} dan sudah diverifikasi.`
+        : `Perubahan status belum berhasil diverifikasi. ${String(execution.result?.error || execution.result?.message || "Tidak ada perubahan yang terverifikasi.")}`;
+      const returnedState: ConversationState = {
+        ...conversationDecision.state,
+        activeDomain: "tasks",
+        activeOperation: "update",
+        activeEntityIds: taskIds,
+        activeScope: taskScope,
+        lastActionTools: execution.applied ? ["update_tasks_bulk"] : conversationDecision.state.lastActionTools,
+        updatedAt: Date.now(),
+      };
+      await saveServerChatTurn(supabase, user.id, "assistant", reply, typeof turnId === "string" ? turnId.slice(0, 120) : null, { domains: ["tasks"], mode: selectedMode, verifiedActions: execution.applied ? 1 : 0 });
+      return NextResponse.json({
+        reply,
+        turnMessages: [{ role: "assistant", content: reply }],
+        domains: ["tasks"],
+        pendingAction: null,
+        pendingActionId: null,
+        pendingBulkAction: null,
+        pendingScheduleImport: pendingScheduleImport || null,
+        visionUsed: Boolean(imageDataUrl),
+        mode: selectedMode,
+        actions: [{ tool: "update_tasks_bulk", ok: execution.applied, label: actionLabel("update_tasks_bulk", execution.result) }],
+        undoActionId: execution.undoActionId || null,
+        conversationState: returnedState,
+        aiMeta: { model: selectedAiModel, contextMode: aiReadAllData ? "all" : "smart", domains: ["tasks"], deniedDomains, temporalGuard: temporalGuard.active, topicSwitched: conversationDecision.topicSwitched, followUp: true, activeDomain: "tasks", operation: "update", mutationExpected: true, verifiedActions: execution.applied ? 1 : 0, actionScope: taskScope.label },
+      });
+    }
   }
   const intelligenceContext = [
     connectedContext,
