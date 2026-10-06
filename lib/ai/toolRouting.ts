@@ -113,10 +113,13 @@ export function selectToolDefs<T extends { function?: { name?: string } }>(defs:
   const names = new Set<string>();
   const wantsWrite = actionPattern.test(userText);
   if (capabilityPattern.test(userText)) names.add("get_life_os_capabilities");
-  const fallbackAllowed = !(wantsWrite && (
-    (scheduleIntent && domains.includes("calendar")) ||
-    (financeIntent && domains.includes("finance"))
-  ));
+  // Tool khusus tetap diprioritaskan, tetapi fallback jangan dimatikan bila
+  // pesan menunjuk entity yang memang belum punya CRUD khusus.
+  const specializedWriteRequested = domains
+    .filter((domain) => domain !== "all" && domain !== "overview")
+    .some((domain) => selectWriteNames(writeTools[domain] ?? [], userText).length > 0);
+  const fallbackEntityHint = /\b(?:sesi(?:\s+membaca|\s+baca|\s+reading)|reading\s+session|relasi|hubungan|interaksi|jurnal(?:\s+harian)?|milestone|titik\s+milestone|tidur|sleep|hidrasi|kafein|caffeine|makan|meal|obat|medication|kelelahan|fatigue|gerakan|movement|inbox|smart\s*inbox|memory|memori|daily\s+plan|rencana\s+harian)\b/i.test(userText);
+  const fallbackAllowed = !wantsWrite || !specializedWriteRequested || fallbackEntityHint || domains.includes("all");
   if (fallbackAllowed) names.add("manage_life_os_data");
   const cross = domains.includes("all") || /\b(hubungkan|jadikan .* tugas|dari .* kalender|dari .* agenda|pengingat|ingatkan|lintas modul|semua data)\b/i.test(userText);
   for (const domain of domains) {
