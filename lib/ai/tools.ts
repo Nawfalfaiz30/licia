@@ -2828,6 +2828,31 @@ async function updateTasksBulk(ctx: HandlerCtx, args: any) {
       error: "Sebagian target tugas sudah tidak tersedia. Tidak ada perubahan yang diterapkan.",
     };
   }
+
+  const targetDateMatches = (value: unknown, startIso?: string, endIso?: string) => {
+    if (!value) return false;
+    const timestamp = new Date(String(value)).getTime();
+    if (!Number.isFinite(timestamp)) return false;
+    if (startIso && timestamp < new Date(startIso).getTime()) return false;
+    if (endIso && timestamp > new Date(endIso).getTime()) return false;
+    return true;
+  };
+  const scopedTargets = (args.due_on || args.due_from || args.due_to || args.due_after) ? (existingTargets ?? []).filter((row: any) => {
+    if (args.due_on) {
+      const day = new Date(`${args.due_on}T12:00:00Z`);
+      return targetDateMatches(row.due_at, startOfDayIsoForTimezone(day, ctx.timezone), endOfDayIsoForTimezone(day, ctx.timezone));
+    }
+    if (args.due_after) {
+      const after = new Date(`${args.due_after}T12:00:00Z`);
+      return targetDateMatches(row.due_at, endOfDayIsoForTimezone(after, ctx.timezone), undefined) && new Date(String(row.due_at)).getTime() > new Date(endOfDayIsoForTimezone(after, ctx.timezone)).getTime();
+    }
+    const from = args.due_from ? startOfDayIsoForTimezone(new Date(`${args.due_from}T12:00:00Z`), ctx.timezone) : undefined;
+    const to = args.due_to ? endOfDayIsoForTimezone(new Date(`${args.due_to}T12:00:00Z`), ctx.timezone) : undefined;
+    return targetDateMatches(row.due_at, from, to);
+  }) : (existingTargets ?? []);
+  ids = scopedTargets.map((row: any) => String(row.id)).filter(isUuid);
+  if (!ids.length) return { ok: false, status: "scope_no_match", error: "Target yang diberikan tidak termasuk scope tanggal yang diminta. Tidak ada perubahan yang diterapkan." };
+  
   const patch: Record<string, any> = {};
   if (args.status) patch.status = args.status;
   if (args.priority) patch.priority = args.priority;
