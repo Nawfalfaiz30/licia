@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 // Core Life OS discovery tools intentionally remain available to the chat runtime.
-const AI_CORE_TOOL_NAMES = ["get_unified_life_snapshot", "get_life_module_data", "search_life_os"] as const;
+const AI_CORE_TOOL_NAMES = ["get_unified_life_snapshot", "get_life_module_data", "search_life_os", "get_life_os_capabilities"] as const;
 void AI_CORE_TOOL_NAMES;
 
 let openaiClient: OpenAI | null = null;
@@ -881,7 +881,7 @@ async function handleChatPost(req: Request) {
     const pendingBulkAction = saved.error ? null : { id: saved.data.id, expiresAt: saved.data.expires_at, actions: saved.data.actions, risk: "destructive", confidence: 0.99, requiresConfirmation: true };
     return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains: ["overview", "reminders"] as any, pendingAction: null, pendingBulkAction, pendingScheduleImport: pendingScheduleImport || null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: [], undoActionId: null });
   }
-  const wantsActionContext = aiProactive || /\b(buat|buatkan|jadwalkan|atur|rapikan|ubah|hapus|selesaikan|kerjakan|jalankan|ingatkan)\b/i.test(effectiveMessage);
+  const wantsActionContext = (aiProactive && (domains.includes("overview") || selectedMode !== "assistant" || /\b(analisis|review|evaluasi|rencanakan|prioritas|apa yang harus|saran)\b/i.test(effectiveMessage))) || /\b(buat|buatkan|jadwalkan|atur|rapikan|ubah|hapus|selesaikan|kerjakan|jalankan|ingatkan)\b/i.test(effectiveMessage);
   const connectedContext = await buildConnectedContext(supabase, user.id, timezone, domains);
   const actionableContext = wantsActionContext ? await buildActionableContext(supabase, user.id, timezone) : { signals: [] as any[] };
   const intelligenceContext = [
