@@ -374,7 +374,7 @@ export const toolDefs: ToolDef[] = [
         type: "object",
         properties: {
           operation: { type: "string", enum: ["read", "create", "update", "delete"] },
-          entity_type: { type: "string", enum: ["area","expense","income","account","budget","subscription","journal_entry","relation","interaction","sleep","hydration","caffeine","meal","medication","fatigue","movement","health_metric","daily_plan","reading_session","milestone","link","notification_event","daily_snapshot"] },
+          entity_type: { type: "string", enum: ["area","expense","income","account","budget","subscription","journal_entry","relation","interaction","sleep","hydration","caffeine","meal","medication","fatigue","movement","health_metric","daily_plan","reading_session","milestone","link","notification_event","smart_inbox_item","memory","daily_snapshot"] },
           entity_id: { type: "string" },
           filters: { type: "object", description: "Filter sederhana key=value untuk operasi read." },
           data: { type: "object", description: "Field yang ingin dibuat/diubah. Field berbahaya seperti user_id, version, created_at, updated_at tidak diterima." },
@@ -2208,6 +2208,8 @@ const AI_CRUD_DEFINITIONS: Record<string, { table: string; fields: string[]; rea
   milestone: { table: "goal_milestones", fields: ["goal_id","title","status","target_date","position"], sort: "position" },
   link: { table: "life_os_entity_links", fields: ["source_type","source_id","relation","target_type","target_id","confidence","metadata","created_by"], sort: "created_at" },
   notification_event: { table: "notification_events", fields: ["title","body","href","tone","source_type","source_id","scheduled_at","delivered_at","read_at"], sort: "created_at" },
+  smart_inbox_item: { table: "smart_inbox_items", fields: ["content","kind","status","ai_suggestion","linked_task_id","linked_note_id","processed_at"], sort: "created_at" },
+  memory: { table: "user_memories", fields: ["category","memory_key","memory_value","enabled","confidence","importance","last_confirmed_at","expires_at"], sort: "updated_at" },
   daily_snapshot: { table: "life_os_daily_snapshots", fields: [], readOnly: true, sort: "snapshot_date" },
 };
 
@@ -2218,6 +2220,8 @@ function normalizeAiCrudEntityType(value: unknown) {
     pemasukan: "income", pendapatan: "income", rekening: "account", dompet: "account",
     anggaran: "budget", langganan: "subscription", subscription: "subscription",
     jurnal: "journal_entry", catatan_jurnal: "journal_entry",
+    inbox: "smart_inbox_item", item_inbox: "smart_inbox_item", smart_inbox: "smart_inbox_item",
+    memori: "memory", user_memory: "memory",
   };
   return aliases[raw] || raw;
 }
