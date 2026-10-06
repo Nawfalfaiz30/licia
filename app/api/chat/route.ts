@@ -950,7 +950,12 @@ async function handleChatPost(req: Request) {
   const taskStatusSource = isExplicitConfirmation(String(message || "")) && taskStatusProposal
     ? String(recentAssistantText || "")
     : String(message || "");
-  const taskScope = resolveActionScope(taskStatusSource, new Date(clientNowIso || Date.now()), timezone);
+  const currentTaskScope = resolveActionScope(taskStatusSource, new Date(clientNowIso || Date.now()), timezone);
+  const taskScope = currentTaskScope.explicit
+    ? currentTaskScope
+    : (conversationDecision.followUp && conversationDecision.state.activeDomain === "tasks" && conversationDecision.state.activeScope?.explicit
+      ? conversationDecision.state.activeScope
+      : currentTaskScope);
   const taskStatusTarget = /\b(?:belum\s+selesai|todo|pending|kembali(?:kan)?\s+ke\s+belum)\b/i.test(taskStatusSource)
     ? "todo"
     : "done";
@@ -1401,17 +1406,32 @@ async function handleChatPost(req: Request) {
 
       const activeEntityIds = conversationDecision.state.activeEntityIds;
       const activeDomain = conversationDecision.state.activeDomain;
+      const activeTaskScope = activeDomain === "tasks" && conversationDecision.state.activeScope?.explicit
+        ? conversationDecision.state.activeScope
+        : null;
       const completionRequest = /\b(?:tandai|centang|selesaikan|sudah selesai|jadikan selesai)\b/i.test(String(effectiveMessage || ""));
+      const explicitMultiTaskReference = /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(String(message || ""))
+        || /\b(keduanya|kedua|dua tugas|semua tugas|selesai)\b/i.test(recentAssistantText);
       const multiTaskReference = activeDomain === "tasks" && activeEntityIds.length > 1 && (
-        completionRequest
-        || /\b(keduanya|kedua|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(String(message || ""))
-        || /\b(keduanya|kedua|dua tugas|semua tugas|selesai)\b/i.test(recentAssistantText)
+        Boolean(activeTaskScope)
+        || explicitMultiTaskReference
       );
       if (rawToolName === "update_task" && !parsedArgs.task_id && activeDomain === "tasks" && activeEntityIds.length === 1) {
         parsedArgs.task_id = activeEntityIds[0];
       } else if (rawToolName === "update_task" && !parsedArgs.task_id && multiTaskReference) {
         executionToolName = "update_tasks_bulk";
-        parsedArgs = { ...parsedArgs, task_ids: activeEntityIds.slice(0, 30), status: parsedArgs.status || (completionRequest ? "done" : undefined) };
+        const inheritedScopeArgs = activeTaskScope
+          ? activeTaskScope.kind === "day"
+            ? { due_on: activeTaskScope.fromDate }
+            : activeTaskScope.kind === "after"
+              ? { due_after: activeTaskScope.toDate }
+              : activeTaskScope.kind === "before"
+                ? { due_from: activeTaskScope.fromDate, due_to: activeTaskScope.toDate }
+                : activeTaskScope.kind === "range"
+                  ? { due_from: activeTaskScope.fromDate, due_to: activeTaskScope.toDate }
+                  : {}
+          : {};
+        parsedArgs = { ...parsedArgs, ...inheritedScopeArgs, task_ids: activeEntityIds.slice(0, 30), status: parsedArgs.status || (completionRequest ? "done" : undefined) };
         if (!parsedArgs.status) delete parsedArgs.status;
       }
 
