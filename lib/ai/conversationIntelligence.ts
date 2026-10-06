@@ -40,10 +40,10 @@ const DOMAIN_SET = new Set<AiDomain>([
   "notifications", "subscriptions", "journal", "relations", "overview", "all",
 ]);
 
-const mutationPattern = /\b(buat|buatkan|catat|simpan|tambah|tambahkan|masukkan|input|jadwalkan|ingatkan|log|check[-\s]?in|centang|tandai|ubah|edit|update|ganti|pindah|atur|hapus|delete|buang|hilangkan|arsipkan|hubungkan|jadikan|konversi|convert)\b/i;
+const mutationPattern = /\b(buat|buatkan|catat|simpan|tambah|tambahkan|masukkan|input|jadwalkan|ingatkan|log|check[-\s]?in|centang|tandai|ubah|edit|update|ganti|pindah|atur|hapus|delete|buang|hilangkan|arsipkan|hubungkan|jadikan|konversi|convert|kembalikan|pulihkan)\b/i;
 const deletePattern = /\b(hapus|delete|buang|hilangkan|hapuskan)\b/i;
 const createPattern = /\b(buat|buatkan|catat|simpan|tambah|tambahkan|masukkan|input|jadwalkan|ingatkan|log|check[-\s]?in)\b/i;
-const updatePattern = /\b(ubah|edit|update|ganti|pindah|atur|arsipkan|aktifkan|nonaktifkan|matikan|nyalakan|hubungkan|jadikan|konversi|convert|tandai|centang|selesaikan)\b/i;
+const updatePattern = /\b(ubah|edit|update|ganti|pindah|atur|arsipkan|aktifkan|nonaktifkan|matikan|nyalakan|hubungkan|jadikan|konversi|convert|tandai|centang|selesaikan|kembalikan|pulihkan)\b/i;
 const planPattern = /\b(rencanakan|susun|rapikan|prioritaskan|atur ulang|jadikan rencana|plan|planner)\b/i;
 const followUpPattern = /\b(yang tadi|yg tadi|tadi|itu|ini|yang itu|yang ini|seperti tadi|sama seperti|sebelumnya|lanjut|lanjutkan|ubah lagi|tambahkan lagi|tambahkan juga|hapus yang tadi|pindahkan yang tadi|catatannya|keterangannya|deskripsinya|judulnya|namanya|statusnya|kategorinya|jumlahnya|nominalnya|tanggalnya|waktunya|jamnya)\b/i;
 const shortFollowUpPattern = /^(iya|ya|oke|ok|siap|gas|lanjut|lanjutkan|buatkan|jalankan|terapkan|yang tadi|itu|ini|ubah|ganti|tambahkan|hapus|pindahkan|jamnya|tanggalknya|tanggalnya|namanya|jumlahnya|catatannya|keterangannya|deskripsinya|judulnya|statusnya|kategorinya|nominalnya|waktunya)\b/i;
