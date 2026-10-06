@@ -75,6 +75,36 @@ export async function undoActionRecord(supabase: SupabaseClient, userId: string,
   return { ok: false, error: "Jenis undo tidak didukung." };
 }
 
+async function verifyRestoredAction(supabase: SupabaseClient, userId: string, action: any) {
+  const ids = Array.isArray(action?.record_ids) ? action.record_ids.map(String).filter(Boolean) : [];
+  if (!ids.length) return { ok: false, error: "Aksi tidak memiliki record ID untuk diverifikasi." };
+  const { data, error } = await supabase.from(action.table_name).select("*").eq("user_id", userId).in("id", ids);
+  if (error) return { ok: false, error: error.message };
+  const rows = data ?? [];
+  if (action.operation === "create") {
+    return rows.length === 0 ? { ok: true } : { ok: false, error: "Rollback pembuatan belum terverifikasi karena record masih ada." };
+  }
+  if (rows.length !== ids.length) return { ok: false, error: "Rollback belum lengkap: sebagian record target tidak ditemukan setelah pemulihan." };
+  if (action.operation === "delete") return { ok: true };
+  if (action.operation === "update") {
+    const expectedRows = Array.isArray(action.before_snapshot?.rows) ? action.before_snapshot.rows : action.before_snapshot?.row ? [action.before_snapshot.row] : [];
+    const expectedById = new Map(expectedRows.map((row: any) => [String(row.id), row]));
+    if (action.table_name === "tasks") {
+      for (const row of rows) {
+        const expected = expectedById.get(String(row.id));
+        if (!expected) continue;
+        if (expected.status !== undefined && String(row.status) !== String(expected.status)) return { ok: false, error: "Status task belum kembali ke nilai semula." };
+        if (expected.priority !== undefined && String(row.priority ?? "") !== String(expected.priority ?? "")) return { ok: false, error: "Prioritas task belum kembali ke nilai semula." };
+        const expectedDue = expected.due_at == null ? null : new Date(String(expected.due_at)).getTime();
+        const actualDue = row.due_at == null ? null : new Date(String(row.due_at)).getTime();
+        if (expectedDue !== actualDue) return { ok: false, error: "Deadline task belum kembali ke nilai semula." };
+      }
+    }
+    return { ok: true };
+  }
+  return { ok: false, error: "Jenis undo tidak didukung untuk verifikasi." };
+}
+
 export async function undoActionGroup(supabase: SupabaseClient, userId: string, seed: any) {
   if (!seed?.id) return { ok: false, error: "Riwayat aksi tidak ditemukan." };
   if (!seed.undoable || seed.undone_at) return { ok: false, error: "Aksi ini sudah dibatalkan atau tidak dapat dipulihkan." };
@@ -87,8 +117,16 @@ export async function undoActionGroup(supabase: SupabaseClient, userId: string, 
   const results: Array<{ id: string; ok: boolean; label: string; error?: string }> = [];
   for (const action of actions) {
     const result = await undoActionRecord(supabase, userId, action);
-    results.push({ id: String(action.id), ok: result.ok, label: String(action.label || action.tool_name || "Perubahan"), ...(result.ok ? {} : { error: result.error }) });
-    if (!result.ok) break;
+    if (!result.ok) {
+      results.push({ id: String(action.id), ok: false, label: String(action.label || action.tool_name || "Perubahan"), error: result.error });
+      break;
+    }
+    const verified = await verifyRestoredAction(supabase, userId, action);
+    if (!verified.ok) {
+      results.push({ id: String(action.id), ok: false, label: String(action.label || action.tool_name || "Perubahan"), error: verified.error });
+      break;
+    }
+    results.push({ id: String(action.id), ok: true, label: String(action.label || action.tool_name || "Perubahan") });
     const mark = await supabase.from("ai_action_history").update({ undone_at: new Date().toISOString() }).eq("id", action.id).eq("user_id", userId).is("undone_at", null);
     if (mark.error) { results[results.length - 1].ok = false; results[results.length - 1].error = mark.error.message; break; }
   }
