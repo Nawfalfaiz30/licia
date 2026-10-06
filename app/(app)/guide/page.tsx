@@ -243,7 +243,7 @@ export default function GuidePage() {
                 {tr(item)}
                 <span
                   className={clsx(
-                    "rounded-full px-1.5 py-0.5 text-[9px]",
+                    "rounded-full px-1.5 py-0.5 text-2xs",
                     category === item ? "bg-white/15 text-white" : "bg-surface text-textMuted"
                   )}
                 >
@@ -286,7 +286,7 @@ export default function GuidePage() {
               >
                 <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent">
                   <Icon size={18} />
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-surface bg-bg px-1 text-[8px] font-bold text-textMuted">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-surface bg-bg px-1 text-2xs font-bold text-textMuted">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                 </span>
@@ -294,7 +294,7 @@ export default function GuidePage() {
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-1.5">
                     <span className="text-xs font-bold text-text sm:text-sm">{tr(item.title)}</span>
-                    <span className="rounded-full bg-bg px-2 py-0.5 text-[9px] font-bold text-textMuted">
+                    <span className="rounded-full bg-bg px-2 py-0.5 text-2xs font-bold text-textMuted">
                       {tr(item.category)}
                     </span>
                   </span>

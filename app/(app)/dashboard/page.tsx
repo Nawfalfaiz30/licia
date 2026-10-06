@@ -199,19 +199,19 @@ export default async function DashboardPage() {
     <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <Link href="/today" className="group flex min-h-[72px] items-center gap-2.5 rounded-2xl border border-accent/15 bg-accent/5 p-3 transition hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-sm">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><CalendarDays size={16}/></span>
-        <span className="min-w-0"><span className="block truncate text-xs font-bold text-text">{tr("Hari Ini")}</span><span className="mt-0.5 block truncate text-[10px] text-textMuted">{tr("Lihat ritme hari")}</span></span>
+        <span className="min-w-0"><span className="block truncate text-xs font-bold text-text">{tr("Hari Ini")}</span><span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Lihat ritme hari")}</span></span>
       </Link>
       <Link href="/plan" className="group flex min-h-[72px] items-center gap-2.5 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-sm">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bg text-accent"><ListChecks size={16}/></span>
-        <span className="min-w-0"><span className="block truncate text-xs font-bold text-text">{tr("Rencana")}</span><span className="mt-0.5 block truncate text-[10px] text-textMuted">{tr("Susun langkah")}</span></span>
+        <span className="min-w-0"><span className="block truncate text-xs font-bold text-text">{tr("Rencana")}</span><span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Susun langkah")}</span></span>
       </Link>
       <Link href="/capture" className="group flex min-h-[72px] items-center gap-2.5 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-sm">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bg text-accent"><Zap size={16}/></span>
-        <span className="min-w-0"><span className="block truncate text-xs font-bold text-text">{tr("Tangkap")}</span><span className="mt-0.5 block truncate text-[10px] text-textMuted">{tr("Simpan cepat")}</span></span>
+        <span className="min-w-0"><span className="block truncate text-xs font-bold text-text">{tr("Tangkap")}</span><span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Simpan cepat")}</span></span>
       </Link>
       <Link href="/search" className="group flex min-h-[72px] items-center gap-2.5 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-sm">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bg text-accent"><Search size={16}/></span>
-        <span className="min-w-0"><span className="block truncate text-xs font-bold text-text">{tr("Cari")}</span><span className="mt-0.5 block truncate text-[10px] text-textMuted">{tr("Temukan data")}</span></span>
+        <span className="min-w-0"><span className="block truncate text-xs font-bold text-text">{tr("Cari")}</span><span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Temukan data")}</span></span>
       </Link>
     </section>
 

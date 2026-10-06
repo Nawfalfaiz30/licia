@@ -70,7 +70,7 @@ export default function FinancePage(){
 <Card className="col-span-2 overflow-hidden p-4 sm:p-5">
   <div className="flex items-center justify-between gap-3">
     <div className="flex min-w-0 items-center gap-2"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><WalletCards size={16}/></span><span className="truncate text-xs text-textMuted">{trn("Total saldo dompet")}</span></div>
-    <span className={clsx("shrink-0 rounded-full px-2 py-1 text-[9px] font-bold",net<0?"bg-danger/10 text-danger":"bg-accent/10 text-accent")}>{net<0?trn("Minus"):trn("Tersedia")}</span>
+    <span className={clsx("shrink-0 rounded-full px-2 py-1 text-2xs font-bold",net<0?"bg-danger/10 text-danger":"bg-accent/10 text-accent")}>{net<0?trn("Minus"):trn("Tersedia")}</span>
   </div>
   <p className={clsx("mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.65rem,7vw,2.25rem)] leading-none tabular-nums",net<0?"text-danger":"text-text")}>{rupiah(net)}</p>
   <p className="mt-2 text-2xs leading-relaxed text-textMuted">{trn("Gabungan saldo semua dompet yang terhubung ke transaksi.")}</p>
@@ -78,16 +78,16 @@ export default function FinancePage(){
 <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
   <div className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success"><TrendingUp size={15}/></span><span className="min-w-0 text-xs leading-tight text-textMuted">{trn("Pemasukan bulan ini")}</span></div>
   <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.25rem,5.8vw,1.75rem)] leading-none text-success tabular-nums">{rupiah(monthIncome)}</p>
-  <p className="mt-2 text-[10px] text-textMuted">{trn("Uang masuk")}</p>
+  <p className="mt-2 text-2xs text-textMuted">{trn("Uang masuk")}</p>
 </Card>
 <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
   <div className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-danger/10 text-danger"><TrendingDown size={15}/></span><span className="min-w-0 text-xs leading-tight text-textMuted">{trn("Pengeluaran bulan ini")}</span></div>
   <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.25rem,5.8vw,1.75rem)] leading-none text-danger tabular-nums">{rupiah(monthExpense)}</p>
-  <p className="mt-2 text-[10px] text-textMuted">{trn("Uang keluar")}</p>
+  <p className="mt-2 text-2xs text-textMuted">{trn("Uang keluar")}</p>
 </Card>
 <Card className="col-span-2 min-w-0 overflow-hidden p-4 sm:col-span-2 sm:p-5 lg:col-span-1">
   <div className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><PiggyBank size={15}/></span><span className="text-xs text-textMuted">{trn("Ruang simpan")}</span></div>
-  <div className="mt-3 flex items-end justify-between gap-3"><p className={clsx("font-display text-[clamp(1.5rem,6vw,2rem)] leading-none tabular-nums",savingRate<0?"text-danger":"text-text")}>{savingRate}%</p><span className="text-right text-[10px] leading-tight text-textMuted">{trn("rasio bersih")}</span></div>
+  <div className="mt-3 flex items-end justify-between gap-3"><p className={clsx("font-display text-[clamp(1.5rem,6vw,2rem)] leading-none tabular-nums",savingRate<0?"text-danger":"text-text")}>{savingRate}%</p><span className="text-right text-2xs leading-tight text-textMuted">{trn("rasio bersih")}</span></div>
   <p className="mt-2 text-2xs text-textMuted">{trn("Dari pemasukan bulan ini.")}</p>
 </Card>
 </div>
