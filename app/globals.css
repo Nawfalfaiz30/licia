@@ -731,6 +731,8 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 button, a { touch-action: manipulation; }
 
 @media (max-width: 767px) {
+  .finance-page { animation: none !important; }
+  .finance-tabs { top: .5rem; }
   .licia-main > .mx-auto { padding-left: .8rem !important; padding-right: .8rem !important; padding-top: .8rem !important; padding-bottom: calc(1rem + env(safe-area-inset-bottom)) !important; }
   .licia-topbar { padding-left: .65rem !important; padding-right: .65rem !important; }
   .licia-bottom-nav { padding-bottom: max(.25rem, env(safe-area-inset-bottom)); }
