@@ -2716,4 +2716,5 @@ export const enPhrases: Record<string, string> = {
   "Selesai membaca": "Done reading",
   "Coba kata lain seperti task, agenda, AI, privacy, backup, atau pilih kategori berbeda.": "Try another term such as task, event, AI, privacy, or backup, or choose a different category.",
   "Tampilkan semua": "Show all",
+  "Cari catatan, dokumen, dan konteks belajar.": "Search notes, documents, and learning context.",
 };
