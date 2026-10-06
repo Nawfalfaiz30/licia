@@ -39,7 +39,7 @@ const PRINCIPLES = ["Gunakan tool domain khusus jika tersedia.","Gunakan search/
 export function getLifeOsCapabilities(input?: { domain?: string; includeFields?: boolean }) {
   const wanted = String(input?.domain || "").trim().toLowerCase();
   const selected = wanted ? CAPABILITIES.filter((x) => x.key === wanted || x.label.toLowerCase().includes(wanted)) : CAPABILITIES;
-  if (!selected.length) return { ok: false, error: \`Domain "\${wanted}" tidak ditemukan.\`, available_domains: CAPABILITIES.map((x) => x.key) };
+  if (!selected.length) return { ok: false, error: `Domain "${wanted}" tidak ditemukan.`, available_domains: CAPABILITIES.map((x) => x.key) };
   return {
     ok: true,
     catalog_version: "2.0",
