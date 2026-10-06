@@ -186,13 +186,22 @@ export default function GuidePage() {
       </section>
 
       <section className="grid gap-3 md:grid-cols-3">
-        const quickPrompts = [
-  "Apa yang paling penting hari ini?",
-  "Rapikan jadwal saya besok dan cari konflik.",
-  "Buat tugas dari ide ini dan beri deadline yang masuk akal.",
-];
-
-
+        {quickPrompts.map((prompt, index) => (
+          <Link
+            key={prompt}
+            href={`/chat?prompt=${encodeURIComponent(tr(prompt))}`}
+            className="group rounded-2xl border border-border bg-surface p-4 transition duration-200 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md"
+          >
+            <div className="flex items-center justify-between">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent/10 text-2xs font-bold text-accent">
+                {index + 1}
+              </span>
+              <ArrowRight size={14} className="text-textMuted transition group-hover:translate-x-0.5 group-hover:text-accent" />
+            </div>
+            <p className="mt-4 text-xs font-bold leading-relaxed text-text">{tr(prompt)}</p>
+            <p className="mt-1.5 text-2xs text-textMuted">{tr("Tanya Licia")}</p>
+          </Link>
+        ))}
       </section>
 
       <section className="sticky top-2 z-30 rounded-2xl border border-border bg-surface/95 p-2 shadow-lg shadow-black/[0.03] backdrop-blur-xl">
