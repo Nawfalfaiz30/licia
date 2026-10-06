@@ -8,7 +8,7 @@ const TABLES: Record<string, string> = {
   create_project: "projects", update_project: "projects", delete_project: "projects",
   create_goal: "goals", update_goal: "goals", delete_goal: "goals",
   create_daily_schedule: "schedule_blocks", create_schedule_from_task: "schedule_blocks", update_schedule_block: "schedule_blocks", delete_schedule_block: "schedule_blocks", delete_schedule_blocks_bulk: "schedule_blocks",
-  create_reminder: "reminders", update_reminder: "reminders", delete_reminder: "reminders", delete_all_reminders: "reminders",
+  create_reminder: "reminders", create_schedule_reminder: "reminders", update_reminder: "reminders", delete_reminder: "reminders", delete_all_reminders: "reminders",
   create_subscription: "subscriptions", update_subscription: "subscriptions", delete_subscription: "subscriptions",
   create_ai_watcher: "ai_watchers", update_ai_watcher: "ai_watchers", delete_ai_watcher: "ai_watchers",
   create_task_dependency: "life_os_task_dependencies", delete_task_dependency: "life_os_task_dependencies", delete_subtask: "subtasks",
