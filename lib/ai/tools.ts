@@ -596,9 +596,13 @@ export const toolDefs: ToolDef[] = [
         properties: {
           task_ids: { type: "array", items: { type: "string" }, description: "Daftar UUID tugas dari hasil baca/search atau referensi aktif." },
           keyword: { type: "string", description: "Kata kunci judul jika target belum diberikan sebagai UUID." },
+          due_on: { type: "string", description: "Batasi target ke tugas yang deadline-nya jatuh pada tanggal lokal ini (YYYY-MM-DD). Gunakan untuk permintaan seperti hari ini atau besok." },
+          due_from: { type: "string", description: "Tanggal lokal awal inklusif YYYY-MM-DD untuk scope rentang." },
+          due_to: { type: "string", description: "Tanggal lokal akhir inklusif YYYY-MM-DD untuk scope rentang." },
+          due_after: { type: "string", description: "Batasi target ke tugas yang deadline-nya setelah akhir tanggal lokal ini (YYYY-MM-DD), misalnya setelah hari ini." },
           status: { type: "string", enum: ["todo", "in_progress", "done"] },
           priority: { type: "string", enum: ["low", "medium", "high"] },
-          due_at: { type: "string", description: "Tenggat yang sama untuk semua target, ISO 8601; opsional." },
+          due_at: { type: "string", description: "Tenggat baru yang sama untuk semua target, ISO 8601; opsional." },
         },
         required: [],
       },
@@ -2654,19 +2658,39 @@ async function updateTasksBulk(ctx: HandlerCtx, args: any) {
   if (invalidIds.length) return { ok: false, code: "INVALID_ENTITY_ID", error: "Semua task_ids harus berupa UUID nyata dari hasil baca/search." };
   let ids = [...new Set(rawIds)].slice(0, 30);
 
-  if (!ids.length && typeof args.keyword === "string" && args.keyword.trim()) {
-    const { data, error } = await ctx.supabase
+  if (!ids.length) {
+    let targetQuery = ctx.supabase
       .from("tasks")
       .select("id")
-      .eq("user_id", ctx.userId)
-      .ilike("title", `%${args.keyword.trim()}%`)
-      .order("due_at", { ascending: true, nullsFirst: false })
-      .limit(30);
+      .eq("user_id", ctx.userId);
+    if (typeof args.keyword === "string" && args.keyword.trim()) {
+      targetQuery = targetQuery.ilike("title", `%${args.keyword.trim()}%`);
+    }
+    if (typeof args.due_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_on)) {
+      const day = new Date(`${args.due_on}T12:00:00Z`);
+      targetQuery = targetQuery.gte("due_at", startOfDayIsoForTimezone(day, ctx.timezone)).lte("due_at", endOfDayIsoForTimezone(day, ctx.timezone));
+    }
+    if (typeof args.due_from === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_from)) {
+      const from = new Date(`${args.due_from}T12:00:00Z`);
+      targetQuery = targetQuery.gte("due_at", startOfDayIsoForTimezone(from, ctx.timezone));
+    }
+    if (typeof args.due_to === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_to)) {
+      const to = new Date(`${args.due_to}T12:00:00Z`);
+      targetQuery = targetQuery.lte("due_at", endOfDayIsoForTimezone(to, ctx.timezone));
+    }
+    if (typeof args.due_after === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_after)) {
+      const after = new Date(`${args.due_after}T12:00:00Z`);
+      targetQuery = targetQuery.gt("due_at", endOfDayIsoForTimezone(after, ctx.timezone));
+    }
+    if (!args.keyword && !args.due_on && !args.due_from && !args.due_to && !args.due_after) {
+      return { ok: false, status: "no_scope", error: "Update bulk membutuhkan target eksplisit: task_ids, keyword, atau scope tanggal." };
+    }
+    const { data, error } = await targetQuery.order("due_at", { ascending: true, nullsFirst: false }).limit(30);
     if (error) return { ok: false, error: error.message };
     ids = (data ?? []).map((row: any) => String(row.id)).filter(isUuid).slice(0, 30);
   }
 
-  if (!ids.length) return { ok: false, status: "no_match", error: "Tidak ada target tugas yang jelas. Berikan nama atau kata kunci tugas terlebih dahulu." };
+  if (!ids.length) return { ok: false, status: "no_match", error: "Tidak ada target tugas yang cocok dengan scope yang diminta." };
 
   const { data: existingTargets, error: targetError } = await ctx.supabase
     .from("tasks")
