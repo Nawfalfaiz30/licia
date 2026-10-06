@@ -1412,8 +1412,8 @@ async function handleChatPost(req: Request) {
         ? conversationDecision.state.activeScope
         : null;
       const completionRequest = /\b(?:tandai|centang|selesaikan|sudah selesai|jadikan selesai)\b/i.test(String(effectiveMessage || ""));
-      const explicitMultiTaskReference = /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(String(message || ""))
-        || /\b(keduanya|kedua|dua tugas|semua tugas|selesai)\b/i.test(recentAssistantText);
+      const explicitMultiTaskReference = /\b(keduanya|kedua|dua tugas|semua(?: tugas)?|semuanya|mereka|yang tadi|tadi)\b/i.test(String(message || ""))
+        || /\b(keduanya|kedua|dua tugas|semua(?: tugas)?|semuanya|mereka|yang tadi|tadi)\b/i.test(recentAssistantText);
       const multiTaskReference = activeDomain === "tasks" && activeEntityIds.length > 1 && (
         Boolean(activeTaskScope)
         || explicitMultiTaskReference
