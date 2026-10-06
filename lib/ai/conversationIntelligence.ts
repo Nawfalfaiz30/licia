@@ -138,6 +138,8 @@ export function buildConversationDecision(input: {
   message: string;
   state?: Partial<ConversationState> | null;
   recentAssistantText?: string | null;
+  now?: Date;
+  timezone?: string;
 }): ConversationDecision {
   const message = String(input.message || "").trim();
   let previousDomain = domainFromState(input.state);
@@ -185,9 +187,9 @@ export function buildConversationDecision(input: {
     ? input.state.activeOperation
     : currentOperation;
 
-  const rawScope = resolveActionScope(message);
+  const rawScope = resolveActionScope(message, input.now ?? new Date(), input.timezone ?? "Asia/Jakarta");
   const inheritedScope = (!rawScope.explicit && confirmsRecentMutationProposal)
-    ? resolveActionScope(recentAssistantText)
+    ? resolveActionScope(recentAssistantText, input.now ?? new Date(), input.timezone ?? "Asia/Jakarta")
     : (!rawScope.explicit && input.state?.activeScope ? input.state.activeScope : null);
   const activeScope = rawScope.explicit ? rawScope : inheritedScope ?? rawScope;
 
