@@ -46,6 +46,15 @@ export function resolveActionScope(message: string, now = new Date(), timezone =
     const bounds = isoBounds(date, date, timezone);
     return { kind: "day", label: "besok", fromDate: date, toDate: date, explicit: true, ...bounds };
   }
+  if (/\b(?:setelah|sesudah)\s+hari\s+ini\b|\bbesok\s+dan\s+seterusnya\b|\bsetelah\s+hari\s+ini\s+dan\s+seterusnya\b/i.test(text)) {
+    const bounds = isoBounds(today, today, timezone);
+    return { kind: "after", label: "setelah hari ini", fromDate: today, toDate: today, explicit: true, ...bounds };
+  }
+  if (/\b(?:sebelum|hingga)\s+hari\s+ini\b|\bsampai\s+kemarin\b/i.test(text)) {
+    const yesterday = shiftDate(today, -1);
+    const bounds = isoBounds(yesterday, yesterday, timezone);
+    return { kind: "before", label: "sebelum hari ini", fromDate: yesterday, toDate: yesterday, explicit: true, ...bounds };
+  }
   if (/\b(kemarin|yesterday)\b/i.test(text)) {
     const date = shiftDate(today, -1);
     const bounds = isoBounds(date, date, timezone);
@@ -65,15 +74,7 @@ export function resolveActionScope(message: string, now = new Date(), timezone =
     const bounds = isoBounds(monday, sunday, timezone);
     return { kind: "range", label: "minggu ini", fromDate: monday, toDate: sunday, explicit: true, ...bounds };
   }
-  if (/\b(?:setelah|sesudah)\s+hari\s+ini\b|\bbesok\s+dan\s+seterusnya\b|\bsetelah\s+hari\s+ini\s+dan\s+seterusnya\b/i.test(text)) {
-    const bounds = isoBounds(today, today, timezone);
-    return { kind: "after", label: "setelah hari ini", fromDate: today, toDate: today, explicit: true, ...bounds };
-  }
-  if (/\b(?:sebelum|hingga)\s+hari\s+ini\b|\bsampai\s+kemarin\b/i.test(text)) {
-    const yesterday = shiftDate(today, -1);
-    const bounds = isoBounds(yesterday, yesterday, timezone);
-    return { kind: "before", label: "sebelum hari ini", fromDate: yesterday, toDate: yesterday, explicit: true, ...bounds };
-  }
+
   return { kind: "none", label: "tanpa scope waktu", explicit: false };
 }
 
