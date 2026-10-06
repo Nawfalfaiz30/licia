@@ -2360,7 +2360,7 @@ async function getNetWorth(ctx: HandlerCtx) {
   let accounts: any[] = accountResult.data ?? [];
   if (accountResult.error) {
     const legacy = await ctx.supabase.from("accounts").select("starting_balance").eq("user_id", ctx.userId);
-    accounts = legacy.data;
+    accounts = legacy.data ?? [];
   }
   const incomes = incomeResult.data;
   const expenses = expenseResult.data;
