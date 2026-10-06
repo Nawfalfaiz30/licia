@@ -78,7 +78,8 @@ check("A10: token tinta aksen terpisah dari isian", /--accent-ink-rgb/.test(read
 const i18n = spawnSync(process.execPath, ["scripts/i18n.mjs", "check"], { cwd: root, encoding: "utf8" });
 check("A11: kamus Inggris lengkap (scripts/i18n.mjs check)", i18n.status === 0, (i18n.stderr || "").split("\n").slice(0, 4).join(" | "));
 check("A11: <html lang> mengikuti cookie bahasa", /getServerLanguage/.test(read("app/layout.tsx")));
-check("A11: AI mengikuti bahasa", /languageDirective/.test(read("app/api/chat/route.ts")));
+const aiChatSource = read("app/api/chat/route.ts") + read("lib/ai/chatOrchestrator.ts");
+check("A11: AI mengikuti bahasa", /languageDirective/.test(aiChatSource));
 const hardLocale = sources.filter((f) => f.endsWith(".tsx")).filter((f) => /["']id-ID["']/.test(read(f)) && !/LanguageProvider|tasks\/page/.test(f));
 check("A11: tidak ada locale id-ID tertanam di komponen", hardLocale.length === 0, hardLocale.join(", "));
 
