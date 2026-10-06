@@ -47,6 +47,8 @@ const followUpPattern = /\b(yang tadi|yg tadi|tadi|itu|ini|yang itu|yang ini|sep
 const shortFollowUpPattern = /^(iya|ya|oke|ok|siap|gas|lanjut|lanjutkan|buatkan|jalankan|terapkan|yang tadi|itu|ini|ubah|ganti|tambahkan|hapus|pindahkan|jamnya|tanggalknya|tanggalnya|namanya|jumlahnya|catatannya|keterangannya|deskripsinya|judulnya|statusnya|kategorinya|nominalnya|waktunya)\b/i;
 const propertyFollowUpPattern = /\b(?:ubah|ganti|edit|update|atur|setel)\s+(?:catatan|keterangan|deskripsi|judul|nama|status|kategori|jumlah|nominal|tanggal|waktu|jam)(?:nya)?\b/i;
 const explicitNotesIntentPattern = /\b(?:buat|bikin|tulis|simpan|tambahkan|catat)\s+(?:sebuah\s+)?(?:catatan|note)\b|\b(?:catatan|note)\s+(?:baru|saya|aku)\b/i;
+const explicitConfirmationPattern = /^(?:iya|ya|y|oke|ok|siap|gas|setuju|setujui|konfirmasi|confirm|eksekusi|jalankan|terapkan)(?:[\s.!?,]|$)/i;
+const assistantMutationProposalPattern = /\b(?:mau|ingin|boleh|bisa)\s+(?:aku|saya|kita)\b[\s\S]{0,140}\b(?:buat|buatkan|catat|simpan|tambah|tambahkan|ubah|edit|ganti|update|atur|pindah|hapus|hapuskan|delete|jadwalkan|tandai|centang|selesaikan|jalankan|ingatkan|hubungkan)\b|\b(?:mau|ingin)\s+(?:aku|saya|kita)\b[\s\S]{0,140}\b(?:selesai|terapkan)\b/i;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function sanitizeEntityIds(value: unknown) {
@@ -59,6 +61,15 @@ function inferDomainFromRecentAssistant(text: string) {
   if (/\b(jumlah|kategori|catatan|tanggal|waktu)\s*:/i.test(q) && /\brp\.?\s*[0-9]/i.test(q)) return 'finance' as AiDomain;
   if (/\b(agenda|jadwal|kalender|tanggal|waktu)\s*:/i.test(q) && /\b(?:jam|pukul)\b/i.test(q)) return 'calendar' as AiDomain;
   if (/\b(tugas|deadline|tenggat|prioritas)\s*:/i.test(q)) return 'tasks' as AiDomain;
+  return null;
+}
+
+function inferMutationProposalOperation(text: string): ConversationOperation | null {
+  const q = String(text || '').toLowerCase();
+  if (!assistantMutationProposalPattern.test(q)) return null;
+  if (/\b(?:hapus|hapuskan|delete|buang|hilangkan)\b/i.test(q)) return "delete";
+  if (/\b(?:ubah|edit|ganti|update|atur|pindah|tandai|centang|selesaikan|aktifkan|nonaktifkan)\b/i.test(q)) return "update";
+  if (/\b(?:buat|buatkan|catat|simpan|tambah|tambahkan|jadwalkan|ingatkan|jalankan|hubungkan)\b/i.test(q)) return "create";
   return null;
 }
 
@@ -129,7 +140,10 @@ export function buildConversationDecision(input: {
   const message = String(input.message || "").trim();
   let previousDomain = domainFromState(input.state);
   const propertyFollowUp = propertyFollowUpPattern.test(message);
-  const recentAssistantDomain = inferDomainFromRecentAssistant(String(input.recentAssistantText || ""));
+  const recentAssistantText = String(input.recentAssistantText || "");
+  const recentProposalOperation = inferMutationProposalOperation(recentAssistantText);
+  const confirmsRecentMutationProposal = explicitConfirmationPattern.test(message) && Boolean(recentProposalOperation);
+  const recentAssistantDomain = inferDomainFromRecentAssistant(recentAssistantText);
   // Recover a stale client context when an older turn clearly displayed a domain-specific
   // record. This is especially important for property edits like "ganti catatannya".
   if (propertyFollowUp && recentAssistantDomain && (!previousDomain || previousDomain === "notes")) previousDomain = recentAssistantDomain;
@@ -144,7 +158,10 @@ export function buildConversationDecision(input: {
   }
 
   const explicit = hasExplicitDomain(currentDomains);
-  const currentOperation = resolveOperation(message);
+  const resolvedCurrentOperation = resolveOperation(message);
+  const currentOperation = resolvedCurrentOperation === "read" && confirmsRecentMutationProposal
+    ? (recentProposalOperation || resolvedCurrentOperation)
+    : resolvedCurrentOperation;
   const followUp = Boolean(previousDomain && (
     propertyFollowUp ||
     (!explicit || followUpPattern.test(message) || shortFollowUpPattern.test(message)) && (followUpPattern.test(message) || shortFollowUpPattern.test(message) || message.length < 42)
@@ -176,15 +193,15 @@ export function buildConversationDecision(input: {
     updatedAt: Date.now(),
   };
 
-  const mutationExpected = mutationPattern.test(message);
-  const destructiveIntent = deletePattern.test(message);
+  const mutationExpected = mutationPattern.test(message) || confirmsRecentMutationProposal;
+  const destructiveIntent = deletePattern.test(message) || (confirmsRecentMutationProposal && recentProposalOperation === "delete");
   const contextInstruction = [
     `TOPIK AKTIF: ${activeDomain}.`,
     topicSwitched ? `PERGANTIAN TOPIK: ya. Topik sebelumnya (${previousDomain}) jangan dibawa sebagai intent aktif kecuali pengguna merujuknya secara eksplisit.` : "PERGANTIAN TOPIK: tidak terdeteksi.",
     followUp ? `PESAN LANJUTAN: ya. Gunakan konteks aktif sebelumnya hanya untuk referensi yang jelas.` : "PESAN LANJUTAN: tidak.",
     propertyFollowUp ? "EDIT PROPERTI: pertahankan domain dan entitas aktif; kata seperti catatan/keterangan/jumlah/tanggal adalah properti entity, bukan otomatis modul Notes." : "EDIT PROPERTI: tidak terdeteksi.",
     "PRIORITAS PEMAHAMAN: pesan pengguna saat ini > konteks aktif > percakapan lama. Jangan gunakan nomor urut daftar sebagai database ID.",
-    mutationExpected ? "PENGGUNA MEMINTA AKSI DATA: jawaban sukses hanya boleh diberikan setelah tool mutation berhasil dan hasilnya terverifikasi." : "Tidak ada kewajiban mutation dari kata kerja utama pesan ini.",
+    confirmsRecentMutationProposal ? "KONFIRMASI AKSI: pengguna mengonfirmasi aksi mutation yang baru saja ditawarkan pada balasan sebelumnya. Pertahankan domain/entity dan jalankan operasi yang ditawarkan; jangan kembali hanya ke mode baca." : mutationExpected ? "PENGGUNA MEMINTA AKSI DATA: jawaban sukses hanya boleh diberikan setelah tool mutation berhasil dan hasilnya terverifikasi." : "Tidak ada kewajiban mutation dari kata kerja utama pesan ini.",
   ].join("\n");
 
   return {
