@@ -17,6 +17,7 @@ import { buildTemporalGuard } from "@/lib/ai/temporalGuard";
 import { chatCompletion, chatCompletionWithFallback, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
 import { assertJsonSize, enforceSameOrigin, rateLimit } from "@/lib/security";
 import { buildUndoRecord, captureBeforeAction } from "@/lib/ai/actionHistory";
+import { loadLatestUndoableAction, undoActionGroup } from "@/lib/ai/actionUndo";
 import { detectReminderContinuity } from "@/lib/ai/reminderContinuity";
 import { dateStrInTimezone, formatDateTimeInTimezone, formatTimeInTimezone } from "@/lib/date";
 import { invalidateUserContext } from "@/lib/ai/contextCache";
@@ -823,6 +824,37 @@ async function handleChatPost(req: Request) {
   const pendingAction = serverPendingActionRecord
     ? publicPendingAction(serverPendingActionRecord, legacyPendingAction)
     : legacyPendingAction;
+  const conversationalUndoIntent = /\b(?:undo|urungkan(?:\s+perubahan)?|batalkan\s+perubahan(?:\s+tadi|\s+terakhir)?|batalkan\s+aksi(?:\s+tadi|\s+terakhir)?|kembalikan\s+perubahan(?:\s+tadi|\s+terakhir)?|pulihkan\s+perubahan(?:\s+tadi|\s+terakhir)?)\b/i.test(String(message || ""));
+  if (conversationalUndoIntent) {
+    const latest = await loadLatestUndoableAction(supabase, user.id);
+    if (latest.error) return NextResponse.json({ error: latest.error }, { status: 500 });
+    if (!latest.action) {
+      const reply = "Tidak ada perubahan terbaru yang masih bisa dibatalkan.";
+      return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains, pendingAction: null, pendingBulkAction: null, pendingScheduleImport: pendingScheduleImport || null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: [], undoActionId: null });
+    }
+    const undone = await undoActionGroup(supabase, user.id, latest.action);
+    if (undone.ok) invalidateUserContext(user.id);
+    const count = undone.results?.length ?? 0;
+    const reply = undone.ok
+      ? `Perubahan terakhir sudah dibatalkan dan ${count} aksi dikembalikan seperti semula.`
+      : `Perubahan belum bisa dibatalkan sepenuhnya. ${undone.results?.find((item: any) => !item.ok)?.error || undone.error || "Pemulihan gagal."}`;
+    await saveServerChatTurn(supabase, user.id, "assistant", reply, typeof turnId === "string" ? turnId.slice(0, 120) : null, { domains, mode: selectedMode, verifiedActions: undone.ok ? 1 : 0 });
+    return NextResponse.json({
+      reply,
+      turnMessages: [{ role: "assistant", content: reply }],
+      domains,
+      pendingAction: null,
+      pendingActionId: null,
+      pendingBulkAction: null,
+      pendingScheduleImport: pendingScheduleImport || null,
+      visionUsed: Boolean(imageDataUrl),
+      mode: selectedMode,
+      actions: undone.results?.map((item: any) => ({ tool: "undo", ok: item.ok, label: item.label })) ?? [],
+      undoActionId: null,
+      conversationState: { ...conversationDecision.state, activeOperation: "update", updatedAt: Date.now() },
+      aiMeta: { model: selectedAiModel, contextMode: aiReadAllData ? "all" : "smart", domains, deniedDomains, temporalGuard: temporalGuard.active, operation: "update", mutationExpected: true, verifiedActions: undone.ok ? 1 : 0, conversationalUndo: true },
+    });
+  }
   if (pendingAction && /\b(tidak|nggak|gak|jangan|batal|cancel|batalkan)\b/i.test(String(message || ""))) {
     if (pendingAction.pendingId) {
       await supabase.from("ai_pending_actions")
@@ -928,50 +960,33 @@ async function handleChatPost(req: Request) {
     const activeIds = conversationDecision.state.activeEntityIds.slice(0, 30);
 
     if (taskScope.explicit && taskScope.fromIso && taskScope.toIso) {
-      let targetQuery = supabase
-        .from("tasks")
-        .select("id,title,status,due_at")
-        .eq("user_id", user.id);
-      if (taskStatusTarget === "done") targetQuery = targetQuery.neq("status", "done");
-      else targetQuery = targetQuery.eq("status", "done");
+      let targetQuery = supabase.from("tasks").select("id,title,status,due_at").eq("user_id", user.id);
+      targetQuery = taskStatusTarget === "done" ? targetQuery.neq("status", "done") : targetQuery.eq("status", "done");
       if (taskScope.kind === "after") targetQuery = targetQuery.gt("due_at", taskScope.toIso);
       else if (taskScope.kind === "before") targetQuery = targetQuery.lte("due_at", taskScope.toIso);
       else targetQuery = targetQuery.gte("due_at", taskScope.fromIso).lte("due_at", taskScope.toIso);
-      const { data: scopedTasks, error: scopedError } = await targetQuery.order("due_at", { ascending: true, nullsFirst: false }).limit(30);
-      if (scopedError) {
-        return NextResponse.json({ error: scopedError.message }, { status: 500 });
-      }
-      taskIds = (scopedTasks ?? []).map((row: any) => String(row.id)).filter(Boolean);
+      const { data, error } = await targetQuery.order("due_at", { ascending: true, nullsFirst: false }).limit(30);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      taskIds = (data ?? []).map((row: any) => String(row.id)).filter(Boolean);
     } else {
       const pluralReference = /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(taskStatusSource);
       const titles = pluralReference ? extractTaskTitlesFromText(recentAssistantText) : [];
       if (titles.length) {
-        const byTitle = new Map<string, string>();
+        const found = new Map<string, boolean>();
         for (const title of titles) {
-          const { data } = await supabase
-            .from("tasks")
-            .select("id,title,status")
-            .eq("user_id", user.id)
-            .ilike("title", title)
-            .limit(5);
+          const { data } = await supabase.from("tasks").select("id,title,status").eq("user_id", user.id).ilike("title", title).limit(5);
           for (const row of data ?? []) {
-            if (String(row.title || "").trim().toLocaleLowerCase("id-ID") === title.toLocaleLowerCase("id-ID")) byTitle.set(String(row.id), String(row.id));
+            if (String(row.title || "").trim().toLocaleLowerCase("id-ID") === title.toLocaleLowerCase("id-ID")) found.set(String(row.id), true);
           }
         }
-        taskIds = [...byTitle.keys()].slice(0, 30);
+        taskIds = [...found.keys()].slice(0, 30);
       } else if (activeIds.length === 1 || (pluralReference && activeIds.length <= 2)) {
         taskIds = activeIds;
       }
     }
 
     if (taskIds.length) {
-      const execution = await executeAndVerifyMutation({
-        supabase,
-        userId: user.id,
-        timezone,
-        tool: "update_tasks_bulk",
-        args: { task_ids: taskIds, status: taskStatusTarget },
-      });
+      const execution = await executeAndVerifyMutation({ supabase, userId: user.id, timezone, tool: "update_tasks_bulk", args: { task_ids: taskIds, status: taskStatusTarget } });
       const count = Number(execution.result?.count || 0);
       const label = taskStatusTarget === "done" ? "ditandai selesai" : "dikembalikan menjadi belum selesai";
       const reply = execution.applied
@@ -988,18 +1003,11 @@ async function handleChatPost(req: Request) {
       };
       await saveServerChatTurn(supabase, user.id, "assistant", reply, typeof turnId === "string" ? turnId.slice(0, 120) : null, { domains: ["tasks"], mode: selectedMode, verifiedActions: execution.applied ? 1 : 0 });
       return NextResponse.json({
-        reply,
-        turnMessages: [{ role: "assistant", content: reply }],
-        domains: ["tasks"],
-        pendingAction: null,
-        pendingActionId: null,
-        pendingBulkAction: null,
-        pendingScheduleImport: pendingScheduleImport || null,
-        visionUsed: Boolean(imageDataUrl),
-        mode: selectedMode,
+        reply, turnMessages: [{ role: "assistant", content: reply }], domains: ["tasks"],
+        pendingAction: null, pendingActionId: null, pendingBulkAction: null, pendingScheduleImport: pendingScheduleImport || null,
+        visionUsed: Boolean(imageDataUrl), mode: selectedMode,
         actions: [{ tool: "update_tasks_bulk", ok: execution.applied, label: actionLabel("update_tasks_bulk", execution.result) }],
-        undoActionId: execution.undoActionId || null,
-        conversationState: returnedState,
+        undoActionId: execution.undoActionId || null, conversationState: returnedState,
         aiMeta: { model: selectedAiModel, contextMode: aiReadAllData ? "all" : "smart", domains: ["tasks"], deniedDomains, temporalGuard: temporalGuard.active, topicSwitched: conversationDecision.topicSwitched, followUp: true, activeDomain: "tasks", operation: "update", mutationExpected: true, verifiedActions: execution.applied ? 1 : 0, actionScope: taskScope.label },
       });
     }
