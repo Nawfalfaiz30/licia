@@ -1,4 +1,5 @@
 import { redactVaultContent } from "@/lib/ai/vaultRedact";
+import { getLifeOsCapabilities } from "@/lib/ai/capabilities";
 import { validateToolArguments } from "@/lib/ai/toolValidation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dateStrInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone, startOfMonthIsoForTimezone, startOfWeekIsoForTimezone, ensureTimezoneOffset, formatDateTimeInTimezone, formatTimeInTimezone } from "@/lib/date";
@@ -499,6 +500,21 @@ export const toolDefs: ToolDef[] = [
           priority: { type: "string", enum: ["low", "medium", "high"] },
         },
         required: ["goal_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_life_os_capabilities",
+      description: "Peta ringkas kemampuan dan struktur Life OS. Gunakan hanya saat perlu memahami domain/entity/tool yang tersedia, terutama untuk permintaan seperti 'apa yang bisa Licia lakukan', CRUD, modul yang belum jelas, atau entity yang namanya tidak familiar. Gunakan domain untuk detail terarah agar hemat token.",
+      parameters: {
+        type: "object",
+        properties: {
+          domain: { type: "string", description: "Domain opsional, misalnya tasks, finance, calendar, knowledge, health, goals, atau reminders." },
+          include_fields: { type: "boolean", description: "Jika true, sertakan detail tambahan yang relevan untuk operasi CRUD domain tersebut." },
+        },
+        required: [],
       },
     },
   },
@@ -4628,6 +4644,8 @@ export async function executeTool(
       return getTodayOverview(ctx);
     case "get_life_snapshot":
       return getLifeSnapshot(ctx);
+    case "get_life_os_capabilities":
+      return getLifeOsCapabilities({ domain: args.domain, includeFields: args.include_fields === true });
     case "search_life_os":
       return searchLifeOs(ctx, args);
     case "get_unified_life_snapshot":
