@@ -210,7 +210,6 @@ export async function POST(req: Request) {
         if (transferError) throw new Error(transferError.message);
         data = transferResult;
         response = transferResult;
-      }
       } else {
         const record = { ...(entityId ? { id: entityId } : {}), ...payload, user_id: user.id };
         const result = await supabase.from(definition.table).insert(record).select("*").single();
