@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveActionScope } from "@/lib/ai/actionScope";
+import { isConversationalUndoIntent, resolveActionScope } from "@/lib/ai/actionScope";
 
 describe("resolveActionScope", () => {
   const now = new Date("2026-10-06T10:00:00.000Z");
@@ -49,5 +49,12 @@ describe("resolveActionScope", () => {
     expect(scope.kind).toBe("before");
     expect(scope.fromDate).toBe("2026-10-05");
     expect(scope.toDate).toBe("2026-10-05");
+  });
+
+  it("treats plain kembalikan as undo while keeping scoped restore explicit", () => {
+    expect(isConversationalUndoIntent("kembalikan", now, "Asia/Jakarta")).toBe(true);
+    expect(isConversationalUndoIntent("kembalikan tugas yang tadi", now, "Asia/Jakarta")).toBe(true);
+    expect(isConversationalUndoIntent("kembalikan tugas hari ini", now, "Asia/Jakarta")).toBe(false);
+    expect(isConversationalUndoIntent("kembalikan tugas ke belum selesai", now, "Asia/Jakarta")).toBe(false);
   });
 });

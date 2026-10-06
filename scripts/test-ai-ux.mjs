@@ -49,7 +49,8 @@ assert(route.includes("explicitMultiTaskReference") && route.includes("inherited
 assert(route.includes("due_on: activeTaskScope.fromDate") && route.includes("due_after: activeTaskScope.toDate"), "active task scope must constrain model-generated bulk updates");
 assert(actionUndo.includes("verifyRestoredAction") && actionUndo.includes("Status task belum kembali"), "undo must verify restored task state");
 assert(fs.readFileSync(path.join(root, "tests/actionScope.test.ts"), "utf8").includes("setelah hari ini collapse to today") && fs.readFileSync(path.join(root, "tests/actionScope.test.ts"), "utf8").includes("sebelum hari ini collapse to today"), "relative scope regression tests missing");
-assert(route.includes("conversationalUndoIntent") && route.includes("undoActionGroup"), "conversational undo missing");
+assert(route.includes("conversationalUndoIntent") && route.includes("undoActionGroup") && route.includes("isConversationalUndoIntent"), "conversational undo missing");
+assert(route.includes("scopeNoMatch: true") && route.includes("Tidak ada tugas yang perlu diubah pada scope"), "explicit task scope must fail closed when no target matches");
 assert(verify.includes("MANAGED_ENTITY_TABLES") && verify.includes("database-readback-managed"), "managed CRUD verification missing");
 assert(fs.existsSync(path.join(root, "tests/actionScope.test.ts")), "action scope unit test file missing");
 assert(routing.includes("tandai|centang|selesaikan"), "completion verbs are not routed as update mutations");

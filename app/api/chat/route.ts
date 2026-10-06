@@ -25,7 +25,7 @@ import { LICIA_AGENT_POLICY, agentConfidenceFromResult, agentRiskForTool, isMuta
 import { buildVisionSchedulePrompt, normalizeVisionScheduleBlocks, weekdayFromDate, type VisionScheduleBlock } from "@/lib/ai/visionSchedule";
 import { verifyMutationResult } from "@/lib/v35/verify";
 import { buildConversationDecision, type ConversationState } from "@/lib/ai/conversationIntelligence";
-import { resolveActionScope } from "@/lib/ai/actionScope";
+import { isConversationalUndoIntent, resolveActionScope } from "@/lib/ai/actionScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -826,7 +826,7 @@ async function handleChatPost(req: Request) {
   const pendingAction = serverPendingActionRecord
     ? publicPendingAction(serverPendingActionRecord, legacyPendingAction)
     : legacyPendingAction;
-  const conversationalUndoIntent = /\b(?:undo|urungkan(?:\s+perubahan)?|batalkan\s+perubahan(?:\s+tadi|\s+terakhir)?|batalkan\s+aksi(?:\s+tadi|\s+terakhir)?|kembalikan\s+perubahan(?:\s+tadi|\s+terakhir)?|pulihkan\s+perubahan(?:\s+tadi|\s+terakhir)?)\b/i.test(String(message || ""));
+  const conversationalUndoIntent = isConversationalUndoIntent(message || "", new Date(clientNowIso || Date.now()), timezone);
   if (conversationalUndoIntent) {
     const latest = await loadLatestUndoableAction(supabase, user.id);
     if (latest.error) return NextResponse.json({ error: latest.error }, { status: 500 });
@@ -1017,6 +1017,52 @@ async function handleChatPost(req: Request) {
       } else if (activeIds.length === 1 || (pluralReference && activeIds.length <= 2)) {
         taskIds = activeIds;
       }
+    }
+
+    if (!taskIds.length && taskScope.explicit) {
+      const reply = `Tidak ada tugas yang perlu diubah pada scope ${taskScope.label}. Tidak ada perubahan yang diterapkan.`;
+      const returnedState: ConversationState = {
+        ...conversationDecision.state,
+        activeDomain: "tasks",
+        activeOperation: "update",
+        activeEntityIds: [],
+        activeScope: taskScope,
+        updatedAt: Date.now(),
+      };
+      await saveServerChatTurn(supabase, user.id, "assistant", reply, typeof turnId === "string" ? turnId.slice(0, 120) : null, {
+        domains: ["tasks"],
+        mode: selectedMode,
+        verifiedActions: 0,
+      });
+      return NextResponse.json({
+        reply,
+        turnMessages: [{ role: "assistant", content: reply }],
+        domains: ["tasks"],
+        pendingAction: null,
+        pendingActionId: null,
+        pendingBulkAction: null,
+        pendingScheduleImport: pendingScheduleImport || null,
+        visionUsed: Boolean(imageDataUrl),
+        mode: selectedMode,
+        actions: [],
+        undoActionId: null,
+        conversationState: returnedState,
+        aiMeta: {
+          model: selectedAiModel,
+          contextMode: aiReadAllData ? "all" : "smart",
+          domains: ["tasks"],
+          deniedDomains,
+          temporalGuard: temporalGuard.active,
+          topicSwitched: conversationDecision.topicSwitched,
+          followUp: true,
+          activeDomain: "tasks",
+          operation: "update",
+          mutationExpected: true,
+          verifiedActions: 0,
+          actionScope: taskScope.label,
+          scopeNoMatch: true,
+        },
+      });
     }
 
     if (taskIds.length) {

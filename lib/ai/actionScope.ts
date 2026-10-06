@@ -82,6 +82,30 @@ export function resolveActionScope(message: string, now = new Date(), timezone =
   return { kind: "none", label: "tanpa scope waktu", explicit: false };
 }
 
+export function isConversationalUndoIntent(
+  message: string,
+  now = new Date(),
+  timezone = "Asia/Jakarta",
+): boolean {
+  const text = String(message || "").trim().toLocaleLowerCase("id-ID");
+  if (!text) return false;
+
+  // A date/range scope means "kembalikan/pulihkan" is an explicit status command,
+  // not a request to undo the latest unrelated mutation.
+  if (resolveActionScope(text, now, timezone).explicit) return false;
+
+  // Keep direct status-restoration commands out of generic undo.
+  if (/\b(?:ke|jadi|menjadi)\s+(?:belum\s+selesai|todo|pending)\b/i.test(text)) return false;
+
+  if (/\b(?:undo|urungkan(?:\s+perubahan)?|batalkan\s+perubahan(?:\s+(?:tadi|terakhir))?|batalkan\s+aksi(?:\s+(?:tadi|terakhir))?)\b/i.test(text)) {
+    return true;
+  }
+  if (/\b(?:kembalikan|pulihkan|balikkan)\b[\s\S]{0,60}\b(?:tadi|terakhir|seperti\s+semula|sebelumnya)\b/i.test(text)) {
+    return true;
+  }
+  return /^\s*(?:kembalikan|pulihkan|balikkan)(?:\s+(?:tugas|task)(?:nya)?)?\s*[.!?]*\s*$/i.test(text);
+}
+
 export function mergeActionScope(current: ActionScope, fallback: ActionScope) {
   return current.explicit ? current : fallback.explicit ? fallback : current;
 }
