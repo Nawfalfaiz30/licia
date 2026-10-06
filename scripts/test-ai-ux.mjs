@@ -10,6 +10,8 @@ const prompt = read("lib/ai/systemPrompt.ts");
 const context = read("lib/ai/context.ts");
 const route = read("app/api/chat/route.ts");
 const tools = read("lib/ai/tools.ts");
+const routing = read("lib/ai/toolRouting.ts");
+const verify = read("lib/v35/verify.ts");
 const settings = read("app/(app)/settings/page.tsx");
 const chat = read("components/chat/ChatWidget.tsx");
 const bottom = read("components/layout/BottomNav.tsx");
@@ -25,6 +27,9 @@ assert(convo.includes("assistantMutationProposalPattern") && convo.includes("con
 assert(route.includes("confirmationRoutingHint") && route.includes("[konfirmasi aksi: ubah]"), "confirmed mutation routing hint missing");
 assert(tools.includes('name: "get_life_os_capabilities"') && tools.includes('case "get_life_os_capabilities"'), "Life OS capability discovery tool missing");
 assert(tools.includes('"smart_inbox_item"') && tools.includes('"memory"'), "fallback CRUD does not expose Smart Inbox/Memory entities");
+assert(tools.includes('name: "update_tasks_bulk"') && tools.includes("case \"update_tasks_bulk\""), "bulk task update surface missing");
+assert(routing.includes("tandai|centang|selesaikan"), "completion verbs are not routed as update mutations");
+assert(verify.includes('update_tasks_bulk: "tasks"') && verify.includes('capture_inbox_item: "smart_inbox_items"'), "CRUD verification map incomplete");
 assert(tools.includes("INVALID_ENTITY_ID") && tools.includes("expenseId"), "invalid UUID guard missing for expense update");
 assert(tools.includes("noteId") && tools.includes("ID catatan tidak valid"), "invalid UUID guard missing for note update");
 assert(settings.includes("Atur Licia sesuai caramu") && settings.includes("Pilih yang penting. Licia menyesuaikan sisanya."), "settings hero not simplified");
