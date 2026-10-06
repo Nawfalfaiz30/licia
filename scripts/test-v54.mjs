@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 
 const tools = readFileSync("lib/ai/tools.ts", "utf8");
 const toolDefinitions = readFileSync("lib/ai/toolDefinitions.ts", "utf8");
-const chat = readFileSync("app/api/chat/route.ts", "utf8");
+const chatRoute = readFileSync("app/api/chat/route.ts", "utf8");
+const chatOrchestrator = readFileSync("lib/ai/chatOrchestrator.ts", "utf8");
+const chat = chatRoute + "\n" + chatOrchestrator;
 const chatOrchestrator = readFileSync("lib/ai/chatOrchestrator.ts", "utf8");
 const aiSource = tools + "\n" + toolDefinitions;
 const prompt = readFileSync("lib/ai/systemPrompt.ts", "utf8");
