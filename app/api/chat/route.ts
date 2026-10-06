@@ -516,7 +516,7 @@ async function executeAndVerifyMutation({
   tool: string;
   args: any;
 }) {
-  const beforeSnapshot = await captureBeforeAction(supabase, userId, tool, args);
+  const beforeSnapshot = await captureBeforeAction(supabase, userId, tool, args, timezone);
   let result: any;
   try {
     result = await executeTool({ supabase, userId, timezone }, tool, JSON.stringify(args));
@@ -1127,7 +1127,7 @@ async function handleChatPost(req: Request) {
       return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains: ["calendar"], pendingAction: null, pendingBulkAction: null, pendingScheduleImport: null, visionUsed: true, mode: "assistant", actions: [], undoActionId: null });
     }
 
-    const before = await captureBeforeAction(supabase, user.id, "create_daily_schedule", { blocks });
+    const before = await captureBeforeAction(supabase, user.id, "create_daily_schedule", { blocks }, timezone);
     let result: any;
     try {
       result = await executeTool({ supabase, userId: user.id, timezone }, "create_daily_schedule", JSON.stringify({ blocks }));
@@ -1167,7 +1167,7 @@ async function handleChatPost(req: Request) {
   }
 
   if (continuityReminder) {
-    const before = await captureBeforeAction(supabase, user.id, "create_reminder", {});
+    const before = await captureBeforeAction(supabase, user.id, "create_reminder", {}, timezone);
     let reminderResult: any = null;
     try {
       const existing = await supabase.from("reminders")
@@ -1226,7 +1226,7 @@ async function handleChatPost(req: Request) {
       return { [pendingAction.confirmField]: pendingAction.id };
     })();
     const args = JSON.stringify(argsObject);
-    const before = await captureBeforeAction(supabase, user.id, tool, argsObject);
+    const before = await captureBeforeAction(supabase, user.id, tool, argsObject, timezone);
     let result: any;
     try {
       result = await executeTool({ supabase, userId: user.id, timezone }, tool, args);
@@ -1487,7 +1487,7 @@ async function handleChatPost(req: Request) {
           continue;
         }
       }
-      const beforeSnapshot = await captureBeforeAction(supabase, user.id, executionToolName, parsedArgs);
+      const beforeSnapshot = await captureBeforeAction(supabase, user.id, executionToolName, parsedArgs, timezone);
       let result: any;
       emitProgress({ type: "tool_start", name: executionToolName, label: toolLabel(executionToolName) });
       try { result = await executeTool({ supabase, userId: user.id, timezone }, executionToolName, call.function.arguments); } catch (error) {
