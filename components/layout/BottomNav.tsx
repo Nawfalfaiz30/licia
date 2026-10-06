@@ -16,8 +16,11 @@ export function BottomNav() {
   const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const mobilePrimaryOrder = ["/dashboard", "/plan", "/chat", "/finance"];
-  const visiblePrimary = mobilePrimaryOrder.map((href) => primaryNavItems.find((item) => item.href === href)).filter((item): item is typeof primaryNavItems[number] => Boolean(item));
+  const mobilePrimaryOrder = ["/dashboard", "/plan", "/chat"];
+  const visiblePrimary = [
+    ...mobilePrimaryOrder.map((href) => primaryNavItems.find((item) => item.href === href)),
+    moreNavGroups.flatMap((group) => group.items).find((item) => item.href === "/finance"),
+  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
   const isPrimary = visiblePrimary.some((i) => pathname?.startsWith(i.href));
   const isInMore = !isPrimary && moreNavGroups.some((g) => g.items.some((i) => pathname?.startsWith(i.href)));
 
