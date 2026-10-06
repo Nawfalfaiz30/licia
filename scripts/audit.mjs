@@ -26,6 +26,7 @@ for(const file of textFiles){
   const relative=path.relative(root,file);
   const secretPatterns=/\bsk-proj-[A-Za-z0-9_-]{20,}|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----|^VAPID_PRIVATE_KEY=(?!YOUR_)[A-Za-z0-9_-]{30,}|^SUPABASE_SERVICE_ROLE_KEY=(?!YOUR_).+|^OPENAI_API_KEY=(?!YOUR_|sk-your)[A-Za-z0-9_-]{20,}|^LICIA_CRON_SECRET=(?!YOUR_).{12,}/mi;
   if(secretPatterns.test(s)) failures.push(`Possible secret in ${relative}`);
-  if(/localhost:3000|127\.0\.0\.1:3000/.test(s)&&!file.endsWith("preflight.mjs")&&!file.endsWith("healthcheck.mjs")&&!file.endsWith("audit.mjs")&&!file.endsWith("reminder-cron.mjs")&&!file.endsWith("reminder-worker.mjs"))failures.push(`Runtime localhost reference in ${relative}`);
+  const isEnvExample = relative === ".env.example";
+  if(/localhost:3000|127\.0\.0\.1:3000/.test(s)&&!isEnvExample&&!file.endsWith("preflight.mjs")&&!file.endsWith("healthcheck.mjs")&&!file.endsWith("audit.mjs")&&!file.endsWith("reminder-cron.mjs")&&!file.endsWith("reminder-worker.mjs"))failures.push(`Runtime localhost reference in ${relative}`);
 }
 if(failures.length){console.error(`Licia audit FAILED (${failures.length})`);for(const x of failures)console.error(`- ${x}`);process.exit(1)}console.log(`Licia audit OK — ${textFiles.length} text files scanned, ${required.length} core files present, no obvious runtime secrets/origin leaks.`);
