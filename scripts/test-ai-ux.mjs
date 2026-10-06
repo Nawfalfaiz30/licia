@@ -28,6 +28,9 @@ assert(route.includes("confirmationRoutingHint") && route.includes("[konfirmasi 
 assert(route.includes("taskCompletionFollowUp") && route.includes("update_tasks_bulk"), "deterministic task completion continuity missing");
 assert(tools.includes('name: "get_life_os_capabilities"') && tools.includes('case "get_life_os_capabilities"'), "Life OS capability discovery tool missing");
 assert(tools.includes('"smart_inbox_item"') && tools.includes('"memory"'), "fallback CRUD does not expose Smart Inbox/Memory entities");
+assert(/notifications:\s*\["mark_notification_read",\s*"delete_notification"/.test(routing), "notification mutation routing missing");
+assert(routing.includes("journal: [") && routing.includes("relations: ["), "journal/relations routing missing");
+assert(convo.includes('"journal", "relations"'), "conversation domain set missing journal/relations");
 assert(tools.includes('name: "update_tasks_bulk"') && tools.includes("case \"update_tasks_bulk\""), "bulk task update surface missing");
 assert(routing.includes("tandai|centang|selesaikan"), "completion verbs are not routed as update mutations");
 assert(verify.includes('update_tasks_bulk: "tasks"') && verify.includes('capture_inbox_item: "smart_inbox_items"'), "CRUD verification map incomplete");
