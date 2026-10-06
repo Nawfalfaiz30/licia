@@ -963,7 +963,18 @@ async function handleChatPost(req: Request) {
     const pluralReference = /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(taskStatusSource);
     const titles = (confirmationFromProposal || pluralReference) ? extractTaskTitlesFromText(recentAssistantText) : [];
 
-    if (titles.length && confirmationFromProposal) {
+    const matchesScope = (row: any) => {
+      if (taskStatusTarget === "done" && String(row.status || "") === "done") return false;
+      if (taskStatusTarget === "todo" && String(row.status || "") !== "done") return false;
+      if (!taskScope.explicit || !taskScope.fromIso || !taskScope.toIso) return true;
+      const value = new Date(String(row.due_at || "")).getTime();
+      if (!Number.isFinite(value)) return false;
+      if (taskScope.kind === "after") return value > new Date(taskScope.toIso).getTime();
+      if (taskScope.kind === "before") return value <= new Date(taskScope.toIso).getTime();
+      return value >= new Date(taskScope.fromIso).getTime() && value <= new Date(taskScope.toIso).getTime();
+    };
+
+    if (confirmationFromProposal && titles.length) {
       const foundRows: any[] = [];
       for (const title of titles) {
         const { data } = await supabase.from("tasks").select("id,title,status,due_at").eq("user_id", user.id).ilike("title", title).limit(5);
@@ -971,17 +982,11 @@ async function handleChatPost(req: Request) {
           if (String(row.title || "").trim().toLocaleLowerCase("id-ID") === title.toLocaleLowerCase("id-ID")) foundRows.push(row);
         }
       }
-      const matchesScope = (row: any) => {
-        if (taskStatusTarget === "done" && String(row.status || "") === "done") return false;
-        if (taskStatusTarget === "todo" && String(row.status || "") !== "done") return false;
-        if (!taskScope.explicit || !taskScope.fromIso || !taskScope.toIso) return true;
-        const value = new Date(String(row.due_at || "")).getTime();
-        if (!Number.isFinite(value)) return false;
-        if (taskScope.kind === "after") return value > new Date(taskScope.toIso).getTime();
-        if (taskScope.kind === "before") return value <= new Date(taskScope.toIso).getTime();
-        return value >= new Date(taskScope.fromIso).getTime() && value <= new Date(taskScope.toIso).getTime();
-      };
       taskIds = [...new Map(foundRows.filter(matchesScope).map((row: any) => [String(row.id), true])).keys()].slice(0, 30);
+    } else if (confirmationFromProposal && activeIds.length) {
+      const { data: activeRows, error: activeRowsError } = await supabase.from("tasks").select("id,title,status,due_at").eq("user_id", user.id).in("id", activeIds);
+      if (activeRowsError) return NextResponse.json({ error: activeRowsError.message }, { status: 500 });
+      taskIds = [...new Map((activeRows ?? []).filter(matchesScope).map((row: any) => [String(row.id), true])).keys()].slice(0, 30);
     } else if (taskScope.explicit && taskScope.fromIso && taskScope.toIso) {
       let targetQuery = supabase.from("tasks").select("id,title,status,due_at").eq("user_id", user.id);
       targetQuery = taskStatusTarget === "done" ? targetQuery.neq("status", "done") : targetQuery.eq("status", "done");
