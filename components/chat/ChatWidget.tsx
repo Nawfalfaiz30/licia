@@ -754,7 +754,7 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
     ? latestAiMessage.aiMeta.domains.slice(0, 3).map((item) => item.replaceAll("_", " ")).join(" · ")
     : "Konteks cerdas";
   return (
-    <div data-chat-style={chatStyle} className={clsx("chat-v48 flex min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-border bg-surface", compact ? "h-[500px]" : "h-[calc(100dvh-108px)] min-h-[430px] max-h-[860px] sm:rounded-[1.5rem]")}>
+    <div data-chat-style={chatStyle} className={clsx("chat-v48 flex min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-border bg-surface", compact ? "h-[500px]" : "h-[calc(100dvh-108px)] min-h-[430px] max-h-[900px] sm:rounded-[1.5rem]")}>
       <header className="chat-v48-header relative z-30 flex shrink-0 items-center gap-2.5 border-b border-border/80 bg-surface px-3 py-3 sm:px-4">
         <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-xl ring-1 ring-accent/15">
           <Image src="/licia-avatar.png" alt={tr("Licia")} fill sizes="32px" className="object-cover" />
