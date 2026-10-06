@@ -11,6 +11,19 @@ describe("resolveActionScope", () => {
     expect(scope.toDate).toBe("2026-10-06");
     expect(scope.explicit).toBe(true);
   });
+  it("does not let setelah hari ini collapse to today", () => {
+    const scope = resolveActionScope("kembalikan tugas setelah hari ini ke belum selesai", now, "Asia/Jakarta");
+    expect(scope.kind).toBe("after");
+    expect(scope.fromDate).toBe("2026-10-06");
+    expect(scope.toDate).toBe("2026-10-06");
+  });
+
+  it("does not let sebelum hari ini collapse to today", () => {
+    const scope = resolveActionScope("kembalikan tugas sebelum hari ini ke belum selesai", now, "Asia/Jakarta");
+    expect(scope.kind).toBe("before");
+    expect(scope.fromDate).toBe("2026-10-05");
+    expect(scope.toDate).toBe("2026-10-05");
+  });
 
   it("resolves besok dan seterusnya to after-today", () => {
     const scope = resolveActionScope("kembalikan tugas besok dan seterusnya", now, "Asia/Jakarta");
