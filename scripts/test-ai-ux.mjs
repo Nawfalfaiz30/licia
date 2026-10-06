@@ -24,6 +24,7 @@ assert(route.includes("recentAssistantText") && route.includes("ENTITY_UUID_RE")
 assert(convo.includes("assistantMutationProposalPattern") && convo.includes("confirmsRecentMutationProposal"), "confirmation-to-mutation continuity missing");
 assert(route.includes("confirmationRoutingHint") && route.includes("[konfirmasi aksi: ubah]"), "confirmed mutation routing hint missing");
 assert(tools.includes('name: "get_life_os_capabilities"') && tools.includes('case "get_life_os_capabilities"'), "Life OS capability discovery tool missing");
+assert(tools.includes('"smart_inbox_item"') && tools.includes('"memory"'), "fallback CRUD does not expose Smart Inbox/Memory entities");
 assert(tools.includes("INVALID_ENTITY_ID") && tools.includes("expenseId"), "invalid UUID guard missing for expense update");
 assert(tools.includes("noteId") && tools.includes("ID catatan tidak valid"), "invalid UUID guard missing for note update");
 assert(settings.includes("Atur Licia sesuai caramu") && settings.includes("Pilih yang penting. Licia menyesuaikan sisanya."), "settings hero not simplified");
