@@ -24,10 +24,27 @@ async function undoOne(supabase: any, userId: string, action: any) {
     const res = await supabase.from(action.table_name).delete().in("id", ids).eq("user_id", userId);
     error = res.error;
   } else if (action.operation === "update") {
-    const row = action.before_snapshot?.row ?? action.before_snapshot;
-    if (!row?.id) return { ok: false, error: "Snapshot perubahan tidak lengkap." };
-    const restored = await supabase.from(action.table_name).update(sanitizeBeforeForRestore(action.table_name, action.before_snapshot)).eq("id", String(row.id)).eq("user_id", userId);
-    error = restored.error;
+    const rows = Array.isArray(action.before_snapshot?.rows) ? action.before_snapshot.rows : null;
+    if (rows) {
+      if (!rows.length) return { ok: false, error: "Snapshot perubahan massal kosong." };
+      for (const row of rows) {
+        if (!row?.id) { error = { message: "Snapshot perubahan massal memiliki row tanpa ID." }; break; }
+        const restored = await supabase
+          .from(action.table_name)
+          .update(sanitizeBeforeForRestore(action.table_name, { row }))
+          .eq("id", String(row.id))
+          .eq("user_id", userId);
+        if (restored.error) { error = restored.error; break; }
+      }
+      if (!error && action.table_name === "tasks" && Array.isArray(action.before_snapshot?.reminders) && action.before_snapshot.reminders.length) {
+        await restoreBoundReminders(supabase, userId, action.before_snapshot.reminders);
+      }
+    } else {
+      const row = action.before_snapshot?.row ?? action.before_snapshot;
+      if (!row?.id) return { ok: false, error: "Snapshot perubahan tidak lengkap." };
+      const restored = await supabase.from(action.table_name).update(sanitizeBeforeForRestore(action.table_name, action.before_snapshot)).eq("id", String(row.id)).eq("user_id", userId);
+      error = restored.error;
+    }
   } else if (action.operation === "delete") {
     const rows = Array.isArray(action.before_snapshot?.rows) ? action.before_snapshot.rows : null;
     if (rows) {
