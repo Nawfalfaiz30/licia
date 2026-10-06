@@ -899,13 +899,21 @@ async function handleChatPost(req: Request) {
   const connectedContext = await buildConnectedContext(supabase, user.id, timezone, domains);
   const actionableContext = wantsActionContext ? await buildActionableContext(supabase, user.id, timezone) : { signals: [] as any[] };
 
+  const recentAssistantTaskCompletionProposal = /\b(?:tandai|selesaikan|centang|bereskan|complete)\b[\s\S]{0,120}\b(?:selesai|done|beres)\b/i.test(String(recentAssistantText || ""));
+  const taskCompletionConfirmation = isExplicitConfirmation(String(message || "")) && recentAssistantTaskCompletionProposal;
   const taskCompletionFollowUp = conversationDecision.state.activeDomain === "tasks"
     && conversationDecision.state.activeEntityIds.length > 0
-    && /\b(?:tandai|centang|selesaikan|jadikan)\b/i.test(String(message || ""))
-    && /\b(?:selesai|done)\b/i.test(String(message || ""))
+    && (
+      (
+        /\b(?:tandai|centang|selesaikan|jadikan|bereskan|complete)\b/i.test(String(message || ""))
+        && /\b(?:selesai|done|beres)\b/i.test(String(message || ""))
+      )
+      || taskCompletionConfirmation
+    )
     && (
       conversationDecision.state.activeEntityIds.length === 1
       || /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(String(message || ""))
+      || taskCompletionConfirmation
       || /\b(tandai|centang|selesaikan)\b[\s\S]{0,100}\b(keduanya|kedua|dua tugas|semua|selesai)\b/i.test(recentAssistantText)
     );
 
@@ -1183,81 +1191,6 @@ async function handleChatPost(req: Request) {
     return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains, pendingAction: applied ? null : pendingAction, pendingActionId: applied ? null : (pendingAction?.pendingId || null), pendingBulkAction: null, pendingScheduleImport: pendingScheduleImport || null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: performedActions, undoActionId: undoActionIds.at(-1) || null });
   }
 
-  const recentAssistantTaskCompletionProposal = /\b(?:tandai|selesaikan|centang|bereskan|complete)\b[\s\S]{0,120}\b(?:selesai|done|beres)\b/i.test(String(recentAssistantText || ""));
-  const taskCompletionFollowUp = domains.includes("tasks")
-    && (
-      /\b(tandai|tandainya|selesaikan|centang|bereskan|complete)\b[\s\S]{0,80}\b(?:selesai|done|beres)\b/i.test(String(message || ""))
-      || (isExplicitConfirmation(String(message || "")) && recentAssistantTaskCompletionProposal)
-    )
-    && !/\b(?:tugas|task)\s+[^?!.]{2,100}\b/i.test(String(message || ""));
-  const recentAssistantTaskTitles = taskCompletionFollowUp
-    ? [...String(recentAssistantText || "").matchAll(/(?:^|\n)\s*(?:[-•*])\s*\*\*([^*\n]{2,140})\*\*/g)]
-      .map((m) => String(m[1]).trim())
-      .filter(Boolean)
-      .slice(0, 20)
-    : [];
-
-  if (taskCompletionFollowUp && recentAssistantTaskTitles.length) {
-    const candidateIds = new Map<string, string>();
-    for (const title of recentAssistantTaskTitles) {
-      const result = await executeTool(
-        { supabase, userId: user.id, timezone },
-        "get_tasks",
-        JSON.stringify({ status: "all", keyword: title }),
-      );
-      for (const row of Array.isArray(result?.tasks) ? result.tasks : []) {
-        const id = String(row?.id || "").trim();
-        const rowTitle = String(row?.title || "").trim();
-        if (id && rowTitle && rowTitle.toLocaleLowerCase("id-ID") === title.toLocaleLowerCase("id-ID")) {
-          candidateIds.set(id, rowTitle);
-        }
-      }
-    }
-    const ids = [...candidateIds.keys()].slice(0, 30);
-    if (ids.length) {
-      const recovered = await executeAndVerifyMutation({
-        supabase,
-        userId: user.id,
-        timezone,
-        tool: "update_tasks_bulk",
-        args: { task_ids: ids, status: "done" },
-      });
-      const applied = recovered.applied;
-      const label = ids.length === 1 ? "1 tugas" : `${ids.length} tugas`;
-      const reply = applied
-        ? `Sudah. ${label} yang tadi ditampilkan sekarang ditandai selesai dan sudah diverifikasi.`
-        : `Aku menemukan ${label}, tetapi perubahan belum berhasil diverifikasi. ${String(recovered.result?.error || "Tidak ada perubahan terverifikasi.")}`;
-      if (applied) invalidateUserContext(user.id);
-      const displayName = String(resolvedProfile?.display_name || "").trim();
-      const displayReply = displayName && applied ? `${displayName}, ${reply}` : reply;
-      await saveServerChatTurn(supabase, user.id, "assistant", displayReply, typeof turnId === "string" ? turnId.slice(0, 120) : null, {
-        domains: ["tasks"],
-        mode: selectedMode,
-        verifiedActions: applied ? 1 : 0,
-      });
-      return NextResponse.json({
-        reply: displayReply,
-        turnMessages: [{ role: "assistant", content: displayReply }],
-        domains: ["tasks"],
-        pendingAction: null,
-        pendingActionId: null,
-        pendingBulkAction: null,
-        pendingScheduleImport: pendingScheduleImport || null,
-        visionUsed: Boolean(imageDataUrl),
-        mode: selectedMode,
-        actions: [{ tool: "update_tasks_bulk", ok: applied, label: `Menandai ${label} selesai` }],
-        undoActionId: recovered.undoActionId || null,
-        aiMeta: {
-          model: selectedAiModel,
-          contextMode: aiReadAllData ? "all" : "smart",
-          domains: ["tasks"],
-          operation: "update",
-          verifiedActions: applied ? 1 : 0,
-          deterministicRecovery: true,
-        },
-      });
-    }
-  }
   const messages: RawMsg[] = [
     { role: "system", content: buildSystemPrompt(resolvedProfile?.display_name ?? null, timezone, clientNowIso ?? undefined, intelligenceContext, selectedMode, selectedResponseStyle as any, { aiReadAllData, aiAutoLink, aiProactive, aiSuggestActions, aiConfirmDestructive, aiConfirmMassive, aiDeniedDomains: deniedDomains }) },
     { role: "system", content: `AI ROUTING: model=${selectedAiModel}; contextMode=${aiReadAllData ? "all" : "smart"}; domains=${domains.join(",") || "overview"}. Jangan mengakses domain yang tidak disediakan toolset.` },
