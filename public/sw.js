@@ -220,11 +220,20 @@ self.addEventListener('fetch', (event) => {
   // pass through normally so app-router resources are not altered.
   if (!['script','style','image','font','manifest'].includes(req.destination)) return;
 
-  event.respondWith(loadVersionMetadata().then(() => caches.match(req).then((cached) => fetch(req).then((res) => {
-    if (res.ok) {
-      const copy = res.clone();
-      caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => undefined);
-    }
-    return res;
-  }).catch(() => cached || caches.match(OFFLINE_URL))));
-});
+  event.respondWith(
+    loadVersionMetadata()
+      .then(() =>
+        caches.match(req).then((cached) =>
+          fetch(req)
+            .then((res) => {
+              if (res.ok) {
+                const copy = res.clone();
+                caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => undefined);
+              }
+              return res;
+            })
+            .catch(() => cached || caches.match(OFFLINE_URL))
+        )
+      )
+  );
+
