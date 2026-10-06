@@ -735,7 +735,6 @@ button, a { touch-action: manipulation; }
   .finance-tabs { top: .5rem; }
   .finance-summary-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
   .finance-summary-row > * { min-width: 0; }
-  .finance-summary-row > :first-child { grid-column: 1 / -1; }
   .finance-tabs { scroll-padding-inline: .25rem; }
   .finance-tabs button { min-height: 44px; }
   .finance-tabs button:focus-visible { outline-offset: -3px; }
