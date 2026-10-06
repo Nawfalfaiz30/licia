@@ -1,5 +1,7 @@
 "use client";
 
+// Modern, responsive Guide refresh.
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight, BookOpen, CalendarDays, Camera, ChevronDown, Database, HeartPulse, Lightbulb, Search, Settings2, ShieldCheck, Smartphone, Sparkles, Target, Wallet } from "lucide-react";
