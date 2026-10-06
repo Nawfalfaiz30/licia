@@ -5,6 +5,8 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 const chat = fs.readFileSync(new URL('../app/api/chat/route.ts', import.meta.url), 'utf8');
+const chatOrchestrator = fs.readFileSync(new URL('../lib/ai/chatOrchestrator.ts', import.meta.url), 'utf8');
+const chatRuntimeSource = chat + '\n' + chatOrchestrator;
 const historySchema = readFileSync(new URL('../supabase/schema_ai_chat_history.sql', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
@@ -14,7 +16,7 @@ assert.match(runtime, /LICIA_AI_OMIT_TEMPERATURE/);
 assert.match(runtime, /LICIA_AI_REASONING_EFFORT/);
 
 for (const file of [
-  'app/api/chat/route.ts',
+  'lib/ai/chatOrchestrator.ts',
   'app/api/weekly-planner/route.ts',
   'app/api/v38/daily-plan/route.ts',
   'app/api/inbox/triage/route.ts',
@@ -31,12 +33,12 @@ assert.ok(/^0\.(5[4-9]|[6-9]\d)\./.test(pkg.version), `versi paket ${pkg.version
 assert.ok(fs.existsSync(new URL('../DEPLOY_VPS.md', import.meta.url)));
 assert.match(runtime, /reasoning_effort/);
 assert.match(runtime, /unsupportedGenerationParameter/);
-assert.match(chat, /tools:\s*selectedTools/);
-assert.match(chat, /tools:\s*recoveryTools/);
-assert.match(chat, /selectAiToolModel/);
-assert.match(chat, /pendingActionId/);
-assert.match(chat, /loadServerPendingAction/);
-assert.match(chat, /export async function DELETE/);
+assert.match(chatRuntimeSource, /tools:\s*selectedTools/);
+assert.match(chatRuntimeSource, /tools:\s*recoveryTools/);
+assert.match(chatRuntimeSource, /selectAiToolModel/);
+assert.match(chatRuntimeSource, /pendingActionId/);
+assert.match(chatRuntimeSource, /loadServerPendingAction/);
+assert.match(chatOrchestrator, /export async function chatDelete/);
 const validatorUrl = pathToFileURL(new URL('../lib/ai/toolValidation.ts', import.meta.url).pathname).href;
 const behaviorScript = `
 import { validateToolArguments } from ${JSON.stringify(validatorUrl)};
