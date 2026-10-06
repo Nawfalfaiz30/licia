@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { startOfDayIsoForTimezone, endOfDayIsoForTimezone } from "@/lib/date";
 
 const DELETE_IDS: Record<string, { table: string; field: string }> = {
   delete_expense: { table: "expenses", field: "confirm_expense_id" },
@@ -79,7 +80,7 @@ function stripForUpdate(row: Record<string, any>) {
   return copy;
 }
 
-export async function captureBeforeAction(supabase: SupabaseClient, userId: string, toolName: string, args: any) {
+export async function captureBeforeAction(supabase: SupabaseClient, userId: string, toolName: string, args: any, timezone = "Asia/Jakarta") {
   if (toolName === "update_task" && args?.subtask_id) {
     const { data, error } = await supabase.from("subtasks").select("*").eq("id", String(args.subtask_id)).eq("user_id", userId).maybeSingle();
     return error || !data ? null : { row: data, table: "subtasks" };
@@ -112,7 +113,23 @@ export async function captureBeforeAction(supabase: SupabaseClient, userId: stri
     const ids = Array.isArray(args?.task_ids) ? args.task_ids.map(String).filter((id:string)=>id) : [];
     if (ids.length) query = query.in("id", ids);
     else if (typeof args?.keyword === "string" && args.keyword.trim()) query = query.ilike("title", `%${args.keyword.trim()}%`);
-    else return null;
+    else if (!args?.due_on && !args?.due_from && !args?.due_to && !args?.due_after) return null;
+    if (typeof args?.due_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_on)) {
+      const day = new Date(`${args.due_on}T12:00:00Z`);
+      query = query.gte("due_at", startOfDayIsoForTimezone(day, timezone)).lte("due_at", endOfDayIsoForTimezone(day, timezone));
+    }
+    if (typeof args?.due_from === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_from)) {
+      const from = new Date(`${args.due_from}T12:00:00Z`);
+      query = query.gte("due_at", startOfDayIsoForTimezone(from, timezone));
+    }
+    if (typeof args?.due_to === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_to)) {
+      const to = new Date(`${args.due_to}T12:00:00Z`);
+      query = query.lte("due_at", endOfDayIsoForTimezone(to, timezone));
+    }
+    if (typeof args?.due_after === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_after)) {
+      const after = new Date(`${args.due_after}T12:00:00Z`);
+      query = query.gt("due_at", endOfDayIsoForTimezone(after, timezone));
+    }
     const { data: rows, error } = await query;
     if (error || !rows?.length) return error ? null : { rows: [], reminders: [] };
     const rowIds = rows.map((row:any)=>String(row.id));
