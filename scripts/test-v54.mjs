@@ -24,7 +24,7 @@ for (const file of [
   "app/api/inbox/triage/route.ts",
   "app/api/estimate-nutrition/route.ts",
   "app/api/weekly-planner/route.ts",
-  "app/api/chat/route.ts",
+  "lib/ai/chatOrchestrator.ts",
   "app/api/v38/daily-plan/route.ts",
   "app/api/tasks/assist/route.ts",
 ]) {
