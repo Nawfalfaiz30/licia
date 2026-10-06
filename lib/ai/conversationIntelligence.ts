@@ -35,7 +35,7 @@ export type ConversationDecision = {
 const DOMAIN_SET = new Set<AiDomain>([
   "tasks", "calendar", "focus", "finance", "health", "goals", "projects", "notes", "inbox",
   "decisions", "learning", "reading", "habits", "memory", "vault", "automations", "reminders",
-  "notifications", "subscriptions", "overview", "all",
+  "notifications", "subscriptions", "journal", "relations", "overview", "all",
 ]);
 
 const mutationPattern = /\b(buat|buatkan|catat|simpan|tambah|tambahkan|masukkan|input|jadwalkan|ingatkan|log|check[-\s]?in|centang|tandai|ubah|edit|update|ganti|pindah|atur|hapus|delete|buang|hilangkan|arsipkan|hubungkan|jadikan|konversi|convert)\b/i;
