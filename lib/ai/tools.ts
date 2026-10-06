@@ -589,6 +589,24 @@ export const toolDefs: ToolDef[] = [
   {
     type: "function",
     function: {
+      name: "update_tasks_bulk",
+      description: "Perbarui beberapa tugas sekaligus dengan perubahan yang sama. Gunakan hanya jika target sudah jelas melalui task_ids atau keyword; cocok untuk menandai dua atau lebih tugas selesai. Jangan gunakan tanpa target.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_ids: { type: "array", items: { type: "string" }, description: "Daftar UUID tugas dari hasil baca/search atau referensi aktif." },
+          keyword: { type: "string", description: "Kata kunci judul jika target belum diberikan sebagai UUID." },
+          status: { type: "string", enum: ["todo", "in_progress", "done"] },
+          priority: { type: "string", enum: ["low", "medium", "high"] },
+          due_at: { type: "string", description: "Tenggat yang sama untuk semua target, ISO 8601; opsional." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "delete_task",
       description:
         "Hapus tugas. Pola wajib cari-kandidat-dulu: >1 kandidat → tampilkan daftar & tanya, 0 → bilang tidak ketemu, hapus hanya setelah confirm_task_id dikirim eksplisit.",
@@ -2600,6 +2618,7 @@ async function updateTask(ctx: HandlerCtx, args: any) {
   }
 
   if (!args.task_id) return { ok: false, error: "task_id wajib diisi kalau bukan update subtugas." };
+  if (!isUuid(String(args.task_id))) return { ok: false, code: "INVALID_ENTITY_ID", error: "task_id harus berupa UUID nyata dari hasil baca/search, bukan nomor urut seperti 1, 2, atau 3.", retryable: false };
 
   const patch: Record<string, any> = {};
   if (args.status) patch.status = args.status;
@@ -2626,6 +2645,62 @@ async function updateTask(ctx: HandlerCtx, args: any) {
   }
   await emitLifeEvent(ctx.supabase, { userId: ctx.userId, eventType: "task.updated", entityType: "task", entityId: data.id, payload: { status: data.status, due_at: data.due_at } });
   return { ok: true, task: data, reminder };
+}
+
+async function updateTasksBulk(ctx: HandlerCtx, args: any) {
+  const rawIds = Array.isArray(args.task_ids) ? args.task_ids.map(String).map((x: string) => x.trim()).filter(Boolean) : [];
+  const invalidIds = rawIds.filter((id: string) => !isUuid(id));
+  if (invalidIds.length) return { ok: false, code: "INVALID_ENTITY_ID", error: "Semua task_ids harus berupa UUID nyata dari hasil baca/search." };
+  let ids = [...new Set(rawIds)].slice(0, 30);
+
+  if (!ids.length && typeof args.keyword === "string" && args.keyword.trim()) {
+    const { data, error } = await ctx.supabase
+      .from("tasks")
+      .select("id")
+      .eq("user_id", ctx.userId)
+      .ilike("title", `%${args.keyword.trim()}%`)
+      .order("due_at", { ascending: true, nullsFirst: false })
+      .limit(30);
+    if (error) return { ok: false, error: error.message };
+    ids = (data ?? []).map((row: any) => String(row.id)).filter(isUuid).slice(0, 30);
+  }
+
+  if (!ids.length) return { ok: false, status: "no_match", error: "Tidak ada target tugas yang jelas. Berikan nama atau kata kunci tugas terlebih dahulu." };
+
+  const patch: Record<string, any> = {};
+  if (args.status) patch.status = args.status;
+  if (args.priority) patch.priority = args.priority;
+  if (args.due_at !== undefined) patch.due_at = args.due_at ? ensureTimezoneOffset(String(args.due_at), ctx.timezone) : null;
+  if (!Object.keys(patch).length) return { ok: false, status: "no_changes", error: "Tidak ada perubahan yang diberikan." };
+  patch.updated_at = new Date().toISOString();
+
+  const { data, error } = await ctx.supabase
+    .from("tasks")
+    .update(patch)
+    .in("id", ids)
+    .eq("user_id", ctx.userId)
+    .select("id,title,status,priority,due_at,description,estimated_minutes,project_id,created_at,updated_at");
+  if (error) return { ok: false, error: error.message };
+
+  const updated = data ?? [];
+  if (updated.length) {
+    const updatedIds = updated.map((row: any) => row.id);
+    if (patch.status === "done" || patch.due_at === null) {
+      await cancelTaskReminders(ctx.supabase, ctx.userId, updatedIds, patch.status === "done" ? "task_bulk_completed" : "task_deadline_removed");
+    } else if (patch.due_at !== undefined) {
+      for (const row of updated) {
+        const reminder = await syncExistingTaskReminder(ctx.supabase, ctx.userId, ctx.timezone, row);
+        if (!reminder) {
+          const mins = await getDefaultReminderMinutes(ctx.supabase, ctx.userId);
+          if (mins > 0) await createDefaultTaskReminder(ctx.supabase, ctx.userId, ctx.timezone, row, mins);
+        }
+      }
+    }
+    for (const row of updated) {
+      await emitLifeEvent(ctx.supabase, { userId: ctx.userId, eventType: "task.updated", entityType: "task", entityId: row.id, payload: { status: row.status, due_at: row.due_at, bulk: true } });
+    }
+  }
+  return { ok: true, operation: "bulk_update", count: updated.length, requested_count: ids.length, updated, requested_ids: ids };
 }
 
 async function deleteSubtask(ctx: HandlerCtx, args: any) {
@@ -4584,6 +4659,8 @@ export async function executeTool(
       return getTasks(ctx, args);
     case "update_task":
       return updateTask(ctx, args);
+    case "update_tasks_bulk":
+      return updateTasksBulk(ctx, args);
     case "delete_task":
       return deleteTask(ctx, args);
     case "delete_tasks_bulk":
