@@ -4606,8 +4606,19 @@ export async function executeTool(
   if (!validation.ok) return validation;
   args = validation.value;
 
-  switch (name) {
-    case "log_expense":
+  const idFieldByMutationTool: Record<string, string> = {
+    update_expense: "expense_id", update_task: "task_id", update_income: "income_id", update_account: "account_id",
+    update_schedule_block: "block_id", update_reminder: "reminder_id", update_decision: "decision_id", update_skill: "skill_id",
+    update_budget: "budget_id", update_goal: "goal_id", update_note: "note_id", update_reading: "reading_id", update_project: "project_id",
+    update_vault_item: "item_id", update_automation: "automation_id", update_habit: "habit_id", update_subscription: "subscription_id",
+    mark_notification_read: "notification_id", checkin_habit: "habit_id", uncheckin_habit: "habit_id",
+  };
+  const idField = idFieldByMutationTool[name];
+  if (idField && args[idField] !== undefined && args[idField] !== null && !isUuid(args[idField])) {
+    return { ok: false, code: "INVALID_ENTITY_ID", error: `${idField} harus berupa UUID nyata dari hasil baca/search, bukan nomor urut.` };
+  }
+
+  switch (name) {    case "log_expense":
       return logExpense(ctx, args);
     case "get_expense_summary":
       return getExpenseSummary(ctx, args);
