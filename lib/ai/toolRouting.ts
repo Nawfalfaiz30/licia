@@ -108,7 +108,7 @@ export function selectReadToolDefs<T extends { function?: { name?: string } }>(d
   for (const readNames of Object.values(readTools)) {
     for (const name of readNames ?? []) names.add(name);
   }
-  ["get_unified_life_snapshot", "get_daily_brain", "get_ai_watchers", "get_life_module_data", "search_life_os", "get_life_os_capabilities", "resolve_calendar_date"].forEach((name) => names.add(name));
+  ["get_unified_life_snapshot", "get_daily_brain", "get_ai_watchers", "get_life_module_data", "get_life_graph", "search_life_os", "get_life_os_capabilities", "resolve_calendar_date"].forEach((name) => names.add(name));
   return defs.filter((d) => d.function?.name && names.has(d.function.name));
 }
 
