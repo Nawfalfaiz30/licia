@@ -1,3 +1,4 @@
+// FASE 2 rebuild marker: keep deployment source in sync after CRUD resolver cleanup.
 import { NextResponse } from "next/server";
 
 import OpenAI from "openai";
