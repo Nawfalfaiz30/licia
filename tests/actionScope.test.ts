@@ -24,6 +24,11 @@ describe("resolveActionScope", () => {
     expect(scope.fromDate).toBe("2026-10-05");
     expect(scope.toDate).toBe("2026-10-05");
   });
+  it("keeps after-today scope for direct restore commands", () => {
+    const scope = resolveActionScope("kembalikan tugas setelah hari ini ke belum selesai", now, "Asia/Jakarta");
+    expect(scope.kind).toBe("after");
+    expect(scope.explicit).toBe(true);
+  });
 
   it("resolves besok dan seterusnya to after-today", () => {
     const scope = resolveActionScope("kembalikan tugas besok dan seterusnya", now, "Asia/Jakarta");
