@@ -1,13 +1,30 @@
 "use client";
 
-// Modern, responsive Guide refresh.
-
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, BookOpen, CalendarDays, Camera, ChevronDown, Database, HeartPulse, Lightbulb, Search, Settings2, ShieldCheck, Smartphone, Sparkles, Target, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarDays,
+  Camera,
+  Check,
+  ChevronDown,
+  Database,
+  HeartPulse,
+  Lightbulb,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  Target,
+  Wallet,
+  X,
+} from "lucide-react";
 import { clsx } from "clsx";
 
 import { useLanguage } from "@/components/LanguageProvider";
+
 type GuideItem = {
   id: string;
   title: string;
@@ -37,36 +54,324 @@ const guide: GuideItem[] = [
   { id:"backup", title:"Ekspor & Backup", summary:"Simpan salinan data pribadi untuk arsip atau pemulihan.", steps:["Buka Pengaturan → Data & Akun.","Gunakan Ekspor untuk membuat salinan.","Gunakan Backup & Restore untuk pemulihan atau pemindahan data."], href:"/settings#data", icon:Database, category:"Sistem" },
 ];
 
+
+
 const quickPrompts = [
   "Apa yang paling penting hari ini?",
   "Rapikan jadwal saya besok dan cari konflik.",
   "Buat tugas dari ide ini dan beri deadline yang masuk akal.",
 ];
 
+
+
 export default function GuidePage() {
   const { t: tr } = useLanguage();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<string | null>("home");
   const [category, setCategory] = useState<GuideItem["category"] | "Semua">("Semua");
+
   const categories = ["Semua", "Mulai", "Rencana", "Personal", "AI & Privasi", "Sistem"] as const;
+
+  const counts = useMemo(
+    () =>
+      categories.reduce<Record<string, number>>((acc, item) => {
+        acc[item] = item === "Semua" ? guide.length : guide.filter((x) => x.category === item).length;
+        return acc;
+      }, {}),
+    []
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return guide.filter((x) => (category === "Semua" || x.category === category) && (!q || `${x.title} ${tr(x.title)} ${tr(x.summary)} ${x.steps.map((st) => tr(st)).join(" ")} ${x.example ? tr(x.example) : ""}`.toLowerCase().includes(q)));
-  }, [query, category]);
+    return guide.filter(
+      (x) =>
+        (category === "Semua" || x.category === category) &&
+        (!q ||
+          `${x.title} ${tr(x.title)} ${tr(x.summary)} ${x.steps
+            .map((st) => tr(st))
+            .join(" ")} ${x.example ? tr(x.example) : ""}`
+            .toLowerCase()
+            .includes(q))
+    );
+  }, [query, category, tr]);
 
-  return <div className="guide-shell space-y-4 animate-licia-page-in">
-    <header className="guide-shell-hero relative overflow-hidden rounded-[2rem] border border-accent/15 bg-surface p-4 sm:p-6">
-      <div className="absolute -right-14 -top-14 h-48 w-48 rounded-full bg-accent/10 blur-3xl" />
-      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3"><div className="rounded-2xl bg-accent/10 p-3 text-accent"><BookOpen size={20}/></div><div className="min-w-0"><p className="text-2xs font-bold uppercase tracking-[.16em] text-accent">{tr("Pusat Bantuan Licia")}</p><h1 className="mt-1 break-words font-display text-2xl text-text sm:text-3xl">{tr("Panduan Licia")}</h1><p className="mt-1 max-w-2xl text-xs leading-relaxed text-textMuted">{tr("Panduan penggunaan yang mengikuti struktur aplikasi saat ini. Tidak perlu menghafal banyak menu: mulai dari Beranda, Rencana, Chat, Tangkap, atau Insights. Fitur yang serupa sudah ditempatkan dalam workspace yang sama. Tombol Lainnya di ponsel hanya menampilkan pilihan yang masih menjadi tujuan aktif.")}</p></div></div>
-        <Link href="/chat" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-2xs font-semibold text-white"><Sparkles size={13}/> {" "}{tr("Tanya Licia")}</Link>
+  const featured = guide.slice(0, 3);
+
+  return (
+    <div className="guide-shell mx-auto max-w-6xl space-y-5 pb-8 animate-licia-page-in">
+      <header className="relative overflow-hidden rounded-[2rem] border border-accent/15 bg-surface shadow-sm">
+        <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.10] via-transparent to-transparent" />
+        <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
+        <div className="absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-accent/[0.06] blur-3xl" />
+
+        <div className="relative grid gap-7 p-5 sm:p-7 lg:grid-cols-[1fr_320px] lg:items-center lg:p-9">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-accent/15 bg-accent/5 px-3 py-1.5 text-2xs font-bold uppercase tracking-[0.14em] text-accent">
+              <Sparkles size={12} />
+              {tr("Pusat Bantuan Licia")}
+            </div>
+
+            <h1 className="mt-4 max-w-2xl font-display text-3xl leading-tight text-text sm:text-4xl lg:text-[2.75rem]">
+              {tr("Kenali Licia, tanpa harus menghafal banyak menu.")}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-textMuted">
+              {tr("Temukan workspace yang tepat, pelajari cara kerjanya, atau langsung minta bantuan Licia. Semua panduan mengikuti struktur aplikasi saat ini.")}
+            </p>
+
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Link
+                href="/chat"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
+              >
+                <Sparkles size={15} />
+                {tr("Tanya Licia")}
+                <ArrowRight size={13} />
+              </Link>
+              <Link
+                href="/dashboard"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-bg/70 px-4 text-xs font-bold text-text transition hover:border-accent/30 hover:text-accent"
+              >
+                <BookOpen size={15} />
+                {tr("Mulai dari Beranda")}
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-2xl border border-border bg-bg/70 p-3 text-center backdrop-blur">
+              <p className="font-display text-xl text-text">{guide.length}</p>
+              <p className="mt-0.5 text-2xs text-textMuted">{tr("Panduan")}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-bg/70 p-3 text-center backdrop-blur">
+              <p className="font-display text-xl text-text">{categories.length - 1}</p>
+              <p className="mt-0.5 text-2xs text-textMuted">{tr("Kategori")}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-bg/70 p-3 text-center backdrop-blur">
+              <p className="font-display text-xl text-text">AI</p>
+              <p className="mt-0.5 text-2xs text-textMuted">{tr("Siap bantu")}</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        {featured.map((item, index) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              className="group relative overflow-hidden rounded-2xl border border-border bg-surface p-4 transition duration-200 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md"
+            >
+              <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-accent/5 blur-2xl transition group-hover:bg-accent/10" />
+              <div className="relative">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                    <Icon size={18} />
+                  </span>
+                  <span className="rounded-full bg-bg px-2 py-1 text-2xs font-semibold text-textMuted">
+                    {tr("Pilihan")}
+                  </span>
+                </div>
+                <h2 className="mt-4 text-sm font-bold text-text">{tr(item.title)}</h2>
+                <p className="mt-1.5 line-clamp-2 text-2xs leading-relaxed text-textMuted">{tr(item.summary)}</p>
+                <span className="mt-4 inline-flex items-center gap-1.5 text-2xs font-bold text-accent">
+                  {tr("Buka workspace")}
+                  <ArrowRight size={11} className="transition group-hover:translate-x-0.5" />
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </section>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        const quickPrompts = [
+  "Apa yang paling penting hari ini?",
+  "Rapikan jadwal saya besok dan cari konflik.",
+  "Buat tugas dari ide ini dan beri deadline yang masuk akal.",
+];
+
+
+      </section>
+
+      <section className="sticky top-2 z-30 rounded-2xl border border-border bg-surface/95 p-2 shadow-lg shadow-black/[0.03] backdrop-blur-xl">
+        <div className="flex flex-col gap-2">
+          <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border bg-bg px-3">
+            <Search size={16} className="shrink-0 text-textMuted" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={tr("Cari panduan, task, kalender, AI, keuangan…")}
+              className="min-w-0 flex-1 bg-transparent py-3 text-xs text-text outline-none placeholder:text-textMuted"
+              aria-label={tr("Cari panduan")}
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="rounded-lg p-1.5 text-textMuted transition hover:bg-surface hover:text-text"
+                aria-label={tr("Hapus pencarian")}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+            {categories.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCategory(item)}
+                className={clsx(
+                  "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-2xs font-bold transition",
+                  category === item
+                    ? "bg-accent text-white shadow-sm"
+                    : "border border-border bg-bg text-textMuted hover:border-accent/25 hover:text-text"
+                )}
+              >
+                {tr(item)}
+                <span
+                  className={clsx(
+                    "rounded-full px-1.5 py-0.5 text-[9px]",
+                    category === item ? "bg-white/15 text-white" : "bg-surface text-textMuted"
+                  )}
+                >
+                  {counts[item]}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-2xs font-bold uppercase tracking-[0.14em] text-accent">{tr("Semua panduan")}</p>
+          <h2 className="mt-1 font-display text-xl text-text">{tr("Pilih topik yang ingin kamu kuasai")}</h2>
+        </div>
+        <p className="text-2xs text-textMuted">
+          {tr("Menampilkan")} <span className="font-bold text-text">{filtered.length}</span> {tr("panduan")}
+        </p>
       </div>
-    </header>
 
-    <section className="grid gap-2 md:grid-cols-3">{quickPrompts.map((p, i) => <Link key={p} href={`/chat?prompt=${encodeURIComponent(tr(p))}`} className="guide-shell-prompt rounded-2xl border border-border bg-surface p-3.5"><div className="flex items-center justify-between"><span className="flex h-7 w-7 items-center justify-center rounded-xl bg-accent/10 text-2xs font-bold text-accent">{i+1}</span><ArrowRight size={13} className="text-textMuted"/></div><p className="mt-3 text-xs font-semibold text-text">{tr(p)}</p></Link>)}</section>
+      <section className="space-y-3">
+        {filtered.map((item, index) => {
+          const Icon = item.icon;
+          const expanded = open === item.id;
 
-    <section className="sticky top-2 z-20 rounded-2xl border border-border bg-surface/95 p-2.5 shadow-sm backdrop-blur-xl"><div className="flex flex-col gap-2 lg:flex-row"><div className="guide-shell-search flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-bg px-3"><Search size={15} className="shrink-0 text-textMuted"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={tr("Cari task, kalender, AI, pengaturan…")} className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-text outline-none placeholder:text-textMuted"/>{query&&<button onClick={()=>setQuery("")} className="rounded-lg px-2 py-1 text-2xs font-semibold text-textMuted hover:text-text">{tr("Hapus")}</button>}</div><div className="flex min-w-0 gap-1 overflow-x-auto no-scrollbar">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={clsx("shrink-0 rounded-xl px-3 py-2 text-2xs font-semibold transition",category===c?"bg-accent text-white":"border border-border bg-bg text-textMuted hover:text-text")}>{c}</button>)}</div></div></section>
+          return (
+            <article
+              key={item.id}
+              className={clsx(
+                "overflow-hidden rounded-2xl border bg-surface transition-all duration-200",
+                expanded ? "border-accent/25 shadow-md shadow-black/[0.03]" : "border-border hover:border-accent/15"
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => setOpen(expanded ? null : item.id)}
+                className="group flex w-full min-w-0 items-center gap-3 p-4 text-left sm:p-5"
+                aria-expanded={expanded}
+              >
+                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                  <Icon size={18} />
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-surface bg-bg px-1 text-[8px] font-bold text-textMuted">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </span>
 
-    <section className="space-y-2">{filtered.map(item=>{const Icon=item.icon;const expanded=open===item.id;return <article key={item.id} className={clsx("overflow-hidden rounded-2xl border border-border bg-surface transition",expanded&&"border-accent/20 shadow-sm")}><button onClick={()=>setOpen(expanded?null:item.id)} className="flex w-full min-w-0 items-center gap-3 p-3.5 text-left sm:p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><Icon size={16}/></span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-1.5"><span className="text-xs font-semibold text-text sm:text-sm">{tr(item.title)}</span><span className="rounded-full bg-bg px-1.5 py-0.5 text-2xs font-semibold text-textMuted">{tr(item.category)}</span></span><span className="mt-0.5 block text-2xs leading-relaxed text-textMuted">{tr(item.summary)}</span></span><ChevronDown size={16} className={clsx("shrink-0 text-textMuted transition",expanded&&"rotate-180 text-accent")}/></button>{expanded&&<div className="border-t border-border px-3.5 pb-4 pt-3.5 sm:px-4"><div className="grid gap-2 sm:grid-cols-2">{item.steps.map((step,i)=><div key={tr(step)} className="flex gap-2.5 rounded-xl bg-bg p-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-2xs font-bold text-accent">{i+1}</span><p className="min-w-0 text-2xs leading-relaxed text-textMuted">{tr(step)}</p></div>)}</div>{item.example&&<div className="mt-3 rounded-xl border border-accent/15 bg-accent/5 p-3"><p className="text-2xs font-bold uppercase tracking-[.12em] text-accent">{tr("Contoh")}</p><p className="mt-1 text-2xs leading-relaxed text-text">“{tr(item.example)}”</p></div>}<Link href={item.href} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-2xs font-semibold text-white">{tr("Buka {item_title}", { item_title: item.title })}<ArrowRight size={11}/></Link></div>}</article>})}{!filtered.length&&<div className="rounded-2xl border border-dashed border-border p-10 text-center"><Search size={24} className="mx-auto text-accent"/><p className="mt-2 font-display text-lg text-text">{tr("Topik tidak ditemukan")}</p><p className="mt-1 text-xs text-textMuted">{tr("Coba kata seperti task, agenda, AI, privacy, atau backup.")}</p></div>}</section>
-  </div>;
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-bold text-text sm:text-sm">{tr(item.title)}</span>
+                    <span className="rounded-full bg-bg px-2 py-0.5 text-[9px] font-bold text-textMuted">
+                      {tr(item.category)}
+                    </span>
+                  </span>
+                  <span className="mt-1 block max-w-3xl text-2xs leading-relaxed text-textMuted sm:text-xs">
+                    {tr(item.summary)}
+                  </span>
+                </span>
+
+                <span
+                  className={clsx(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-bg text-textMuted transition",
+                    expanded && "bg-accent/10 text-accent"
+                  )}
+                >
+                  <ChevronDown size={15} className={clsx("transition-transform", expanded && "rotate-180")} />
+                </span>
+              </button>
+
+              {expanded && (
+                <div className="border-t border-border bg-bg/35 px-4 pb-5 pt-4 sm:px-5">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {item.steps.map((step, stepIndex) => (
+                      <div key={step} className="flex gap-3 rounded-xl border border-border/70 bg-surface p-3.5">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-2xs font-bold text-accent">
+                          {stepIndex + 1}
+                        </span>
+                        <p className="min-w-0 pt-0.5 text-2xs leading-relaxed text-textMuted sm:text-xs">{tr(step)}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {item.example && (
+                    <div className="mt-3 rounded-2xl border border-accent/15 bg-accent/[0.06] p-4">
+                      <div className="flex items-center gap-2 text-accent">
+                        <Lightbulb size={14} />
+                        <p className="text-2xs font-bold uppercase tracking-[0.12em]">{tr("Contoh")}</p>
+                      </div>
+                      <p className="mt-2 text-xs leading-relaxed text-text">“{tr(item.example)}”</p>
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <Link
+                      href={item.href}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-3.5 text-2xs font-bold text-white transition hover:opacity-90"
+                    >
+                      {tr("Buka {item_title}", { item_title: item.title })}
+                      <ArrowRight size={12} />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setOpen(null)}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-2xs font-bold text-textMuted transition hover:text-text"
+                    >
+                      <Check size={12} />
+                      {tr("Selesai membaca")}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </article>
+          );
+        })}
+
+        {!filtered.length && (
+          <div className="rounded-3xl border border-dashed border-border bg-surface p-10 text-center sm:p-14">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+              <Search size={24} />
+            </div>
+            <h3 className="mt-4 font-display text-xl text-text">{tr("Topik tidak ditemukan")}</h3>
+            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-textMuted">
+              {tr("Coba kata lain seperti task, agenda, AI, privacy, backup, atau pilih kategori berbeda.")}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setCategory("Semua");
+              }}
+              className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl bg-accent px-4 text-2xs font-bold text-white"
+            >
+              {tr("Tampilkan semua")}
+            </button>
+          </div>
+        )}
+      </section>
+    </div>
+  );
 }
