@@ -894,6 +894,8 @@ async function handleChatPost(req: Request) {
     return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains: ["overview", "reminders"] as any, pendingAction: null, pendingBulkAction, pendingScheduleImport: pendingScheduleImport || null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: [], undoActionId: null });
   }
   const wantsActionContext = (aiProactive && (domains.includes("overview") || selectedMode !== "assistant" || /\b(analisis|review|evaluasi|rencanakan|prioritas|apa yang harus|saran)\b/i.test(effectiveMessage))) || /\b(buat|buatkan|jadwalkan|atur|rapikan|ubah|hapus|selesaikan|kerjakan|jalankan|ingatkan)\b/i.test(effectiveMessage);
+  const selectedAiModel = selectAiModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
+  const selectedToolModel = selectAiToolModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const connectedContext = await buildConnectedContext(supabase, user.id, timezone, domains);
   const actionableContext = wantsActionContext ? await buildActionableContext(supabase, user.id, timezone) : { signals: [] as any[] };
 
@@ -1181,8 +1183,6 @@ async function handleChatPost(req: Request) {
     return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains, pendingAction: applied ? null : pendingAction, pendingActionId: applied ? null : (pendingAction?.pendingId || null), pendingBulkAction: null, pendingScheduleImport: pendingScheduleImport || null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: performedActions, undoActionId: undoActionIds.at(-1) || null });
   }
 
-  const selectedAiModel = selectAiModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
-  const selectedToolModel = selectAiToolModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const recentAssistantTaskCompletionProposal = /\b(?:tandai|selesaikan|centang|bereskan|complete)\b[\s\S]{0,120}\b(?:selesai|done|beres)\b/i.test(String(recentAssistantText || ""));
   const taskCompletionFollowUp = domains.includes("tasks")
     && (
