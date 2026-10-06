@@ -2626,6 +2626,7 @@ async function updateTask(ctx: HandlerCtx, args: any) {
   if (args.description !== undefined) patch.description = args.description;
   if (args.priority) patch.priority = args.priority;
   if (args.due_at !== undefined) patch.due_at = args.due_at ? ensureTimezoneOffset(String(args.due_at), ctx.timezone) : null;
+  if (!Object.keys(patch).length) return { ok: false, status: "no_changes", error: "Tidak ada perubahan task yang diberikan." };
   patch.updated_at = new Date().toISOString();
 
   const { data, error } = await ctx.supabase
