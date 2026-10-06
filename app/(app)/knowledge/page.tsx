@@ -1,7 +1,7 @@
+import { getServerT } from "@/lib/i18n-server";
 import Link from "next/link";
 import { Brain, BookOpen, LibraryBig, StickyNote, GraduationCap } from "lucide-react";
 import { Card } from "@/components/ui";
-import { getServerI18n } from "@/lib/i18n/server";
 
 const items = [
   { href: "/learning", title: "Belajar & Keahlian", detail: "Skill, materi, level, target belajar, dan sesi latihan yang kamu bangun.", icon: GraduationCap },
@@ -12,10 +12,10 @@ const items = [
 ];
 
 export default async function KnowledgePage() {
-  const { tr } = await getServerI18n();
+  const { t: tr } = await getServerT();
   return <div className="space-y-5">
     <section className="rounded-[2rem] border border-accent/15 bg-surface p-5 sm:p-7">
-      <p className="text-[10px] font-bold uppercase tracking-[.14em] text-accent">{tr("Knowledge")}</p>
+      <p className="text-2xs font-bold uppercase tracking-[.14em] text-accent">{tr("Knowledge")}</p>
       <h1 className="mt-2 font-display text-3xl text-text">{tr("Satu tempat untuk hal yang ingin kamu simpan")}</h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-textMuted">{tr("Catatan, Memory, Vault, Bacaan, dan Belajar tetap punya mesin sendiri, tetapi pintu masuknya satu supaya tidak terasa seperti banyak aplikasi kecil.")}</p>
     </section>

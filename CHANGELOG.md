@@ -1,31 +1,43 @@
-# Changelog
+## 0.57.0 — "Rapi dan dua bahasa" (Kategori A: UI/UX)
 
-## 0.57.1
-- Fix build: `app/global-error.tsx` — direktif `"use client"` kembali ke baris pertama.
-- Fix build: `components/v36/AIModeGuide.tsx` dipakai dari halaman klien, jadi kini komponen klien (`useLanguage`), bukan memakai `next/headers`.
+**Dwibahasa penuh (A11)**
+- Seluruh antarmuka kini tersedia dalam **Bahasa Indonesia dan English**: ±2.600 teks (halaman, toast, dialog, chip cerdas, keadaan kosong, pesan galat API yang tampil di UI, Panduan, nama kontrol). Kunci kamus = teks Indonesia apa adanya (`t("Tugas dibuat")`), padanan Inggris di `lib/locales/en.ts`; teks yang belum diterjemahkan jatuh ke Indonesia, tidak pernah kosong.
+- **Bahasa berlaku seketika** dari Pengaturan, palet perintah (`> bahasa`), atau pintasan; disimpan di `localStorage` **dan cookie** `licia-language` sehingga komponen server (SSR) langsung merender bahasa yang benar tanpa kedipan; `<html lang>` ikut berubah.
+- Tanggal, jam, dan angka mengikuti locale (`id-ID` / `en-US`): Rp 47.000 ↔ Rp 47,000; label chip "Besok" ↔ "Tomorrow"; parser tetap memahami masukan ID **dan** EN.
+- **AI membalas sesuai bahasa antarmuka**: chat, rencana harian, planner mingguan, dan triase Inbox menerima arahan bahasa dari cookie; argumen alat (ISO date, enum) tidak berubah.
+- `node scripts/i18n.mjs check` (dipasang di CI dan `npm test`) **gagal bila ada teks UI baru tanpa terjemahan Inggris**; `missing` dan `unused` membantu perawatan kamus.
 
-## 0.57.0 — "Dwibahasa penuh & UI yang lebih cekatan" (Kategori A)
+**A1 — Smart chips di mana-mana**
+- Inbox, Catatan, dan Kalender kini menampilkan chip tanggal/jam/prioritas/tag/nominal. Nominal menawarkan **"Catat sebagai pengeluaran / pemasukan"** (tebakan arah dari kata kunci; hanya menyimpan setelah diklik). Inbox/Catatan: **"Jadikan tugas"**. Kalender: **"Isi tanggal & jam dari judul"**.
 
-**A11 · Dwibahasa penuh (Indonesia/English)**
-- Seluruh teks antarmuka (±2.300 string di 100+ berkas) kini lewat `tr()`; kamus Inggris di `lib/i18n/en.ts` dibangun dari `i18n-src/en.json` (`npm run i18n:build`). Teks tanpa padanan tampil apa adanya, tidak pernah kosong.
-- Bahasa disimpan di **cookie** `licia-language` + localStorage, sehingga halaman server (Beranda, dll.) dan API (`/api/chat`, `/api/search`) ikut berbahasa pengguna tanpa kedip. `<html lang>` benar sejak HTML pertama.
-- Format tanggal/angka mengikuti bahasa (`locale` dari `useLanguage()`); bentuk jamak lewat `{0:day|days}`.
-- Prompt sistem Chat memuat bahasa antarmuka; Licia membalas dalam bahasa pengguna.
-- Alat CI: `npm run i18n:check` (kunci tanpa terjemahan, placeholder tidak cocok, `tr()` literal baru yang belum diterjemahkan).
+**A2 — Palet perintah jadi palet aksi**
+- Satu palet (`Ctrl/⌘+K`) menggantikan Pusat Perintah + QuickSearch: awalan `>` perintah (tema, bahasa, ukuran teks, sinkronkan, keluar, buat catatan/tugas…), `/` halaman, `?` data lintas modul. **Mengetik teks bebas menawarkan "Buat tugas: …"** dengan smart parsing dan Urungkan.
 
-**A1 · Smart chips di mana-mana** — Inbox, Catatan, dan Kalender menampilkan chip tanggal/jam/prioritas/tag/nominal; chip nominal menawarkan **Catat sebagai pengeluaran** (dengan Urungkan). Label chip mengikuti bahasa.
-**A2 · Palet perintah aksi** (`Ctrl/⌘+K`): `t teks` buat tugas, `i teks` ke Inbox, `$ teks` catat pengeluaran, `> perintah` (tema, bahasa, simpan cepat, fokus), plus pencarian lintas modul. Semua aksi bisa diurungkan.
-**A3 · Perangkap fokus** untuk semua dialog/sheet/palet (`OverlayGuard`): fokus masuk, Tab berputar, fokus kembali ke pemicu.
-**A4 · Overlay terpadu** — komponen `Overlay` + skala **z-index bertoken** (`z-modal`, `z-sheet`, `z-toast`, …). Toast kini selalu di atas dialog.
-**A5 · Teks minimum 11px** (lantai tipografi global; ikut skala teks pengguna).
-**A6 · Urungkan** pada selesai/hapus tugas, pindah papan/matriks/minggu, dan semua aksi cepat palet/chip (`notifyUndo`).
-**A7 · Checklist onboarding 5 langkah** dengan progres, langkah berikutnya disorot, dan bisa diciutkan (sebelumnya komponen tak terpasang dan hanya menampilkan 4 dari 6 item).
-**A8 · Dashboard bisa disesuaikan** — urutan, tampil/sembunyi per bagian, dan mode **Hari ini saja** (cookie, dirender server tanpa kedip).
-**A9 · Tugas: seret-dan-lepas** pada Papan, **Matriks Eisenhower**, dan **Minggu**; setiap kartu juga punya menu "Pindahkan ke…" (keyboard & layar sentuh).
-**A10 · Kontras WCAG AA** — aksen pilihan pengguna otomatis disesuaikan (gelap/terang) agar terbaca; warna teks di atas aksen dipilih otomatis. `npm run a11y:contrast` menguji 98 kombinasi tema (gagal = CI merah).
-**A12 · Pintasan daftar**: `J/K` (↑/↓) pindah, `X` selesai/arsip, `E` ubah, `Enter` buka — di Tugas, Inbox, Catatan.
+**A3/A4 — Satu komponen overlay**
+- `components/ui/Overlay.tsx` dipakai semua dialog, sheet, dan palet: **perangkap fokus**, fokus kembali ke pemicu, hanya overlay teratas yang merespons Esc, scroll dikunci, latar dibuat `inert`, dirender lewat portal.
+- **Skala z-index bertoken** (`lib/zIndex.ts`: `z-nav` … `z-toast`); tak ada lagi nilai 80/105/110/9998/9999 yang tersebar.
 
-**Catatan upgrade:** tidak ada migrasi basis data. Pengguna lama otomatis mendapat cookie bahasa dari pilihan sebelumnya.
+**A5/A10 — Keterbacaan**
+- Tidak ada lagi teks 8–10 px: semua memakai `text-2xs` (11 px, berbasis **rem**) dan ikut skala teks. Pengaturan > **Ukuran teks** (Kecil / Normal / Besar / Sangat besar) mengubah ukuran dasar seluruh aplikasi.
+- **Kontras WCAG AA terjamin**: warna aksen dipecah menjadi *isian* (tombol, teks putih di atasnya ≥ 4,5:1) dan *tinta* (teks/ikon di atas latar). Aksen kustom diturunkan otomatis; `success`/`danger` ikut diperbaiki. Dicakup tes untuk semua preset aksen × semua latar.
+
+**A6 — Urungkan**
+- Selesai/ubah status/pindah tugas menampilkan toast **Urungkan (5 dtk, juga `Ctrl/⌘+Z`)**. Hapus tugas **ditunda 5 dtk** (item disembunyikan; komit dijalankan otomatis bila tab ditutup). Toast berhenti menghitung mundur saat disorot/difokus.
+
+**A7 — Onboarding**
+- Checklist 5 langkah di Beranda (nama, tugas, catatan, target/proyek, transaksi) dengan **contoh yang bisa diklik** yang membuka Simpan Cepat terisi. Keadaan kosong di Tugas, Inbox, Catatan, dan Keuangan juga menyertakan contoh klik.
+
+**A8 — Beranda bisa diatur**
+- **Atur beranda**: tampil/sembunyi dan urutan 9 bagian (tombol naik/turun, ramah keyboard) serta mode **"Hari ini saja"**. Tersimpan lokal dan ikut tersinkron lewat preferensi.
+
+**A9/A12 — Tugas**
+- Tampilan baru: **Kanban**, **Matriks Eisenhower** (penting = prioritas tinggi; mendesak = ≤ 48 jam), dan **Pekan** dengan seret-lepas. Setiap kartu punya pilihan **"Pindahkan ke…"** (alternatif non-seret, WCAG 2.5.7). Semua pemindahan bisa diurungkan.
+- Pintasan daftar tugas: `J`/`K` pindah, `X` selesai, `E` ubah, `Enter` buka, `#` hapus.
+
+**Kualitas**
+- +86 asersi vitest (kontras, overlay/undo, tampilan tugas, tata letak dashboard, onboarding, palet, i18n/format/catat nominal); skrip regresi `scripts/test-v57.mjs`.
+- Semua skrip regresi lama menghasilkan kode keluar yang sama seperti 0.56.1.
+- Catatan migrasi: tidak ada migrasi database. Pengguna lama dengan aksen kustom otomatis diturunkan token kontrasnya saat pertama dibuka.
 
 ## 0.56.1
 - Fix: permintaan massal (mis. "atur pengingat sesuai semua agenda") yang menunggu konfirmasi tidak lagi dilaporkan sebagai gagal. Recovery dan "final honesty guard" kini dilewati saat ada pendingBulkAction/pendingAction baru, sehingga tidak ada lagi pesan "Agenda tidak ditemukan" palsu sebelum perubahan disetujui.

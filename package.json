@@ -1,6 +1,6 @@
 {
   "name": "licia",
-  "version": "0.57.1",
+  "version": "0.57.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -14,10 +14,7 @@
     "preflight:dev": "node scripts/preflight.mjs",
     "audit": "node scripts/audit.mjs",
     "typecheck": "tsc --noEmit",
-    "i18n:build": "node scripts/build-i18n.mjs",
-    "i18n:check": "node scripts/build-i18n.mjs --check && node scripts/i18n-audit.cjs",
-    "a11y:contrast": "node scripts/contrast-audit.mjs",
-    "test": "vitest run && node scripts/build-i18n.mjs --check && node scripts/contrast-audit.mjs && node scripts/test-v54-2.mjs && node scripts/test-v54.mjs && node scripts/test-v53.mjs",
+    "test": "vitest run && node scripts/i18n.mjs check && node scripts/test-v57.mjs && node scripts/test-v54-2.mjs && node scripts/test-v54.mjs && node scripts/test-v53.mjs",
     "setup:push": "node scripts/setup-push.mjs",
     "sync:diagnose": "node scripts/healthcheck.mjs",
     "verify:v32": "node scripts/verify-v32.mjs",
@@ -48,7 +45,8 @@
     "format:check": "prettier --check .",
     "ci": "npm run typecheck && npm run lint && npm run test:unit",
     "eval": "node scripts/eval.mjs",
-    "eval:dry": "node scripts/eval.mjs"
+    "eval:dry": "node scripts/eval.mjs",
+    "i18n:check": "node scripts/i18n.mjs check"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

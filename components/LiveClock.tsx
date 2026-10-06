@@ -35,7 +35,7 @@ export function LiveClock({ timezone }: { timezone: string }) {
   }, []);
 
   return (
-    <div className="inline-flex min-w-[108px] items-center justify-center gap-1.5 rounded-full border border-border bg-bg px-2.5 py-1 text-[11px] text-textMuted tabular-nums">
+    <div className="inline-flex min-w-[108px] items-center justify-center gap-1.5 rounded-full border border-border bg-bg px-2.5 py-1 text-2xs text-textMuted tabular-nums">
       <Clock3 size={12} className="text-accent" />
       <span suppressHydrationWarning>{now ? formatClock(now, timezone, timeFormat, showSeconds) : "--:--"}</span>
       <span className="hidden sm:inline">· {timezoneLabel(timezone)}</span>

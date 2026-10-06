@@ -6,6 +6,7 @@ import { dateStrInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone } f
 import { selectAiModel } from "@/lib/ai/modelRouter";
 import { chatCompletion, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
 import OpenAI from "openai";
+import { languageDirective, languageFromCookieHeader } from "@/lib/ai/language";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +51,7 @@ export async function GET(req: Request) {
       const model = selectAiModel({ text: "Susun daily plan dari tasks, agenda, goals, dan ruang waktu", domains: ["tasks","calendar","goals"], mode: "planner" });
       const completion = await withOpenAIRetry(() => chatCompletion(openai(), { model, ...generationOptions(model, 0.15), max_completion_tokens: 500, response_format: { type: "json_object" }, messages: [
         { role: "system", content: `Susun smart daily plan realistis untuk tanggal ${today} timezone ${timezone}. Jangan mengarang data. Maksimal 3 prioritas, maksimal 3 blok. Jangan menambah komitmen baru pada kalender, hanya rekomendasi. JSON: {"focus":string,"priority_reasons":string[],"block_minutes":number}` },
+        { role: "system", content: languageDirective(languageFromCookieHeader(req.headers.get("cookie"))) },
         { role: "user", content: JSON.stringify({ priorities: priorities.map((p:any)=>({title:p.title,reason:p.reason})), goals: goals.slice(0,4), agenda, availableMinutes, focusToday }) },
       ] }), 1);
       logCompletionFinish(completion, "daily-plan");

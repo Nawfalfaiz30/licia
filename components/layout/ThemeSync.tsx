@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { applyThemePreference } from "@/lib/theme";
+import { applyThemePreference, ensureAccentTokens } from "@/lib/theme";
 
 export function ThemeSync() {
   useEffect(() => {
@@ -11,6 +11,7 @@ export function ThemeSync() {
       if (stored === "system") applyThemePreference("system");
     };
     sync();
+    ensureAccentTokens(); // pengguna lama: turunkan token aksen aman-kontras sekali
     media.addEventListener?.("change", sync);
     return () => media.removeEventListener?.("change", sync);
   }, []);

@@ -1,5 +1,5 @@
+import { getServerT } from "@/lib/i18n-server";
 import Link from "next/link";
-import { getServerI18n } from "@/lib/i18n/server";
 
 export const metadata = {
   title: "Privasi · Licia",
@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default async function PublicPrivacyPage() {
-  const { tr } = await getServerI18n();
+  const { t: tr } = await getServerT();
   return (
     <main className="min-h-screen bg-bg px-5 py-12 text-text sm:px-8">
       <div className="mx-auto max-w-3xl space-y-6">

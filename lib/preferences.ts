@@ -100,6 +100,7 @@ const STORAGE_MAP: Record<string, string> = {
   calendarGuard: "licia-calendar-guard",
   smartReview: "licia-smart-review",
   adaptiveWidgets: "licia-adaptive-widgets",
+  dashboardLayout: "licia-dashboard-layout",
   offlineWorkspace: "licia-offline-workspace",
   privacyCenter: "licia-privacy-center",
   voiceVisionCapture: "licia-voice-vision-capture",

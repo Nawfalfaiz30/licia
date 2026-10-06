@@ -1,8 +1,10 @@
+"use client";
 // Parser markdown ringan untuk bubble chat (V55).
 // Mendukung: **bold**, *italic*, `code`, [tautan](https://…), heading (ditampilkan tebal),
 // daftar bullet/bernomor, checklist "- [ ]" / "- [x]", dan tabel pipe.
 // Tidak ada raw HTML: semua teks dirender lewat React sehingga otomatis ter-escape.
 import React from "react";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const INLINE = /(\*\*([^*]+)\*\*)|(\*([^*\s][^*]*)\*)|(`([^`]+)`)|(\[([^\]]+)\]\(([^)\s]+)\))/g;
 
@@ -44,6 +46,7 @@ const isTableSep = (l: string) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?
 const splitRow = (l: string) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
 
 export function MarkdownLite({ text }: { text: string | null | undefined }) {
+  const { t: tr } = useLanguage();
   const lines = (text ?? "").split("\n");
   const nodes: React.ReactNode[] = [];
   let idx = 0;
@@ -90,7 +93,7 @@ export function MarkdownLite({ text }: { text: string | null | undefined }) {
       nodes.push(
         <div key={idx} className="flex gap-1.5 pl-1">
           <span aria-hidden className="shrink-0 opacity-70">{done ? "☑" : "☐"}</span>
-          <span className="sr-only">{done ? "Selesai: " : "Belum: "}</span>
+          <span className="sr-only">{done ? tr("Selesai: ") : tr("Belum: ")}</span>
           <span className={done ? "line-through opacity-60" : undefined}>{renderInline(checkMatch[2], `l${idx}`)}</span>
         </div>,
       );

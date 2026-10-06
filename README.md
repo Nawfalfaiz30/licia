@@ -291,6 +291,15 @@ Licia dirancang untuk desktop dan mobile.
 
 # 💾 Backup, Export & Undo
 
+### Bahasa, keterbacaan, dan alur kerja (v0.57)
+
+- **Dwibahasa penuh (ID/EN)** — pilih di Pengaturan, atau `Ctrl/⌘+K` lalu ketik `>bahasa`. Kunci kamus = teks Indonesia apa adanya: `t("Tugas dibuat")` di komponen klien (`useLanguage()`) atau `const { t } = await getServerT()` di komponen server. Tambahkan padanan Inggris di `lib/locales/en.ts`; `npm run i18n:check` menggagalkan CI bila ada teks UI baru tanpa terjemahan. Placeholder memakai `{nama}`: `t("{n} tugas", { n: 3 })`.
+- **Palet aksi (`Ctrl/⌘+K`)** — `>` perintah, `/` halaman, `?` cari data; teks bebas menawarkan "Buat tugas: …".
+- **Tugas** — tampilan Daftar / Kanban / Matriks Eisenhower / Pekan (seret-lepas atau pilih "Pindahkan ke…"); pintasan `J K X E Enter #`; semua aksi cepat bisa **Diurungkan** (`Ctrl/⌘+Z`).
+- **Beranda** — tombol **Atur beranda** (tampil/sembunyi, urutan) dan mode **Hari ini saja**.
+- **Overlay** — semua dialog/sheet memakai `components/ui/Overlay.tsx` (perangkap fokus, Esc hanya untuk yang teratas). Lapisan z-index hanya lewat token (`z-nav`, `z-sheet`, `z-modal`, `z-palette`, `z-toast`; lihat `lib/zIndex.ts`).
+- **Ukuran teks & kontras** — teks minimum 11 px berbasis rem; Pengaturan > Ukuran teks. Aksen kustom diturunkan otomatis menjadi *isian* dan *tinta* yang lolos WCAG AA (`lib/contrast.ts`).
+
 ## Data Export
 
 Pengguna dapat membuat arsip HTML yang mudah dibaca dan dicetak menjadi PDF.
@@ -1154,10 +1163,3 @@ Project native Android tersedia di `native/android`.
 Aplikasi menggunakan native Android shell + WebView dan terhubung ke instance Licia online. Backend tetap dideploy di VPS, sehingga AI, Supabase, reminder worker, authentication, dan data tetap terpusat.
 
 Lihat `NATIVE_APP_GUIDE.md` untuk build APK/AAB dan deployment 24/7.
-
-### Dwibahasa penuh & UI Kategori A (v0.57)
-- **Bahasa**: Pengaturan → Bahasa (Indonesia/English). Cookie `licia-language` dibaca server & API. Di komponen klien pakai `const { tr, locale } = useLanguage()`; di komponen server `const { tr, locale } = await getServerI18n()`. Kunci `tr("…")` = teks Indonesia; padanan Inggris ada di `i18n-src/en.json` → `npm run i18n:build`. Tambah teks baru lalu jalankan `npm run i18n:check` (gagal bila ada `tr()` tanpa terjemahan).
-- **Overlay**: gunakan `components/ui/Overlay` (atau `ActionDialog`/`BottomSheet`) dan token `z-modal|sheet|palette|toast|…`; fokus ditangani `OverlayGuard` secara otomatis.
-- **Urungkan**: `notifyUndo({ title, undoLabel, onUndo })` dari `@/components/ui`.
-- **Daftar**: tandai baris dengan `data-list-item` dan tombol dengan `data-list-action="toggle|edit|open"` agar J/K/X/E/Enter bekerja.
-- **Kontras**: `npm run a11y:contrast` (WCAG AA untuk semua preset tema).

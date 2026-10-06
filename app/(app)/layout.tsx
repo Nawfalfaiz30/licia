@@ -7,8 +7,8 @@ import { GlobalQuickCapture } from "@/components/GlobalQuickCapture";
 import { MotionRuntime } from "@/components/MotionRuntime";
 import { CommandCenter } from "@/components/v35/CommandCenter";
 import { TopBar } from "@/components/layout/TopBar";
+import { SkipLink } from "@/components/layout/SkipLink";
 import { KeyboardShortcuts } from "@/components/layout/KeyboardShortcuts";
-import { ListShortcuts } from "@/components/layout/ListShortcuts";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div id="licia-app" className="min-h-screen bg-bg">
+      <SkipLink />
       <Sidebar />
       <main id="main-content" tabIndex={-1} className="licia-main min-w-0 max-w-full overflow-x-clip pb-20 md:pl-64 md:pb-0">
         <TopBar />
@@ -31,7 +32,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <GlobalQuickCapture />
       <CommandCenter />
       <KeyboardShortcuts />
-      <ListShortcuts />
       <MotionRuntime />
     </div>
   );

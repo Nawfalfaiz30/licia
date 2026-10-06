@@ -1,11 +1,11 @@
-import { EN_SOURCE } from "./i18n/en";
+import { enPhrases } from "@/lib/locales/en";
 
 export type Language = "id" | "en";
-export const LANGUAGES: readonly Language[] = ["id", "en"] as const;
 export const LANGUAGE_STORAGE_KEY = "licia-language";
-/** Cookie agar server (SSR, komponen server, API) tahu bahasa pengguna tanpa menunggu klien. */
+/** Cookie agar komponen server (SSR) tahu bahasa pengguna tanpa menunggu klien. */
 export const LANGUAGE_COOKIE = "licia-language";
-export type TranslateVars = ReadonlyArray<string | number> | Readonly<Record<string, string | number>>;
+export const LOCALE_BY_LANGUAGE: Record<Language, string> = { id: "id-ID", en: "en-US" };
+export type TranslateParams = Record<string, string | number | null | undefined>;
 
 export const translations: Record<Language, Record<string, string>> = {
   id: {
@@ -184,47 +184,27 @@ export function resolveLanguage(value: unknown): Language {
   return value === "en" ? "en" : "id";
 }
 
-/** Locale BCP-47 untuk Intl/toLocale*String sesuai bahasa antarmuka. */
-export function localeOf(language: Language = "id"): string {
-  return language === "en" ? "en-US" : "id-ID";
+/** Ganti {nama} dengan nilai params. Placeholder tak dikenal dibiarkan apa adanya. */
+export function interpolate(text: string, params?: TranslateParams): string {
+  if (!params) return text;
+  return text.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (match, key: string) => (key in params ? String(params[key] ?? "") : match));
 }
 
 /**
- * Mengisi placeholder `{0}`, `{nama}` serta bentuk jamak `{0:task|tasks}` (pilih kata pertama bila nilai = 1).
- * Placeholder tanpa nilai dibiarkan apa adanya supaya kesalahan terlihat saat diuji.
+ * Terjemahan dua jenis kunci:
+ *  - kunci pendek lama (`"home"`, `"tasks"`) dari tabel `translations`;
+ *  - teks Indonesia apa adanya (`"Tugas selesai"`) sebagai kunci, dengan padanan Inggris di `lib/locales/en.ts`.
+ * Bahasa Indonesia mengembalikan kunci itu sendiri, sehingga teks tak pernah hilang meski belum diterjemahkan.
  */
-export function interpolate(template: string, vars?: TranslateVars): string {
-  if (!vars || !template.includes("{")) return template;
-  const get = (name: string) => (Array.isArray(vars) ? (vars as ReadonlyArray<string | number>)[Number(name)] : (vars as Record<string, string | number>)[name]);
-  return template
-    .replace(/\{(\w+):([^|{}]*)\|([^{}]*)\}/g, (match, name: string, one: string, many: string) => {
-      const value = get(name);
-      return value === undefined ? match : Number(value) === 1 ? one : many;
-    })
-    .replace(/\{(\w+)\}/g, (match, name: string) => {
-      const value = get(name);
-      return value === undefined ? match : String(value);
-    });
+export function t(key: string, language: Language = "id", params?: TranslateParams): string {
+  const base = language === "en"
+    ? (translations.en[key] ?? enPhrases[key] ?? translations.id[key] ?? key)
+    : (translations.id[key] ?? key);
+  return interpolate(base, params);
 }
 
-/**
- * Terjemahkan satu kunci. Urutan pencarian:
- * 1. kamus berkunci (`translations`, mis. "nav_main") untuk bahasa aktif,
- * 2. kamus teks-sumber (`EN_SOURCE`): kunci = teks Indonesia, nilai = padanan Inggris,
- * 3. kamus Indonesia, 4. kunci itu sendiri (teks Indonesia apa adanya).
- */
-export function t(key: string, language: Language = "id", vars?: TranslateVars): string {
-  let out: string | undefined = translations[language][key];
-  if (out === undefined && language === "en") out = EN_SOURCE[key];
-  if (out === undefined) out = translations.id[key] ?? key;
-  return interpolate(out, vars);
-}
-
-/** Cookie dibaca di server (`next/headers`) maupun dari `document.cookie` di klien. */
-export function readLanguageCookie(cookieHeader: string | null | undefined): Language {
-  if (!cookieHeader) return "id";
-  const match = new RegExp(`(?:^|;\\s*)${LANGUAGE_COOKIE}=([^;]+)`).exec(cookieHeader);
-  return resolveLanguage(match ? decodeURIComponent(match[1]) : undefined);
+export function localeOf(language: Language): string {
+  return LOCALE_BY_LANGUAGE[language] ?? LOCALE_BY_LANGUAGE.id;
 }
 
 export function applyLanguage(language: Language = "id") {

@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Cloud, CloudOff, RefreshCw, AlertTriangle } from "lucide-react";
 import { getDeviceId } from "@/lib/pwa/offlineQueue";
 import { applySyncedPreferences } from "@/lib/preferences";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
 const CURSOR_KEY = "licia-sync-cursor-v2";
 
 type SyncPrefs = {
@@ -32,7 +32,7 @@ function preferences(): SyncPrefs {
 }
 
 export function SyncManager() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const router = useRouter();
   const [online, setOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -194,9 +194,9 @@ export function SyncManager() {
   }, [loadStatus, registerAndPull]);
 
   if (!showStatus || !enabled) return null;
-  const label = syncing ? tr("Menyinkronkan…") : !online ? tr("Offline") : resyncRequired ? tr("Perlu sinkron ulang") : conflicts > 0 ? `${conflicts} konflik` : lastSync ? tr("Tersinkron {0}d", [Math.max(0, Math.round((lastSyncTick-lastSync)/1000))]) : tr("Sinkron aktif");
-  return <div className="pointer-events-none fixed bottom-[calc(5.35rem+env(safe-area-inset-bottom))] right-3 z-banner sm:bottom-[5.5rem]">
-    <div className="flex items-center gap-1.5 rounded-full border border-border bg-surface/95 px-2.5 py-1.5 text-[9px] font-medium text-textMuted shadow-lg backdrop-blur-xl">
+  const label = syncing ? "Menyinkronkan…" : !online ? "Offline" : resyncRequired ? tr("Perlu sinkron ulang") : conflicts > 0 ? `${conflicts} konflik` : lastSync ? `Tersinkron ${Math.max(0, Math.round((lastSyncTick-lastSync)/1000))}d` : "Sinkron aktif";
+  return <div className="pointer-events-none fixed bottom-[calc(5.35rem+env(safe-area-inset-bottom))] right-3 z-float sm:bottom-[5.5rem]">
+    <div className="flex items-center gap-1.5 rounded-full border border-border bg-surface/95 px-2.5 py-1.5 text-2xs font-medium text-textMuted shadow-lg backdrop-blur-xl">
       {syncing ? <RefreshCw size={11} className="animate-spin text-accent"/> : !online ? <CloudOff size={11} className="text-warning"/> : resyncRequired ? <AlertTriangle size={11} className="text-warning"/> : conflicts > 0 ? <AlertTriangle size={11} className="text-warning"/> : <Cloud size={11} className="text-success"/>}
       <span>{label}</span>
     </div>

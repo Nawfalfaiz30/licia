@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { filterPalette, moveActive } from "@/lib/commandPalette";
+import { composePalette, filterPalette, moveActive, parsePaletteQuery, type PaletteItem } from "@/lib/commandPalette";
 
 const E = [
   { label: "Beranda", href: "/dashboard" },
@@ -55,32 +55,51 @@ describe("moveActive", () => {
   });
 });
 
-import { createActionsFor, filterCommands, parsePaletteQuery, SYSTEM_COMMANDS } from "@/lib/commandPalette";
+const page = (id: string, label: string, keywords = ""): PaletteItem => ({ id: `page:${id}`, kind: "page", label, keywords, href: `/${id}`, group: "Halaman" });
+const cmd = (id: string, label: string, keywords = ""): PaletteItem => ({ id: `cmd:${id}`, kind: "command", commandId: id, label, keywords, group: "Aksi" });
+const create: PaletteItem = { id: "create-task", kind: "create-task", label: "Buat tugas", payload: "x", group: "Buat" };
+const pages = [page("tasks", "Tugas", "tasks todo"), page("finance", "Keuangan", "finance money"), page("settings", "Pengaturan", "settings")];
+const commands = [cmd("new-task", "Buat tugas baru", "new task create"), cmd("theme-dark", "Tema gelap", "theme dark"), cmd("language-toggle", "Ganti bahasa", "language english")];
+const results: PaletteItem[] = [{ id: "res:1", kind: "result", label: "Catatan rapat", href: "/notes", group: "Hasil" }];
 
-describe("palet perintah v0.57 (aksi)", () => {
-  it("mengenali awalan", () => {
-    expect(parsePaletteQuery("t kirim laporan besok")).toEqual({ mode: "task", text: "kirim laporan besok" });
-    expect(parsePaletteQuery("+ beli kopi")).toEqual({ mode: "task", text: "beli kopi" });
-    expect(parsePaletteQuery("i ide aplikasi")).toEqual({ mode: "inbox", text: "ide aplikasi" });
-    expect(parsePaletteQuery("$ makan siang 25rb")).toEqual({ mode: "expense", text: "makan siang 25rb" });
-    expect(parsePaletteQuery("> gelap")).toEqual({ mode: "commands", text: "gelap" });
-    expect(parsePaletteQuery(">gelap")).toEqual({ mode: "commands", text: "gelap" });
+describe("parsePaletteQuery", () => {
+  it("awalan > / ? menentukan cakupan", () => {
+    expect(parsePaletteQuery(">tema")).toEqual({ scope: "commands", text: "tema" });
+    expect(parsePaletteQuery("  / keu")).toEqual({ scope: "pages", text: "keu" });
+    expect(parsePaletteQuery("?rapat")).toEqual({ scope: "data", text: "rapat" });
+    expect(parsePaletteQuery("kirim laporan")).toEqual({ scope: "all", text: "kirim laporan" });
   });
-  it("kata biasa yang kebetulan berawal huruf awalan tidak dianggap awalan", () => {
-    expect(parsePaletteQuery("tugas")).toEqual({ mode: "all", text: "tugas" });
-    expect(parsePaletteQuery("inbox")).toEqual({ mode: "all", text: "inbox" });
-    expect(parsePaletteQuery("e")).toEqual({ mode: "all", text: "e" });
+});
+
+describe("composePalette", () => {
+  const run = (query: string, createTask: PaletteItem | null = create) => composePalette({ query, pages, commands, results, createTask }).items.map((i) => i.id);
+  it("kueri kosong → perintah teratas lalu halaman", () => {
+    const ids = run("");
+    expect(ids[0]).toBe("cmd:new-task");
+    expect(ids).toContain("page:finance");
+    expect(ids).not.toContain("create-task");
   });
-  it("menawarkan aksi pembuatan sesuai mode dan nominal", () => {
-    expect(createActionsFor({ mode: "all", text: "beli kopi" }, false)).toEqual(["create-task", "create-inbox"]);
-    expect(createActionsFor({ mode: "all", text: "kopi 25rb" }, true)).toEqual(["create-task", "create-inbox", "create-expense"]);
-    expect(createActionsFor({ mode: "expense", text: "kopi" }, false)).toEqual([]);
-    expect(createActionsFor({ mode: "commands", text: "gelap" }, false)).toEqual([]);
-    expect(createActionsFor({ mode: "all", text: "a" }, false)).toEqual([]);
+  it("kueri '>' hanya perintah; '/' hanya halaman; '?' hanya data", () => {
+    expect(run(">tema")).toEqual(["cmd:theme-dark"]);
+    expect(run("/keu")).toEqual(["page:finance"]);
+    expect(run("?rapat")).toEqual(["res:1"]);
   });
-  it("menyaring perintah di dua bahasa", () => {
-    expect(filterCommands(SYSTEM_COMMANDS, "dark").map((c) => c.id)).toContain("theme-dark");
-    expect(filterCommands(SYSTEM_COMMANDS, "gelap").map((c) => c.id)).toContain("theme-dark");
-    expect(filterCommands(SYSTEM_COMMANDS, "language").map((c) => c.id)).toEqual(["lang-id", "lang-en"]);
+  it("kata kunci Inggris menemukan perintah/halaman berlabel Indonesia", () => {
+    expect(run(">english")).toEqual(["cmd:language-toggle"]);
+    expect(run("/money")).toEqual(["page:finance"]);
+  });
+  it("teks bebas tanpa kecocokan → 'Buat tugas' paling atas", () => {
+    expect(run("kirim laporan besok")[0]).toBe("create-task");
+  });
+  it("ada halaman cocok → navigasi didahulukan, 'Buat tugas' menyusul", () => {
+    const ids = run("tugas");
+    expect(ids[0]).toBe("page:tasks");
+    expect(ids.indexOf("create-task")).toBeGreaterThan(ids.indexOf("page:tasks"));
+  });
+  it("tanpa createTask (teks terlalu pendek) tidak ada entri buat", () => {
+    expect(run("xy", null)).not.toContain("create-task");
+  });
+  it("cakupan non-'all' tidak pernah menampilkan 'Buat tugas'", () => {
+    expect(run(">zzz")).toEqual([]);
   });
 });

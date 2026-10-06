@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { clsx } from "clsx";
 import { applyThemePreference, type ThemeMode } from "@/lib/theme";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
 export function ThemeToggle({ onChange }: { onChange?: (isDark: boolean) => void }) {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const [theme, setTheme] = useState<ThemeMode>("system");
 
   useEffect(() => {

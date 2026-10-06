@@ -6,10 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, SectionTitle, StatTile } from "@/components/ui";
 import { getOrCreateProfile } from "@/lib/getOrCreateProfile";
 import { dateStrInTimezone } from "@/lib/date";
-import { getServerI18n } from "@/lib/i18n/server";
+import { getServerT } from "@/lib/i18n-server";
 
 export default async function LifeMapPage() {
-  const { tr } = await getServerI18n();
+  const { t: tr } = await getServerT();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -46,19 +46,19 @@ export default async function LifeMapPage() {
     .filter((x): x is { label: string; date: string } => Boolean(x.date) && x.date! >= todayISO && x.date! <= next14ISO).sort((a, b) => a.date.localeCompare(b.date))[0];
 
   const nodes: Array<{ href: string; icon: LucideIcon; title: string; meta: string; desc: string }> = [
-    { href: "/goals", icon: Target, title: tr("Target"), meta: `${goalRows.length} target aktif`, desc: tr("Arah jangka menengah yang memberi konteks pada project dan rutinitas.") },
-    { href: "/projects", icon: FolderKanban, title: tr("Proyek"), meta: `${projectRows.length} proyek berjalan`, desc: tr("Tempat mengubah target menjadi pekerjaan nyata.") },
-    { href: "/tasks", icon: CheckCircle2, title: tr("Tugas"), meta: `${taskRows.length} tugas terbuka`, desc: tr("Unit eksekusi terkecil yang bisa diberi deadline, project, dan fokus.") },
-    { href: "/calendar", icon: CalendarDays, title: tr("Kalender"), meta: `${scheduleRows.length} agenda mendatang`, desc: tr("Waktu nyata tempat rencana benar-benar mendapat ruang.") },
-    { href: "/inbox", icon: Inbox, title: tr("Smart Inbox"), meta: `${inboxRows.length} item menunggu`, desc: tr("Menangkap ide cepat lalu mengubahnya menjadi aksi atau pengetahuan.") },
-    { href: "/focus", icon: Timer, title: tr("Fokus"), meta: `${focusMinutes} menit / 7 hari`, desc: tr("Bukti waktu yang benar-benar diberikan pada pekerjaanmu.") },
+    { href: "/goals", icon: Target, title: "Target", meta: `${goalRows.length} target aktif`, desc: tr("Arah jangka menengah yang memberi konteks pada project dan rutinitas.") },
+    { href: "/projects", icon: FolderKanban, title: "Proyek", meta: `${projectRows.length} proyek berjalan`, desc: tr("Tempat mengubah target menjadi pekerjaan nyata.") },
+    { href: "/tasks", icon: CheckCircle2, title: "Tugas", meta: tr("{taskRows_length} tugas terbuka", { taskRows_length: taskRows.length }), desc: tr("Unit eksekusi terkecil yang bisa diberi deadline, project, dan fokus.") },
+    { href: "/calendar", icon: CalendarDays, title: "Kalender", meta: tr("{scheduleRows_length} agenda mendatang", { scheduleRows_length: scheduleRows.length }), desc: "Waktu nyata tempat rencana benar-benar mendapat ruang." },
+    { href: "/inbox", icon: Inbox, title: "Smart Inbox", meta: tr("{inboxRows_length} item menunggu", { inboxRows_length: inboxRows.length }), desc: tr("Menangkap ide cepat lalu mengubahnya menjadi aksi atau pengetahuan.") },
+    { href: "/focus", icon: Timer, title: "Fokus", meta: tr("{focusMinutes} menit / 7 hari", { focusMinutes }), desc: tr("Bukti waktu yang benar-benar diberikan pada pekerjaanmu.") },
   ];
 
   return <div className="space-y-7 animate-licia-in">
     <header className="relative overflow-hidden rounded-3xl border border-border bg-surface p-5 sm:p-7">
       <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-accent/10 blur-3xl" />
       <div className="relative">
-        <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-accent"><Compass size={14}/> {tr("PERSONAL OS")}</p>
+        <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-accent"><Compass size={14}/> {" "}{tr("PERSONAL OS")}</p>
         <h1 className="font-display text-3xl text-text sm:text-4xl">{tr("Life Map")}</h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-textMuted">{tr("Pengganti Relations: bukan mengelola orang, tetapi melihat bagaimana target, project, tugas, waktu, pengetahuan, dan fokus saling terhubung.")}</p>
       </div>
@@ -69,7 +69,7 @@ export default async function LifeMapPage() {
       <StatTile label={tr("Project berjalan")} value={String(projectRows.length)} icon={FolderKanban} />
       <StatTile label={tr("Tugas terbuka")} value={String(taskRows.length)} icon={CheckCircle2} tone={taskRows.length > 0 ? "accent" : "default"} />
       <StatTile label={tr("Fokus 7 hari")} value={`${focusMinutes} mnt`} icon={Timer} tone="success" />
-      <StatTile label={tr("Momentum")} value={`${completed7d} tugas`} icon={CheckCircle2} hint={tr("selesai / 7 hari")} />
+      <StatTile label={tr("Momentum")} value={tr("{completed7d} tugas", { completed7d })} icon={CheckCircle2} hint={tr("selesai / 7 hari")} />
       <StatTile label={tr("Attention debt")} value={String(attentionDebt)} icon={CircleAlert} hint={tr("deadline lewat + inbox baru")} tone={attentionDebt > 0 ? "accent" : "default"} />
     </div>
 
@@ -86,11 +86,11 @@ export default async function LifeMapPage() {
       <Card className="border-accent/20 bg-accent/5">
         <SectionTitle action={<Waypoints size={16} className="text-accent" />}>{tr("Sinyal yang perlu dilihat")}</SectionTitle>
         <div className="space-y-3">
-          {nextDeadline ? <div className="rounded-xl border border-accent/20 bg-surface p-3"><p className="text-[10px] uppercase tracking-wider text-accent">{tr("Deadline 14 hari")}</p><p className="mt-1 text-sm font-semibold text-text">{nextDeadline.label}</p><p className="mt-1 text-xs text-textMuted">{tr("Target tanggal")} {nextDeadline.date}</p></div> : null}
-          {goalsWithoutProjects.length > 0 && <div className="flex gap-2 rounded-xl bg-surface p-3"><CircleAlert size={15} className="mt-0.5 shrink-0 text-accent"/><p className="text-xs leading-relaxed text-textMuted"><strong className="text-text">{goalsWithoutProjects.length} {tr("target")}</strong> {tr("belum punya project. Buat project saat target sudah cukup jelas untuk dikerjakan.")}</p></div>}
-          {projectsWithoutTasks.length > 0 && <div className="flex gap-2 rounded-xl bg-surface p-3"><CircleAlert size={15} className="mt-0.5 shrink-0 text-accent"/><p className="text-xs leading-relaxed text-textMuted"><strong className="text-text">{projectsWithoutTasks.length} {tr("project")}</strong> {tr("belum punya tugas terbuka. Tambahkan satu next action yang konkret.")}</p></div>}
-          {overdueTasks > 0 && <div className="flex gap-2 rounded-xl bg-surface p-3"><CircleAlert size={15} className="mt-0.5 shrink-0 text-danger"/><p className="text-xs leading-relaxed text-textMuted"><strong className="text-text">{overdueTasks} {tr("tugas")}</strong> {tr("sudah melewati deadline. Pilih satu untuk dibereskan atau ubah tenggat bila memang bergeser.")}</p></div>}
-          {tasksWithoutDue > 0 && <div className="flex gap-2 rounded-xl bg-surface p-3"><BrainCircuit size={15} className="mt-0.5 shrink-0 text-accent"/><p className="text-xs leading-relaxed text-textMuted"><strong className="text-text">{tasksWithoutDue} {tr("tugas")}</strong> {tr("belum punya deadline. Tidak semua tugas perlu deadline, jadi jadikan ini pilihan, bukan kewajiban.")}</p></div>}
+          {nextDeadline ? <div className="rounded-xl border border-accent/20 bg-surface p-3"><p className="text-2xs uppercase tracking-wider text-accent">{tr("Deadline 14 hari")}</p><p className="mt-1 text-sm font-semibold text-text">{nextDeadline.label}</p><p className="mt-1 text-xs text-textMuted">{tr("Target tanggal {date}", { date: nextDeadline.date })}</p></div> : null}
+          {goalsWithoutProjects.length > 0 && <div className="flex gap-2 rounded-xl bg-surface p-3"><CircleAlert size={15} className="mt-0.5 shrink-0 text-accent"/><p className="text-xs leading-relaxed text-textMuted"><strong className="text-text">{tr("{goalsWithoutProjects} target", { goalsWithoutProjects: goalsWithoutProjects.length })}</strong> {" "}{tr("belum punya project. Buat project saat target sudah cukup jelas untuk dikerjakan.")}</p></div>}
+          {projectsWithoutTasks.length > 0 && <div className="flex gap-2 rounded-xl bg-surface p-3"><CircleAlert size={15} className="mt-0.5 shrink-0 text-accent"/><p className="text-xs leading-relaxed text-textMuted"><strong className="text-text">{tr("{projectsWithoutTasks} project", { projectsWithoutTasks: projectsWithoutTasks.length })}</strong> {" "}{tr("belum punya tugas terbuka. Tambahkan satu next action yang konkret.")}</p></div>}
+          {overdueTasks > 0 && <div className="flex gap-2 rounded-xl bg-surface p-3"><CircleAlert size={15} className="mt-0.5 shrink-0 text-danger"/><p className="text-xs leading-relaxed text-textMuted"><strong className="text-text">{tr("{overdueTasks} tugas", { overdueTasks })}</strong> {" "}{tr("sudah melewati deadline. Pilih satu untuk dibereskan atau ubah tenggat bila memang bergeser.")}</p></div>}
+          {tasksWithoutDue > 0 && <div className="flex gap-2 rounded-xl bg-surface p-3"><BrainCircuit size={15} className="mt-0.5 shrink-0 text-accent"/><p className="text-xs leading-relaxed text-textMuted"><strong className="text-text">{tr("{tasksWithoutDue} tugas", { tasksWithoutDue })}</strong> {" "}{tr("belum punya deadline. Tidak semua tugas perlu deadline, jadi jadikan ini pilihan, bukan kewajiban.")}</p></div>}
           {!goalsWithoutProjects.length && !projectsWithoutTasks.length && !tasksWithoutDue && !overdueTasks && !nextDeadline && <p className="text-sm leading-relaxed text-textMuted">{tr("Belum ada gap besar yang terdeteksi dari data saat ini.")}</p>}
         </div>
       </Card>
@@ -98,7 +98,7 @@ export default async function LifeMapPage() {
 
     <Card>
       <p className="text-sm font-semibold text-text">{tr("Cara memakai Life Map")}</p>
-      <p className="mt-1 text-sm leading-relaxed text-textMuted">{tr("Mulai dari")} <strong className="text-text">{tr("Target")}</strong> {tr("ketika menentukan arah, turun ke")} <strong className="text-text">{tr("Project")}</strong> {tr("untuk membuat wadah kerja, pecah menjadi")} <strong className="text-text">{tr("Tugas")}</strong>{tr(", tempatkan ke")} <strong className="text-text">{tr("Kalender")}</strong>{tr(", lalu gunakan")} <strong className="text-text">{tr("Focus")}</strong> {tr("untuk mengeksekusi. Smart Inbox dan Vault menjaga hal-hal yang belum siap dikerjakan tetap tertangani.")}</p>
+      <p className="mt-1 text-sm leading-relaxed text-textMuted">{tr("Mulai dari")}{" "}<strong className="text-text">{tr("Target")}</strong> {" "}{tr("ketika menentukan arah, turun ke")}{" "}<strong className="text-text">{tr("Project")}</strong> {" "}{tr("untuk membuat wadah kerja, pecah menjadi")}{" "}<strong className="text-text">{tr("Tugas")}</strong>{tr(", tempatkan ke")}{" "}<strong className="text-text">{tr("Kalender")}</strong>{tr(", lalu gunakan")}{" "}<strong className="text-text">{tr("Focus")}</strong> {" "}{tr("untuk mengeksekusi. Smart Inbox dan Vault menjaga hal-hal yang belum siap dikerjakan tetap tertangani.")}</p>
     </Card>
   </div>;
 }

@@ -12,8 +12,8 @@ import {
   getDeviceId,
   saveOfflineConflict,
 } from "@/lib/pwa/offlineQueue";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
 const INSTALL_DISMISSED = "licia-pwa-install-dismissed";
 
 function isStandalone(): boolean {
@@ -28,7 +28,7 @@ function isIOS(): boolean {
 }
 
 export function PWARegister() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const [online, setOnline] = useState(true);
   const [queued, setQueued] = useState(0);
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
@@ -243,17 +243,17 @@ export function PWARegister() {
   return (
     <>
       {statusVisible && (
-        <div className="fixed inset-x-3 bottom-[calc(4.9rem+env(safe-area-inset-bottom))] z-install mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border bg-surface/95 px-4 py-3 text-xs shadow-xl backdrop-blur-xl md:bottom-5">
+        <div className="fixed inset-x-3 bottom-[calc(4.9rem+env(safe-area-inset-bottom))] z-banner mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border bg-surface/95 px-4 py-3 text-xs shadow-xl backdrop-blur-xl md:bottom-5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
             {online ? <CloudUpload size={15} /> : <WifiOff size={15} />}
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-text">{online ? (syncing ? tr("Menyinkronkan…") : tr("Data siap disinkronkan")) : tr("Licia sedang offline")}</p>
-            <p className="mt-0.5 text-[10px] leading-relaxed text-textMuted">
+            <p className="mt-0.5 text-2xs leading-relaxed text-textMuted">
               {!online
                 ? tr("Capture baru tetap bisa masuk antrean lokal.")
                 : queued > 0
-                  ? tr("{0} item menunggu sinkronisasi.", [queued])
+                  ? tr("{queued} item menunggu sinkronisasi.", { queued })
                   : tr("Perubahan lokal sudah tersinkron.")}
             </p>
           </div>
@@ -266,24 +266,24 @@ export function PWARegister() {
       )}
 
       {installVisible && (
-        <div className="fixed inset-x-3 bottom-[calc(4.9rem+env(safe-area-inset-bottom)+6.25rem)] z-install mx-auto max-w-md rounded-3xl border border-accent/20 bg-surface/95 p-4 shadow-2xl backdrop-blur-xl md:bottom-5 md:right-5 md:left-auto md:mx-0">
+        <div className="fixed inset-x-3 bottom-[calc(4.9rem+env(safe-area-inset-bottom)+6.25rem)] z-banner mx-auto max-w-md rounded-3xl border border-accent/20 bg-surface/95 p-4 shadow-2xl backdrop-blur-xl md:bottom-5 md:right-5 md:left-auto md:mx-0">
           <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent"><Download size={18} /></span>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-text">{tr("Pasang Licia")}</p>
-                  <p className="mt-0.5 text-[10px] leading-relaxed text-textMuted">{tr("Buka lebih cepat seperti aplikasi, dengan pengalaman mobile yang lebih nyaman.")}</p>
+                  <p className="mt-0.5 text-2xs leading-relaxed text-textMuted">{tr("Buka lebih cepat seperti aplikasi, dengan pengalaman mobile yang lebih nyaman.")}</p>
                 </div>
                 <button onClick={dismissInstall} className="rounded-lg p-1.5 text-textMuted hover:bg-bg hover:text-text" aria-label={tr("Tutup")}><X size={14}/></button>
               </div>
               {isIOSInstall ? (
-                <div className="mt-3 rounded-xl bg-bg p-3 text-[10px] leading-relaxed text-textMuted">
-                  {tr("Di Safari iPhone/iPad: tekan")} <strong className="text-text">{tr("Bagikan")}</strong> → <strong className="text-text">{tr("Tambahkan ke Layar Utama")}</strong>.
+                <div className="mt-3 rounded-xl bg-bg p-3 text-2xs leading-relaxed text-textMuted">
+                  {tr("Di Safari iPhone/iPad: tekan")}{" "}<strong className="text-text">{tr("Bagikan")}</strong> → <strong className="text-text">{tr("Tambahkan ke Layar Utama")}</strong>.
                 </div>
               ) : (
                 <button onClick={() => void install()} className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90">
-                  <Download size={14}/> {tr("Install Licia")}</button>
+                  <Download size={14}/> {" "}{tr("Install Licia")}</button>
               )}
             </div>
           </div>
@@ -291,14 +291,14 @@ export function PWARegister() {
       )}
 
       {showUpdate && (
-        <div className="fixed inset-x-3 bottom-3 z-install mx-auto max-w-md rounded-2xl border border-accent/20 bg-surface/95 px-4 py-3 shadow-xl backdrop-blur-xl">
+        <div className="fixed inset-x-3 bottom-3 z-banner mx-auto max-w-md rounded-2xl border border-accent/20 bg-surface/95 px-4 py-3 shadow-xl backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><Bell size={15}/></span>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-text">{tr("Pembaruan Licia tersedia")}</p>
-              <p className="mt-0.5 text-[10px] text-textMuted">{tr("Muat ulang untuk memakai versi terbaru.")}</p>
+              <p className="mt-0.5 text-2xs text-textMuted">{tr("Muat ulang untuk memakai versi terbaru.")}</p>
             </div>
-            <button onClick={() => void updateNow()} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-[10px] font-semibold text-white"><Check size={12}/> {tr("Perbarui")}</button>
+            <button onClick={() => void updateNow()} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-2xs font-semibold text-white"><Check size={12}/> {" "}{tr("Perbarui")}</button>
           </div>
         </div>
       )}

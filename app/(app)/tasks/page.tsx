@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -16,6 +16,8 @@ import {
   Circle,
   Clock3,
   Columns3,
+  Grid2X2,
+  CalendarRange,
   FolderKanban,
   Layers3,
   List,
@@ -30,17 +32,18 @@ import {
   Timer,
   Trash2,
   X,
-  LayoutGrid,
-  CalendarRange,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { mutateEntity } from "@/lib/sync/client";
-import { Card, EmptyState, PrimaryButton, TextInput, notifyToast, notifyUndo } from "@/components/ui";
+import { Card, EmptyState, PrimaryButton, TextInput, notifyToast } from "@/components/ui";
 import { dateStrInTimezone, localDateTimeToIso } from "@/lib/date";
-import { createDefaultScheduleReminder, createDefaultTaskReminder, getDefaultReminderMinutes, syncExistingTaskReminder } from "@/lib/reminders/schedule";
+import { TaskKanban, TaskMatrix, TaskWeek } from "@/components/tasks/TaskViews";
+import { inversePatch, stepFocus, taskKeyAction, type TaskPatch, type ViewTask } from "@/lib/tasks/views";
+import { deferDestructive, toastWithUndo } from "@/lib/ui/undoToast";
+import { isTypingTarget } from "@/lib/shortcuts";
 import { useLanguage } from "@/components/LanguageProvider";
-import { TaskViews } from "@/components/tasks/TaskViews";
+import { createDefaultScheduleReminder, createDefaultTaskReminder, getDefaultReminderMinutes, syncExistingTaskReminder } from "@/lib/reminders/schedule";
 
 type Subtask = { id: string; title: string; status: "todo" | "done" };
 type Task = {
@@ -62,6 +65,7 @@ type Area = { id: string; name: string; icon: string | null };
 type AgendaRow = { id: string; title: string; block_date: string; start_time: string; end_time: string; task_id: string | null; project_id: string | null; description: string | null; location: string | null; completed_at: string | null; version?: number | null; updated_at?: string | null };
 type InboxRow = { id: string; content: string; ai_suggestion: any; status: string; linked_task_id: string | null; version?: number | null; updated_at?: string | null };
 type TaskActionResult = { title: string; message: string; items: string[]; tone?: "success" | "info" | "warning" };
+type LayoutMode = "list" | "board" | "matrix" | "week";
 type FilterMode = "all" | "next" | "today" | "unscheduled" | "high" | "done";
 
 const priorityLabel = { low: "Rendah", medium: "Sedang", high: "Tinggi" } as const;
@@ -91,7 +95,7 @@ function splitDueAt(value: string | null, timezone: string) {
   return { date: `${map.year}-${map.month}-${map.day}`, time: `${map.hour}:${map.minute}` };
 }
 
-function formatDue(value: string, timezone: string, locale: string = "id-ID") {
+function formatDue(value: string, timezone: string, locale = "id-ID") {
   return new Intl.DateTimeFormat(locale, {
     timeZone: timezone,
     weekday: "short",
@@ -107,18 +111,22 @@ function dayOnly(value: string, timezone: string) {
   return dateStrInTimezone(new Date(value), timezone);
 }
 
-function relativeDue(value: string, tr: (key: string, vars?: ReadonlyArray<string | number>) => string) {
+type Translate = (key: string, params?: Record<string, string | number | null | undefined>) => string;
+
+function relativeDue(value: string, tr: Translate) {
   const delta = new Date(value).getTime() - Date.now();
   const minutes = Math.round(Math.abs(delta) / 60000);
-  if (minutes < 60) return delta < 0 ? tr("{0} mnt terlambat", [minutes]) : tr("{0} mnt lagi", [minutes]);
+  if (minutes < 60) return delta < 0 ? tr("{n} mnt terlambat", { n: minutes }) : tr("{n} mnt lagi", { n: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return delta < 0 ? tr("{0} jam terlambat", [hours]) : tr("{0} jam lagi", [hours]);
+  if (hours < 24) return delta < 0 ? tr("{n} jam terlambat", { n: hours }) : tr("{n} jam lagi", { n: hours });
   const days = Math.round(hours / 24);
-  return delta < 0 ? tr("{0} hari terlambat", [days]) : tr("{0} hari lagi", [days]);
+  return delta < 0 ? tr("{n} hari terlambat", { n: days }) : tr("{n} hari lagi", { n: days });
 }
 
 export default function TasksPage() {
-  const { tr } = useLanguage();
+  const { t: trn } = useLanguage();
+  const { t: tr, locale } = useLanguage();
+  const { t } = useLanguage();
   const supabase = createClient();
   const [timezone, setTimezone] = useState("Asia/Jakarta");
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -129,7 +137,10 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterMode>("all");
   const [sort, setSort] = useState<"next" | "priority" | "effort">("next");
-  const [layout, setLayout] = useState<"list" | "board" | "matrix" | "week">("list");
+  const [layout, setLayout] = useState<LayoutMode>("list");
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [focusIndex, setFocusIndex] = useState(-1);
+  const tasksRef = useRef<Task[]>([]);
   const [showDone, setShowDone] = useState(false);
   const [composerOpen, setComposerOpen] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -139,6 +150,7 @@ export default function TasksPage() {
   const [completedId, setCompletedId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  tasksRef.current = tasks;
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -232,7 +244,7 @@ export default function TasksPage() {
       },
     });
     if (!result.ok) {
-      notifyToast({ title: tr("Tugas belum tersimpan"), message: result.error || tr("Perubahan gagal disimpan."), tone: "error" });
+      notifyToast({ title: "Tugas belum tersimpan", message: result.error || "Perubahan gagal disimpan.", tone: "error" });
       setSaving(false);
       return;
     }
@@ -248,58 +260,64 @@ export default function TasksPage() {
     if (result.queued) {
       const optimistic: Task = { id: createdTaskId, title, description: form.description.trim() || null, status: "todo", priority: form.priority, due_at: dueIso(form.due_date, form.due_time), estimated_minutes: Number(form.estimated_minutes) || null, project_id: form.project_id || null, area_id: form.area_id || null, version: 1, updated_at: new Date().toISOString(), subtasks: [] };
       setTasks((current) => [optimistic, ...current]);
-      notifyToast({ title: tr("Tugas disimpan offline"), message: tr("Akan disinkronkan saat koneksi kembali."), tone: "info" });
+      notifyToast({ title: "Tugas disimpan offline", message: "Akan disinkronkan saat koneksi kembali.", tone: "info" });
     } else {
-      notifyToast({ title: tr("Tugas ditambahkan ✨"), message: title, tone: "success" });
+      notifyToast({ title: "Tugas ditambahkan ✨", message: title, tone: "success" });
       await load();
     }
     setSaving(false);
   }
 
-  async function setStatus(task: Task, status: Task["status"]) {
+  async function setStatus(task: Task, status: Task["status"], quiet = false) {
+    const previousStatus = task.status;
     const result = await mutateEntity({ entityType: "task", operation: "update", entityId: task.id, baseVersion: task.version ?? null, clientUpdatedAt: task.updated_at ?? null, payload: { status } });
     if (!result.ok) {
-      notifyToast({ title: result.conflict ? tr("Perubahan bertabrakan") : tr("Status belum berubah"), message: result.conflict ? tr("Tinjau konflik sinkronisasi di Pusat Sinkronisasi.") : (result.error || tr("Perubahan gagal disimpan.")), tone: "error" });
+      notifyToast({ title: result.conflict ? trn("Perubahan bertabrakan") : trn("Status belum berubah"), message: result.conflict ? trn("Tinjau konflik sinkronisasi di Pusat Sinkronisasi.") : (result.error || "Perubahan gagal disimpan."), tone: "error" });
       return;
     }
     setTasks((current) => current.map((item) => item.id === task.id ? { ...item, status, version: result.response?.record?.version as number ?? item.version, updated_at: String(result.response?.record?.updated_at || new Date().toISOString()) } : item));
-    if (status === "done") {
-      if (!result.queued) setCompletedId(task.id);
-      window.setTimeout(() => setCompletedId((current) => current === task.id ? null : current), 850);
-      const afterVersion = result.response?.record?.version as number | undefined;
-      const afterUpdatedAt = result.response?.record?.updated_at as string | undefined;
-      notifyUndo({
-        title: tr("Tugas selesai ✨"), message: task.title, undoLabel: tr("Urungkan"),
-        onUndo: async () => {
-          const back = await mutateEntity({ entityType: "task", operation: "update", entityId: task.id, baseVersion: afterVersion ?? null, clientUpdatedAt: afterUpdatedAt ?? null, payload: { status: task.status } });
-          notifyToast({ title: back.ok ? tr("Dikembalikan") : tr("Gagal mengurungkan"), message: task.title, tone: back.ok ? "info" : "error" });
-          await load();
+    if (quiet) {
+      notifyToast({ title: "Dibatalkan", message: task.title, tone: "info", duration: 1800 });
+    } else {
+      if (status === "done" && !result.queued) setCompletedId(task.id);
+      if (status === "done") window.setTimeout(() => setCompletedId((current) => current === task.id ? null : current), 850);
+      // A6: aksi cepat bisa diurungkan 5 detik tanpa dialog konfirmasi.
+      toastWithUndo({
+        title: status === "done" ? t("Tugas selesai ✨") : t("Status tugas diperbarui"),
+        message: task.title,
+        undoLabel: t("Urungkan"),
+        revert: async () => {
+          const latest = tasksRef.current.find((item) => item.id === task.id);
+          if (latest) await setStatus(latest, previousStatus, true);
         },
       });
-    } else {
-      notifyToast({ title: tr("Status tugas diperbarui"), message: task.title, tone: "info" });
     }
     await load();
   }
 
-  /** Ubah beberapa kolom sekaligus (papan, matriks, minggu) dengan hasil optimistis dan tombol Urungkan. */
-  async function patchTask(task: { id: string } & Partial<Task>, patch: Partial<Pick<Task, "priority" | "due_at" | "status">>, label: string) {
-    const full = tasks.find((item) => item.id === task.id);
-    if (!full) return;
-    const previous = { priority: full.priority, due_at: full.due_at, status: full.status };
-    const result = await mutateEntity({ entityType: "task", operation: "update", entityId: full.id, baseVersion: full.version ?? null, clientUpdatedAt: full.updated_at ?? null, payload: patch });
+  /** Perubahan banyak-bidang dari seret-lepas (Kanban / Matriks / Minggu). Selalu bisa diurungkan. */
+  async function patchTask(viewTask: ViewTask, patch: TaskPatch, summary: string) {
+    const task = tasksRef.current.find((item) => item.id === viewTask.id);
+    if (!task) return;
+    const before = inversePatch(task, patch);
+    const result = await mutateEntity({ entityType: "task", operation: "update", entityId: task.id, baseVersion: task.version ?? null, clientUpdatedAt: task.updated_at ?? null, payload: { ...patch } });
     if (!result.ok) {
-      notifyToast({ title: result.conflict ? tr("Perubahan bertabrakan") : tr("Tugas belum dipindahkan"), message: result.conflict ? tr("Tinjau konflik sinkronisasi di Pusat Sinkronisasi.") : (result.error || tr("Perubahan gagal disimpan.")), tone: "error" });
+      notifyToast({ title: result.conflict ? trn("Perubahan bertabrakan") : trn("Tugas belum dipindah"), message: result.conflict ? trn("Tinjau konflik sinkronisasi di Pusat Sinkronisasi.") : (result.error || "Perubahan gagal disimpan."), tone: "error" });
       return;
     }
-    const version = result.response?.record?.version as number | undefined;
-    const updatedAt = result.response?.record?.updated_at as string | undefined;
-    setTasks((current) => current.map((item) => item.id === full.id ? { ...item, ...patch, version: version ?? item.version, updated_at: String(updatedAt || new Date().toISOString()) } : item));
-    notifyUndo({
-      title: tr("Dipindahkan ke {0}", [label]), message: full.title, tone: "info", undoLabel: tr("Urungkan"),
-      onUndo: async () => {
-        const back = await mutateEntity({ entityType: "task", operation: "update", entityId: full.id, baseVersion: version ?? null, clientUpdatedAt: updatedAt ?? null, payload: previous });
-        notifyToast({ title: back.ok ? tr("Dikembalikan") : tr("Gagal mengurungkan"), message: full.title, tone: back.ok ? "info" : "error" });
+    setTasks((current) => current.map((item) => item.id === task.id ? { ...item, ...patch, version: result.response?.record?.version as number ?? item.version, updated_at: String(result.response?.record?.updated_at || new Date().toISOString()) } : item));
+    if (patch.due_at && !result.queued) {
+      try { const uid = (await supabase.auth.getUser()).data.user?.id; if (uid) await syncExistingTaskReminder(supabase, uid, timezone, { id: task.id, title: task.title, due_at: patch.due_at }); } catch {}
+    }
+    toastWithUndo({
+      title: summary,
+      message: task.title,
+      undoLabel: t("Urungkan"),
+      revert: async () => {
+        const latest = tasksRef.current.find((item) => item.id === task.id);
+        if (!latest) return;
+        const back = await mutateEntity({ entityType: "task", operation: "update", entityId: latest.id, baseVersion: latest.version ?? null, clientUpdatedAt: latest.updated_at ?? null, payload: { ...before } });
+        if (!back.ok) notifyToast({ title: "Belum bisa dibatalkan", message: back.error || "Perubahan gagal disimpan.", tone: "error" });
         await load();
       },
     });
@@ -309,7 +327,7 @@ export default function TasksPage() {
   async function toggleSub(sub: Subtask) {
     const result = await mutateEntity({ entityType: "subtask", operation: "update", entityId: sub.id, payload: { status: sub.status === "done" ? "todo" : "done" } });
     if (!result.ok) {
-      notifyToast({ title: tr("Langkah belum berubah"), message: result.error || tr("Perubahan gagal disimpan."), tone: "error" });
+      notifyToast({ title: "Langkah belum berubah", message: result.error || "Perubahan gagal disimpan.", tone: "error" });
       return;
     }
     await load();
@@ -322,39 +340,38 @@ export default function TasksPage() {
     if (!user) return;
     const result = await mutateEntity({ entityType: "subtask", operation: "create", payload: { task_id: taskId, title } });
     if (!result.ok) {
-      notifyToast({ title: tr("Langkah belum ditambahkan"), message: result.error || tr("Perubahan gagal disimpan."), tone: "error" });
+      notifyToast({ title: "Langkah belum ditambahkan", message: result.error || "Perubahan gagal disimpan.", tone: "error" });
       return;
     }
     setNewSub((current) => ({ ...current, [taskId]: "" }));
-    notifyToast({ title: tr("Langkah ditambahkan"), message: title, tone: "success" });
+    notifyToast({ title: "Langkah ditambahkan", message: title, tone: "success" });
     await load();
   }
 
-  async function deleteTask(id: string) {
-    const target = tasks.find((task) => task.id === id);
-    if (!target || removingId) return;
-    setRemovingId(id);
-    window.setTimeout(async () => {
-      const result = await mutateEntity({ entityType: "task", operation: "delete", entityId: id, baseVersion: target.version ?? null, clientUpdatedAt: target.updated_at ?? null, payload: {} });
-      if (!result.ok) {
-        setRemovingId(null);
-        notifyToast({ title: result.conflict ? tr("Tugas berubah di perangkat lain") : tr("Tugas belum terhapus"), message: result.conflict ? tr("Tinjau konflik sebelum menghapus data.") : (result.error || tr("Perubahan gagal disimpan.")), tone: "error" });
-        return;
-      }
-      setExpandedId(null);
-      setRemovingId(null);
-      setTasks((current) => current.filter((item) => item.id !== id));
-      const snapshot = { title: target.title, description: target.description ?? null, priority: target.priority, status: target.status, due_at: target.due_at ?? null, estimated_minutes: target.estimated_minutes ?? null, project_id: target.project_id ?? null, area_id: target.area_id ?? null };
-      notifyUndo({
-        title: result.queued ? tr("Tugas dihapus dari perangkat") : tr("Tugas dihapus"), message: result.queued ? tr("Penghapusan akan disinkronkan.") : target.title, undoLabel: tr("Urungkan"),
-        onUndo: async () => {
-          const back = await mutateEntity({ entityType: "task", operation: "create", payload: snapshot });
-          notifyToast({ title: back.ok ? tr("Tugas dikembalikan") : tr("Gagal mengurungkan"), message: target.title, tone: back.ok ? "info" : "error" });
-          await load();
-        },
-      });
-      if (!result.queued) await load();
-    }, 260);
+  /** A6: penghapusan ditunda 5 detik; item disembunyikan lebih dulu dan bisa dikembalikan lewat Urungkan. */
+  function deleteTask(id: string) {
+    const target = tasksRef.current.find((task) => task.id === id);
+    if (!target || hiddenIds.has(id)) return;
+    deferDestructive({
+      id: `task:${id}`,
+      title: t("Tugas dihapus"),
+      message: target.title,
+      undoLabel: t("Urungkan"),
+      hide: () => { setExpandedId(null); setHiddenIds((current) => new Set(current).add(id)); },
+      restore: () => setHiddenIds((current) => { const next = new Set(current); next.delete(id); return next; }),
+      commit: async () => {
+        const latest = tasksRef.current.find((task) => task.id === id) ?? target;
+        const result = await mutateEntity({ entityType: "task", operation: "delete", entityId: id, baseVersion: latest.version ?? null, clientUpdatedAt: latest.updated_at ?? null, payload: {} });
+        if (!result.ok) {
+          setHiddenIds((current) => { const next = new Set(current); next.delete(id); return next; });
+          notifyToast({ title: result.conflict ? trn("Tugas berubah di perangkat lain") : trn("Tugas belum terhapus"), message: result.conflict ? trn("Tinjau konflik sebelum menghapus data.") : (result.error || "Perubahan gagal disimpan."), tone: "error" });
+          return;
+        }
+        setTasks((current) => current.filter((item) => item.id !== id));
+        setHiddenIds((current) => { const next = new Set(current); next.delete(id); return next; });
+        if (!result.queued) await load();
+      },
+    });
   }
 
   function startEdit(task: Task) {
@@ -394,7 +411,7 @@ export default function TasksPage() {
       },
     });
     if (!result.ok) {
-      notifyToast({ title: result.conflict ? tr("Perubahan bertabrakan") : tr("Perubahan belum tersimpan"), message: result.conflict ? tr("Tinjau konflik di Pusat Sinkronisasi.") : (result.error || tr("Perubahan gagal disimpan.")), tone: "error" });
+      notifyToast({ title: result.conflict ? trn("Perubahan bertabrakan") : trn("Perubahan belum tersimpan"), message: result.conflict ? trn("Tinjau konflik di Pusat Sinkronisasi.") : (result.error || "Perubahan gagal disimpan."), tone: "error" });
       setSavingId(null);
       return;
     }
@@ -409,9 +426,9 @@ export default function TasksPage() {
     setSavingId(null);
     if (result.queued) {
       setTasks((current) => current.map((item) => item.id === id ? { ...item, title: editForm.title.trim(), description: editForm.description.trim() || null, priority: editForm.priority, due_at: dueIso(editForm.due_date, editForm.due_time), estimated_minutes: Number(editForm.estimated_minutes) || null, project_id: editForm.project_id || null, area_id: editForm.area_id || null, updated_at: new Date().toISOString() } : item));
-      notifyToast({ title: tr("Perubahan disimpan offline"), message: tr("Akan disinkronkan saat koneksi kembali."), tone: "info" });
+      notifyToast({ title: "Perubahan disimpan offline", message: "Akan disinkronkan saat koneksi kembali.", tone: "info" });
     } else {
-      notifyToast({ title: tr("Tugas diperbarui"), message: editForm.title.trim(), tone: "success" });
+      notifyToast({ title: "Tugas diperbarui", message: editForm.title.trim(), tone: "success" });
       await load();
     }
   }
@@ -444,7 +461,7 @@ export default function TasksPage() {
         if (result.ok) changed.push(current.title);
       }
       setPriorityPlan({ focus: plan.focus, priorities: proposed.map((item: any) => ({ id: item.id ? String(item.id) : undefined, title: String(item.title || ""), reason: item.reason, estimated_minutes: item.estimated_minutes })) });
-      showActionResult({ title: tr("Prioritas dengan Licia"), message: changed.length ? tr("{0} tugas langsung diperbarui tingkat prioritasnya.", [changed.length]) : tr("Licia sudah menyusun prioritas. Tidak ada tingkat prioritas yang perlu dinaikkan."), items: changed.slice(0, 6), tone: "success" });
+      showActionResult({ title: tr("Prioritas dengan Licia"), message: changed.length ? tr("{changed_length} tugas langsung diperbarui tingkat prioritasnya.", { changed_length: changed.length }) : tr("Licia sudah menyusun prioritas. Tidak ada tingkat prioritas yang perlu dinaikkan."), items: changed.slice(0, 6), tone: "success" });
     } catch (error) {
       showActionResult({ title: tr("Prioritas belum tersusun"), message: error instanceof Error ? error.message : tr("Coba lagi sebentar."), items: [], tone: "warning" });
     } finally { setQuickAction(null); }
@@ -465,7 +482,7 @@ export default function TasksPage() {
       for (const block of candidates) {
         const startMin = Number(block.start_time.slice(0, 2)) * 60 + Number(block.start_time.slice(3, 5));
         const endMin = Number(block.end_time.slice(0, 2)) * 60 + Number(block.end_time.slice(3, 5));
-        const description = [block.description, block.location ? `Lokasi: ${block.location}` : null, `Dibuat dari agenda ${block.block_date} ${block.start_time.slice(0, 5)}–${block.end_time.slice(0, 5)}.`].filter(Boolean).join("\n");
+        const description = [block.description, block.location ? `Lokasi: ${block.location}` : null, tr("Dibuat dari agenda {block_date} {slice}–{slice2}.", { block_date: block.block_date, slice: block.start_time.slice(0, 5), slice2: block.end_time.slice(0, 5) })].filter(Boolean).join("\n");
         const result = await mutateEntity({ entityType: "task", operation: "create", payload: { title: block.title, description: description || null, priority: "medium", status: "todo", due_at: localDateTimeToIso(block.block_date, block.end_time.slice(0, 5), timezone), estimated_minutes: Math.max(1, endMin - startMin), project_id: block.project_id || null } });
         if (!result.ok || !result.response?.entityId) continue;
         const link = await mutateEntity({ entityType: "schedule", operation: "update", entityId: block.id, baseVersion: block.version ?? null, clientUpdatedAt: block.updated_at ?? null, payload: { task_id: result.response.entityId } });
@@ -474,10 +491,10 @@ export default function TasksPage() {
         const reminderMinutes = await getDefaultReminderMinutes(supabase, user.id);
         if (reminderMinutes > 0) await createDefaultTaskReminder(supabase, user.id, timezone, { id: String(result.response.entityId), title: block.title, due_at: localDateTimeToIso(block.block_date, block.end_time.slice(0, 5), timezone) }, reminderMinutes);
       }
-      showActionResult({ title: tr("Agenda → Tugas"), message: created.length ? tr("{0} agenda langsung dijadikan tugas.", [created.length]) : tr("Tidak ada agenda yang berhasil diproses."), items: created.slice(0, 6), tone: created.length ? "success" : "warning" });
+      showActionResult({ title: tr("Agenda → Tugas"), message: created.length ? tr("{created_length} agenda langsung dijadikan tugas.", { created_length: created.length }) : tr("Tidak ada agenda yang berhasil diproses."), items: created.slice(0, 6), tone: created.length ? "success" : "warning" });
       await load();
     } catch (error) {
-      showActionResult({ title: tr("Agenda → Tugas gagal"), message: error instanceof Error ? error.message : tr("Terjadi kesalahan."), items: [], tone: "warning" });
+      showActionResult({ title: tr("Agenda → Tugas gagal"), message: error instanceof Error ? error.message : "Terjadi kesalahan.", items: [], tone: "warning" });
     } finally { setQuickAction(null); }
   }
 
@@ -496,10 +513,10 @@ export default function TasksPage() {
         if (!marked.ok) { await mutateEntity({ entityType: "task", operation: "delete", entityId: String(result.response.entityId) }); continue; }
         created.push(String(suggestion.title || item.content).slice(0, 90));
       }
-      showActionResult({ title: tr("Inbox → Tugas"), message: created.length ? tr("{0} item Inbox dipindahkan menjadi tugas.", [created.length]) : tr("Tidak ada item yang berhasil diproses."), items: created.slice(0, 6), tone: created.length ? "success" : "warning" });
+      showActionResult({ title: tr("Inbox → Tugas"), message: created.length ? tr("{created_length} item Inbox dipindahkan menjadi tugas.", { created_length: created.length }) : tr("Tidak ada item yang berhasil diproses."), items: created.slice(0, 6), tone: created.length ? "success" : "warning" });
       await load();
     } catch (error) {
-      showActionResult({ title: tr("Inbox → Tugas gagal"), message: error instanceof Error ? error.message : tr("Terjadi kesalahan."), items: [], tone: "warning" });
+      showActionResult({ title: tr("Inbox → Tugas gagal"), message: error instanceof Error ? error.message : "Terjadi kesalahan.", items: [], tone: "warning" });
     } finally { setQuickAction(null); }
   }
 
@@ -542,10 +559,10 @@ export default function TasksPage() {
           if (minutes > 0) await createDefaultScheduleReminder(supabase, user.id, timezone, { id: String(result.response.entityId), title: task.title, block_date: today, start_time: fmt(placedStart), end_time: fmt(endMin) }, minutes);
         }
       }
-      showActionResult({ title: tr("Tugas → Agenda"), message: placed.length ? tr("{0} tugas mendapat slot waktu hari ini.", [placed.length]) : tr("Tidak ditemukan ruang waktu yang cocok."), items: placed, tone: placed.length ? "success" : "warning" });
+      showActionResult({ title: tr("Tugas → Agenda"), message: placed.length ? tr("{placed_length} tugas mendapat slot waktu hari ini.", { placed_length: placed.length }) : tr("Tidak ditemukan ruang waktu yang cocok."), items: placed, tone: placed.length ? "success" : "warning" });
       await load();
     } catch (error) {
-      showActionResult({ title: tr("Tugas → Agenda gagal"), message: error instanceof Error ? error.message : tr("Terjadi kesalahan."), items: [], tone: "warning" });
+      showActionResult({ title: tr("Tugas → Agenda gagal"), message: error instanceof Error ? error.message : "Terjadi kesalahan.", items: [], tone: "warning" });
     } finally { setQuickAction(null); }
   }
 
@@ -562,9 +579,9 @@ export default function TasksPage() {
         const reminder = await createDefaultScheduleReminder(supabase, user.id, timezone, block, minutes);
         if (reminder) created.push(block.title);
       }
-      showActionResult({ title: tr("Agenda → Pengingat"), message: created.length ? tr("{0} agenda sekarang punya pengingat. ({1} menit sebelum agenda)", [created.length, minutes]) : tr("Semua agenda hari ini sudah memiliki pengingat atau waktunya sudah lewat."), items: created.slice(0, 6), tone: created.length ? "success" : "info" });
+      showActionResult({ title: tr("Agenda → Pengingat"), message: created.length ? tr("{created_length} agenda sekarang punya pengingat. ({minutes} menit sebelum agenda)", { created_length: created.length, minutes }) : tr("Semua agenda hari ini sudah memiliki pengingat atau waktunya sudah lewat."), items: created.slice(0, 6), tone: created.length ? "success" : "info" });
     } catch (error) {
-      showActionResult({ title: tr("Agenda → Pengingat gagal"), message: error instanceof Error ? error.message : tr("Terjadi kesalahan."), items: [], tone: "warning" });
+      showActionResult({ title: tr("Agenda → Pengingat gagal"), message: error instanceof Error ? error.message : "Terjadi kesalahan.", items: [], tone: "warning" });
     } finally { setQuickAction(null); }
   }
 
@@ -585,7 +602,7 @@ export default function TasksPage() {
       showActionResult({ title: tr("Licia menyusun tugas"), message: plan.summary || tr("Langkah tugas sudah disusun langsung tanpa membuka Chat."), items: created.length ? created : steps, tone: created.length ? "success" : "info" });
       await load();
     } catch (error) {
-      showActionResult({ title: tr("Licia belum bisa menyusun tugas"), message: error instanceof Error ? error.message : tr("Terjadi kesalahan."), items: [], tone: "warning" });
+      showActionResult({ title: tr("Licia belum bisa menyusun tugas"), message: error instanceof Error ? error.message : "Terjadi kesalahan.", items: [], tone: "warning" });
     } finally { setAssistTaskId(null); }
   }
 
@@ -604,6 +621,7 @@ export default function TasksPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return tasks.filter((task) => {
+      if (hiddenIds.has(task.id)) return false;
       if (!showDone && filter !== "done" && task.status === "done") return false;
       if (filter === "done" && task.status !== "done") return false;
       if (filter === "next" && (task.status === "done" || !task.due_at)) return false;
@@ -619,23 +637,68 @@ export default function TasksPage() {
       if (!b.due_at) return -1;
       return new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
     });
-  }, [tasks, showDone, filter, search, sort, timezone, today]);
+  }, [tasks, showDone, filter, search, sort, timezone, today, hiddenIds]);
 
   const projectName = (id: string | null) => id ? projects.find((project) => project.id === id)?.name : null;
   const areaName = (id: string | null) => id ? areas.find((area) => area.id === id)?.name : null;
   const shortTasks = filtered.filter((task) => task.status !== "done" && (task.estimated_minutes ?? 999) <= 30).slice(0, 3);
   const priorityItems = priorityPlan?.priorities ?? [];
   const filterItems: Array<{ id: FilterMode; label: string }> = [
-    { id: "all", label: tr("Semua") },
+    { id: "all", label: "Semua" },
     { id: "today", label: tr("Hari ini") },
-    { id: "next", label: tr("Bertenggat") },
-    { id: "high", label: tr("Prioritas tinggi") },
-    { id: "unscheduled", label: tr("Tanpa tanggal") },
-    { id: "done", label: tr("Selesai") },
+    { id: "next", label: "Bertenggat" },
+    { id: "high", label: "Prioritas tinggi" },
+    { id: "unscheduled", label: "Tanpa tanggal" },
+    { id: "done", label: "Selesai" },
   ];
 
+  /** Dari Kanban/Matriks/Pekan: buka tugas itu di tampilan daftar dengan detail terbuka. */
+  function openFromView(viewTask: ViewTask) {
+    setLayout("list");
+    setShowDone(true);
+    setExpandedId(viewTask.id);
+    const idx = filtered.findIndex((task) => task.id === viewTask.id);
+    setFocusIndex(idx);
+    window.setTimeout(() => document.getElementById(`task-${viewTask.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+  }
+
+  // A12: pintasan daftar tugas (J/K, X, E, Enter, #). Tidak aktif saat mengetik atau saat dialog terbuka.
+  const keyState = useRef({ filtered, focusIndex, layout, expandedId });
+  keyState.current = { filtered, focusIndex, layout, expandedId };
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const state = keyState.current;
+      if (state.layout !== "list" || event.defaultPrevented) return;
+      if (isTypingTarget(event.target) || document.querySelector('[aria-modal="true"]')) return;
+      const action = taskKeyAction(event.key, { ctrl: event.ctrlKey, meta: event.metaKey, alt: event.altKey });
+      if (!action) return;
+      const onInteractive = event.target instanceof HTMLElement && Boolean(event.target.closest("button, a, summary, select"));
+      // Enter/Space milik tombol yang sedang terfokus; jangan dibajak.
+      if ((action === "open" || action === "toggle" || action === "edit" || action === "delete") && onInteractive) return;
+      if (action === "next" || action === "prev" || action === "first" || action === "last") {
+        if (onInteractive && (event.key === "ArrowDown" || event.key === "ArrowUp")) return;
+        event.preventDefault();
+        const next = stepFocus(state.focusIndex, action, state.filtered.length);
+        setFocusIndex(next);
+        const target = state.filtered[next];
+        if (target) document.getElementById(`task-${target.id}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        return;
+      }
+      const current = state.filtered[state.focusIndex];
+      if (!current) return;
+      event.preventDefault();
+      if (action === "toggle") void setStatus(current, current.status === "done" ? "todo" : "done");
+      else if (action === "edit") startEdit(current);
+      else if (action === "open") setExpandedId(state.expandedId === current.id ? null : current.id);
+      else if (action === "delete") deleteTask(current.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => { if (focusIndex >= filtered.length) setFocusIndex(filtered.length - 1); }, [filtered.length, focusIndex]);
+
   const TaskCard = ({ task, index }: { task: Task; index: number }) => {
-  const { locale } = useLanguage();
     const expanded = expandedId === task.id;
     const editing = editingId === task.id;
     const meta = statusMeta[task.status];
@@ -643,11 +706,15 @@ export default function TasksPage() {
     const overdue = Boolean(task.due_at && task.status !== "done" && new Date(task.due_at).getTime() < Date.now());
     const completedSubtasks = task.subtasks.filter((sub) => sub.status === "done").length;
     const progress = task.subtasks.length ? Math.round((completedSubtasks / task.subtasks.length) * 100) : 0;
+    const focused = focusIndex >= 0 && filtered[focusIndex]?.id === task.id;
 
     return (
       <article
-        data-list-item
+        id={`task-${task.id}`}
+        data-focused={focused ? "true" : undefined}
+        aria-current={focused ? "true" : undefined}
         className={clsx(
+          focused && "ring-2 ring-accent/60 ring-offset-2 ring-offset-bg",
           "task-modern-card group relative overflow-hidden rounded-[1.35rem] border bg-surface p-4 shadow-sm sm:p-5",
           "animate-licia-reveal",
           removingId === task.id && "animate-licia-delete-out",
@@ -660,7 +727,6 @@ export default function TasksPage() {
         {overdue && <span className="absolute inset-y-0 left-0 w-1 bg-danger" aria-hidden />}
         <div className="flex min-w-0 items-start gap-3">
           <button
-            data-list-action="toggle"
             onClick={() => setStatus(task, task.status === "done" ? "todo" : "done")}
             className={clsx(
               "touch-target mt-[-3px] flex shrink-0 items-center justify-center rounded-2xl border border-border bg-bg/60 transition hover:scale-105 active:scale-95",
@@ -677,26 +743,26 @@ export default function TasksPage() {
                 <div className="flex items-center gap-2">
                   <p className={clsx("break-words text-[15px] font-bold leading-snug text-text sm:text-base", task.status === "done" && "text-textMuted line-through")}>{task.title}</p>
                 </div>
-                <div className="mt-2 flex min-w-0 flex-wrap gap-1.5 text-[10px] text-textMuted">
+                <div className="mt-2 flex min-w-0 flex-wrap gap-1.5 text-2xs text-textMuted">
                   {task.due_at ? <span className={clsx("rounded-lg border px-2 py-1", overdue ? "border-danger/15 bg-danger/5 font-semibold text-danger" : "border-border bg-bg")}>{formatDue(task.due_at, timezone, locale)} · {relativeDue(task.due_at, tr)}</span> : <span className="rounded-lg border border-border bg-bg px-2 py-1">{tr("Tanpa deadline")}</span>}
-                  {task.estimated_minutes && <span className="rounded-lg border border-border bg-bg px-2 py-1">{task.estimated_minutes} {tr("mnt")}</span>}
+                  {task.estimated_minutes && <span className="rounded-lg border border-border bg-bg px-2 py-1">{tr("{estimated_minutes} mnt", { estimated_minutes: task.estimated_minutes })}</span>}
                   {projectName(task.project_id) && <span className="rounded-lg border border-border bg-bg px-2 py-1">{projectName(task.project_id)}</span>}
                   {areaName(task.area_id) && <span className="rounded-lg border border-border bg-bg px-2 py-1">{areaName(task.area_id)}</span>}
                 </div>
               </button>
-              <span className={clsx("w-fit shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-bold", priorityClass[task.priority])}>{priorityLabel[task.priority]}</span>
+              <span className={clsx("w-fit shrink-0 rounded-full border px-2.5 py-1 text-2xs font-bold", priorityClass[task.priority])}>{priorityLabel[task.priority]}</span>
             </div>
 
             {task.description && !expanded && <p className="mt-3 line-clamp-2 break-words text-xs leading-relaxed text-textMuted">{task.description}</p>}
             {task.subtasks.length > 0 && (
               <div className="mt-3">
-                <div className="mb-1.5 flex items-center justify-between text-[9px] text-textMuted"><span>{completedSubtasks}/{task.subtasks.length} {tr("langkah")}</span><span>{progress}%</span></div>
+                <div className="mb-1.5 flex items-center justify-between text-2xs text-textMuted"><span>{tr("{completedSubtasks}/{subtasks_length} langkah", { completedSubtasks, subtasks_length: task.subtasks.length })}</span><span>{progress}%</span></div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-success transition-all duration-700" style={{ width: `${progress}%` }} /></div>
               </div>
             )}
           </div>
 
-          <button data-list-action="open" onClick={() => setExpandedId(expanded ? null : task.id)} className="touch-target shrink-0 rounded-xl text-textMuted transition hover:bg-bg hover:text-accent" aria-label={expanded ? tr("Tutup detail") : tr("Buka detail")}>
+          <button onClick={() => setExpandedId(expanded ? null : task.id)} className="touch-target shrink-0 rounded-xl text-textMuted transition hover:bg-bg hover:text-accent" aria-label={expanded ? tr("Tutup detail") : tr("Buka detail")}>
             <MoreHorizontal size={18} />
           </button>
         </div>
@@ -713,14 +779,14 @@ export default function TasksPage() {
                 <input type="number" min="1" max="480" value={editForm.estimated_minutes} onChange={(event) => setEditForm({ ...editForm, estimated_minutes: event.target.value })} className="min-h-11 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text" placeholder={tr("Menit")} />
                 <select value={editForm.project_id} onChange={(event) => setEditForm({ ...editForm, project_id: event.target.value })} className="min-h-11 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text"><option value="">{tr("Tanpa proyek")}</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
                 <select value={editForm.area_id} onChange={(event) => setEditForm({ ...editForm, area_id: event.target.value })} className="min-h-11 rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-text"><option value="">{tr("Tanpa area")}</option>{areas.map((area) => <option key={area.id} value={area.id}>{area.icon || "◉"} {area.name}</option>)}</select>
-                <div className="flex flex-wrap gap-2 sm:col-span-2"><button onClick={() => setEditingId(null)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border px-3 text-xs font-semibold text-textMuted"><X size={13} /> {tr("Batal")}</button><PrimaryButton onClick={() => saveEdit(task.id)} disabled={savingId === task.id} className="text-xs">{savingId === task.id && <Loader2 size={13} className="animate-spin" />} {tr("Simpan perubahan")}</PrimaryButton></div>
+                <div className="flex flex-wrap gap-2 sm:col-span-2"><button onClick={() => setEditingId(null)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border px-3 text-xs font-semibold text-textMuted"><X size={13} /> {" "}{tr("Batal")}</button><PrimaryButton onClick={() => saveEdit(task.id)} disabled={savingId === task.id} className="text-xs">{savingId === task.id && <Loader2 size={13} className="animate-spin" />} {" "}{tr("Simpan perubahan")}</PrimaryButton></div>
               </div>
             ) : (
               <>
                 <div className="grid gap-2 md:grid-cols-3">
-                  <div className="rounded-2xl bg-bg p-3.5"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-textMuted">{tr("Konteks")}</p><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-relaxed text-text">{task.description || tr("Belum ada konteks tambahan.")}</p></div>
-                  <div className="rounded-2xl bg-bg p-3.5"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-textMuted">{tr("Status")}</p><div className="mt-2 flex flex-wrap gap-1.5">{(Object.keys(statusMeta) as Task["status"][]).map((status) => <button key={status} onClick={() => setStatus(task, status)} className={clsx("rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold", task.status === status ? "border-accent bg-accent/10 text-accent" : "border-border text-textMuted")}>{statusMeta[status].label}</button>)}</div></div>
-                  <div className="rounded-2xl bg-bg p-3.5"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-textMuted">{tr("Relasi")}</p><div className="mt-2 space-y-1 text-xs text-text">{projectName(task.project_id) && <p className="flex items-center gap-1.5"><FolderKanban size={12} className="text-accent" /> {projectName(task.project_id)}</p>}{areaName(task.area_id) && <p>{areaName(task.area_id)}</p>}{!projectName(task.project_id) && !areaName(task.area_id) && <p className="text-textMuted">{tr("Belum terhubung")}</p>}</div></div>
+                  <div className="rounded-2xl bg-bg p-3.5"><p className="text-2xs font-bold uppercase tracking-[0.12em] text-textMuted">{tr("Konteks")}</p><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-relaxed text-text">{task.description || tr("Belum ada konteks tambahan.")}</p></div>
+                  <div className="rounded-2xl bg-bg p-3.5"><p className="text-2xs font-bold uppercase tracking-[0.12em] text-textMuted">{tr("Status")}</p><div className="mt-2 flex flex-wrap gap-1.5">{(Object.keys(statusMeta) as Task["status"][]).map((status) => <button key={status} onClick={() => setStatus(task, status)} className={clsx("rounded-lg border px-2.5 py-1.5 text-2xs font-semibold", task.status === status ? "border-accent bg-accent/10 text-accent" : "border-border text-textMuted")}>{statusMeta[status].label}</button>)}</div></div>
+                  <div className="rounded-2xl bg-bg p-3.5"><p className="text-2xs font-bold uppercase tracking-[0.12em] text-textMuted">{tr("Relasi")}</p><div className="mt-2 space-y-1 text-xs text-text">{projectName(task.project_id) && <p className="flex items-center gap-1.5"><FolderKanban size={12} className="text-accent" /> {projectName(task.project_id)}</p>}{areaName(task.area_id) && <p>{areaName(task.area_id)}</p>}{!projectName(task.project_id) && !areaName(task.area_id) && <p className="text-textMuted">{tr("Belum terhubung")}</p>}</div></div>
                 </div>
 
                 {task.subtasks.length > 0 && (
@@ -728,14 +794,14 @@ export default function TasksPage() {
                 )}
 
                 <div className="task-action-row mt-3 flex min-w-0 flex-wrap gap-2">
-                  <a href={`/focus?task=${task.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-accent/20 bg-accent/5 px-3 text-xs font-semibold text-accent transition hover:-translate-y-0.5"><Timer size={13} /> {tr("Fokus")}</a>
-                  <a href={`/calendar?task=${task.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:text-accent"><CalendarClock size={13} /> {tr("Jadwalkan")}</a>
+                  <a href={`/focus?task=${task.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-accent/20 bg-accent/5 px-3 text-xs font-semibold text-accent transition hover:-translate-y-0.5"><Timer size={13} /> {" "}{tr("Fokus")}</a>
+                  <a href={`/calendar?task=${task.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:text-accent"><CalendarClock size={13} /> {" "}{tr("Jadwalkan")}</a>
                   <button onClick={() => void assistTask(task)} disabled={assistTaskId===task.id} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-accent/15 bg-accent/5 px-3 text-xs font-semibold text-accent transition hover:-translate-y-0.5 disabled:opacity-60"><Sparkles size={13} /> {assistTaskId===task.id?tr("Menyusun…"):tr("Susun dengan Licia")}</button>
-                  <button data-list-action="edit" onClick={() => startEdit(task)} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:text-text"><Pencil size={13} /> {tr("Edit")}</button>
-                  <button onClick={() => deleteTask(task.id)} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-danger/15 bg-danger/5 px-3 text-xs font-semibold text-danger transition hover:-translate-y-0.5"><Trash2 size={13} /> {tr("Hapus")}</button>
+                  <button onClick={() => startEdit(task)} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:text-text"><Pencil size={13} /> {" "}{tr("Edit")}</button>
+                  <button onClick={() => deleteTask(task.id)} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-danger/15 bg-danger/5 px-3 text-xs font-semibold text-danger transition hover:-translate-y-0.5"><Trash2 size={13} /> {" "}{tr("Hapus")}</button>
                 </div>
 
-                <div className="mt-3 flex min-w-0 gap-2 border-t border-border pt-3"><input value={newSub[task.id] ?? ""} onChange={(event) => setNewSub((current) => ({ ...current, [task.id]: event.target.value }))} onKeyDown={(event) => event.key === "Enter" && addSubtask(task.id)} placeholder={tr("Tambahkan langkah kecil…")} className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-bg px-3 text-xs text-text outline-none focus:ring-2 focus:ring-accent/30" /><button onClick={() => addSubtask(task.id)} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold text-textMuted hover:text-accent"><Plus size={13} /> {tr("Tambah")}</button></div>
+                <div className="mt-3 flex min-w-0 gap-2 border-t border-border pt-3"><input value={newSub[task.id] ?? ""} onChange={(event) => setNewSub((current) => ({ ...current, [task.id]: event.target.value }))} onKeyDown={(event) => event.key === "Enter" && addSubtask(task.id)} placeholder={tr("Tambahkan langkah kecil…")} className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-bg px-3 text-xs text-text outline-none focus:ring-2 focus:ring-accent/30" /><button onClick={() => addSubtask(task.id)} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold text-textMuted hover:text-accent"><Plus size={13} /> {" "}{tr("Tambah")}</button></div>
               </>
             )}
           </div>
@@ -752,23 +818,23 @@ export default function TasksPage() {
         <div className="relative grid gap-5 xl:grid-cols-[1fr_390px] xl:items-stretch">
           <div className="min-w-0 rounded-[1.6rem] border border-border/80 bg-surface/60 p-4 backdrop-blur-sm sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-accent"><ListChecks size={12} /> {tr("Execution OS")}</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-success/15 bg-success/5 px-2.5 py-1 text-[9px] font-semibold text-success"><span className="h-1.5 w-1.5 rounded-full bg-success animate-licia-spark" /> {tr("Fokus ke eksekusi")}</span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-3 py-1 text-2xs font-bold uppercase tracking-[0.15em] text-accent"><ListChecks size={12} /> {" "}{tr("Execution OS")}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-success/15 bg-success/5 px-2.5 py-1 text-2xs font-semibold text-success"><span className="h-1.5 w-1.5 rounded-full bg-success animate-licia-spark" /> {" "}{tr("Fokus ke eksekusi")}</span>
             </div>
             <h1 className="mt-4 max-w-3xl font-display text-[1.85rem] leading-[1.08] text-text sm:text-4xl">{tr("Tugas bukan lagi daftar panjang. Jadikan ia jalur kerja.")}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-textMuted">{tr("Tangkap, pecah, jadwalkan, fokus, lalu biarkan Licia menghubungkan tugas dengan agenda, project, target, Inbox, dan konteks lain.")}</p>
             <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              <button onClick={() => void runPriorityPlan()} disabled={Boolean(quickAction)} className="group inline-flex min-h-11 items-center justify-between gap-3 rounded-2xl bg-accent px-3.5 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"><span className="flex min-w-0 items-center gap-2">{quickAction === "priority" ? <Loader2 size={15} className="shrink-0 animate-spin" /> : <Sparkles size={15} className="shrink-0" />} {tr("Prioritas langsung dengan Licia")}</span><ArrowRight size={14} className="shrink-0 transition group-hover:translate-x-1" /></button>
-              <button onClick={() => setComposerOpen((value) => !value)} className="inline-flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-border bg-surface/90 px-3.5 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent/30 hover:text-accent"><span className="flex min-w-0 items-center gap-2"><Plus size={15} className="shrink-0" /> {composerOpen ? tr("Tutup tambah cepat") : tr("Tambah tugas")}</span><span className="text-[9px]">{tr("⌘K / Ctrl+K")}</span></button>
+              <button onClick={() => void runPriorityPlan()} disabled={Boolean(quickAction)} className="group inline-flex min-h-11 items-center justify-between gap-3 rounded-2xl bg-accent px-3.5 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"><span className="flex min-w-0 items-center gap-2">{quickAction === "priority" ? <Loader2 size={15} className="shrink-0 animate-spin" /> : <Sparkles size={15} className="shrink-0" />} {" "}{tr("Prioritas langsung dengan Licia")}</span><ArrowRight size={14} className="shrink-0 transition group-hover:translate-x-1" /></button>
+              <button onClick={() => setComposerOpen((value) => !value)} className="inline-flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-border bg-surface/90 px-3.5 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent/30 hover:text-accent"><span className="flex min-w-0 items-center gap-2"><Plus size={15} className="shrink-0" /> {composerOpen ? tr("Tutup tambah cepat") : tr("Tambah tugas")}</span><span className="text-2xs">{tr("⌘K / Ctrl+K")}</span></button>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-[9px] text-textMuted">
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2"><BrainCircuit size={11} className="text-accent" /> {tr("AI lintas modul")}</span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2"><CalendarDays size={11} className="text-accent" /> {tr("Kalender terhubung")}</span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2"><Link2 size={11} className="text-accent" /> {tr("Project & target")}</span>
+            <div className="mt-4 flex flex-wrap gap-2 text-2xs text-textMuted">
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2"><BrainCircuit size={11} className="text-accent" /> {" "}{tr("AI lintas modul")}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2"><CalendarDays size={11} className="text-accent" /> {" "}{tr("Kalender terhubung")}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2"><Link2 size={11} className="text-accent" /> {" "}{tr("Project & target")}</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
-            {[{ label: tr("Aktif"), value: stats.active }, { label: tr("Hari ini"), value: stats.today }, { label: tr("Terlambat"), value: stats.overdue }, { label: tr("Menit"), value: stats.effort }].map((item, index) => <div key={item.label} style={{ animationDelay: `${index * 70}ms` }} className="rounded-[1.4rem] border border-border bg-surface/85 p-3.5 backdrop-blur-sm animate-licia-card-in"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-textMuted">{item.label}</p><p className={clsx("mt-1 font-display text-2xl text-text sm:text-3xl", item.label === "Terlambat" && stats.overdue > 0 && "text-danger")}>{item.value}</p><p className="mt-1 text-[9px] text-textMuted">{item.label === "Menit" ? tr("beban estimasi") : tr("snapshot sekarang")}</p></div>)}
+            {[{ label: "Aktif", value: stats.active }, { label: tr("Hari ini"), value: stats.today }, { label: "Terlambat", value: stats.overdue }, { label: "Menit", value: stats.effort }].map((item, index) => <div key={item.label} style={{ animationDelay: `${index * 70}ms` }} className="rounded-[1.4rem] border border-border bg-surface/85 p-3.5 backdrop-blur-sm animate-licia-card-in"><p className="text-2xs font-bold uppercase tracking-[0.12em] text-textMuted">{item.label}</p><p className={clsx("mt-1 font-display text-2xl text-text sm:text-3xl", item.label === "Terlambat" && stats.overdue > 0 && "text-danger")}>{item.value}</p><p className="mt-1 text-2xs text-textMuted">{item.label === "Menit" ? tr("beban estimasi") : tr("snapshot sekarang")}</p></div>)}
           </div>
         </div>
       </header>
@@ -776,43 +842,47 @@ export default function TasksPage() {
       {composerOpen && (
         <Card className="task-capture border-accent/15 bg-surface p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
-            <div className="min-w-0 flex-1"><p className="text-[10px] font-bold uppercase tracking-[0.13em] text-accent">{tr("Tambah cepat")}</p><TextInput id="task-capture-title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} onKeyDown={(event) => event.key === "Enter" && addTask()} placeholder={tr("Apa yang perlu kamu selesaikan?")} className="mt-2 h-12 rounded-2xl bg-bg text-[15px]" /></div>
+            <div className="min-w-0 flex-1"><p className="text-2xs font-bold uppercase tracking-[0.13em] text-accent">{tr("Tambah cepat")}</p><TextInput id="task-capture-title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} onKeyDown={(event) => event.key === "Enter" && addTask()} placeholder={tr("Apa yang perlu kamu selesaikan?")} className="mt-2 h-12 rounded-2xl bg-bg text-[15px]" /></div>
             <div className="grid gap-2 sm:grid-cols-3 xl:w-[440px]"><input type="date" value={form.due_date} onChange={(event) => setForm({ ...form, due_date: event.target.value })} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text" /><input type="time" value={form.due_time} onChange={(event) => setForm({ ...form, due_time: event.target.value })} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text" /><select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as Task["priority"] })} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"><option value="low">{tr("Prioritas rendah")}</option><option value="medium">{tr("Prioritas sedang")}</option><option value="high">{tr("Prioritas tinggi")}</option></select></div>
             <PrimaryButton onClick={addTask} disabled={saving} className="h-12 shrink-0 rounded-2xl px-5">{saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} {saving ? tr("Menyimpan…") : tr("Tambah tugas")}</PrimaryButton>
           </div>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><span className="text-[10px] text-textMuted">{tr("Enter langsung menyimpan. Detail seperti project, area, durasi, dan konteks bisa ditambahkan setelahnya.")}</span><button onClick={() => { setForm((current) => ({ ...current, title: "", description: "" })); setComposerOpen(true); window.setTimeout(() => document.getElementById("task-capture-title")?.focus(), 30); }} className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-accent hover:underline"><ArrowRight size={12} /> {tr("Tambah langsung di sini")}</button></div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3"><button onClick={() => setForm({ ...form, title: tr("Selesaikan tugas terpenting hari ini"), priority: "high" })} className="rounded-xl border border-border bg-bg p-3 text-left transition hover:-translate-y-0.5 hover:border-accent/30"><b className="text-xs text-text">{tr("Prioritas hari ini")}</b><span className="mt-1 block text-[10px] text-textMuted">{tr("Isi cepat untuk pekerjaan paling penting.")}</span></button><button onClick={() => setForm({ ...form, title: tr("Tindak lanjuti agenda berikutnya"), description: tr("Tindak lanjut dari agenda kalender."), priority: "medium" })} className="rounded-xl border border-border bg-bg p-3 text-left transition hover:-translate-y-0.5 hover:border-accent/30"><b className="text-xs text-text">{tr("Follow-up agenda")}</b><span className="mt-1 block text-[10px] text-textMuted">{tr("Cocok untuk hasil rapat, kelas, atau janji.")}</span></button><button onClick={() => void runPriorityPlan()} disabled={Boolean(quickAction)} className="rounded-xl border border-accent/15 bg-accent/5 p-3 text-left transition hover:-translate-y-0.5 disabled:opacity-60"><b className="text-xs text-accent">{tr("Susun dengan Licia")}</b><span className="mt-1 block text-[10px] text-textMuted">{tr("Langsung susun prioritas tanpa membuka Chat.")}</span></button></div>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><span className="text-2xs text-textMuted">{tr("Enter langsung menyimpan. Detail seperti project, area, durasi, dan konteks bisa ditambahkan setelahnya.")}</span><button onClick={() => { setForm((current) => ({ ...current, title: "", description: "" })); setComposerOpen(true); window.setTimeout(() => document.getElementById("task-capture-title")?.focus(), 30); }} className="inline-flex items-center gap-1.5 text-2xs font-semibold text-accent hover:underline"><ArrowRight size={12} /> {" "}{tr("Tambah langsung di sini")}</button></div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3"><button onClick={() => setForm({ ...form, title: tr("Selesaikan tugas terpenting hari ini"), priority: "high" })} className="rounded-xl border border-border bg-bg p-3 text-left transition hover:-translate-y-0.5 hover:border-accent/30"><b className="text-xs text-text">{tr("Prioritas hari ini")}</b><span className="mt-1 block text-2xs text-textMuted">{tr("Isi cepat untuk pekerjaan paling penting.")}</span></button><button onClick={() => setForm({ ...form, title: tr("Tindak lanjuti agenda berikutnya"), description: tr("Tindak lanjut dari agenda kalender."), priority: "medium" })} className="rounded-xl border border-border bg-bg p-3 text-left transition hover:-translate-y-0.5 hover:border-accent/30"><b className="text-xs text-text">{tr("Follow-up agenda")}</b><span className="mt-1 block text-2xs text-textMuted">{tr("Cocok untuk hasil rapat, kelas, atau janji.")}</span></button><button onClick={() => void runPriorityPlan()} disabled={Boolean(quickAction)} className="rounded-xl border border-accent/15 bg-accent/5 p-3 text-left transition hover:-translate-y-0.5 disabled:opacity-60"><b className="text-xs text-accent">{tr("Susun dengan Licia")}</b><span className="mt-1 block text-2xs text-textMuted">{tr("Langsung susun prioritas tanpa membuka Chat.")}</span></button></div>
         </Card>
       )}
 
-      {priorityItems.length ? <Card className="border-accent/15 bg-accent/5 p-4 animate-licia-slide-in"><div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-bold uppercase tracking-[.15em] text-accent">{tr("Susunan prioritas siap")}</p><h3 className="mt-1 font-display text-xl text-text">{tr("Licia sudah menyusun langkahnya.")}</h3><p className="mt-1 text-xs leading-relaxed text-textMuted">{priorityPlan?.focus || tr("Mulai dari pekerjaan yang paling berdampak dan paling dekat dengan waktunya.")}</p></div><button onClick={()=>setPriorityPlan(null)} className="touch-target rounded-lg text-textMuted hover:text-text" aria-label={tr("Tutup hasil prioritas")}><X size={14}/></button></div><div className="mt-3 space-y-2">{priorityItems.map((item,index)=><div key={`${item.title}-${index}`} className="rounded-2xl border border-border bg-surface p-3"><div className="flex items-start gap-2.5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-bold text-accent">{index+1}</span><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-text">{item.title}</p>{item.reason&&<p className="mt-0.5 text-[10px] leading-relaxed text-textMuted">{item.reason}</p>}{item.action&&<p className="mt-1 text-[10px] font-semibold text-accent">{tr("Langkah:")} {item.action}</p>}</div>{item.estimated_minutes ? <span className="shrink-0 rounded-full bg-bg px-2 py-1 text-[9px] text-textMuted">{item.estimated_minutes} {tr("mnt")}</span> : null}</div></div>)}</div><div className="mt-3 flex flex-wrap gap-2"><button onClick={()=>void scheduleOpenTasks(priorityItems.map(item=>item.id).filter((id): id is string => Boolean(id)))} disabled={Boolean(quickAction)} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent px-3 text-[10px] font-semibold text-white">{tr("Jadwalkan prioritas")}</button><Link href="/focus" className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-bg px-3 text-[10px] font-semibold text-textMuted hover:text-accent">{tr("Mulai fokus")}</Link></div></Card> : actionResult && <Card className={clsx("border-accent/15 bg-accent/5 p-4 animate-licia-slide-in", actionResult.tone === "warning" && "border-danger/15 bg-danger/5", actionResult.tone === "success" && "border-success/15 bg-success/5")}><div className="flex items-start gap-3"><span className="rounded-2xl bg-accent/10 p-3 text-accent"><CheckCircle2 size={16}/></span><div className="min-w-0 flex-1"><p className="text-[9px] font-bold uppercase tracking-[.15em] text-accent">{actionResult.title}</p><p className="mt-1 text-xs leading-relaxed text-textMuted">{actionResult.message}</p>{actionResult.items.length>0&&<div className="mt-2 flex flex-wrap gap-1.5">{actionResult.items.slice(0,6).map((item)=><span key={item} className="rounded-full border border-border bg-surface px-2.5 py-1 text-[9px] font-semibold text-text">{item}</span>)}</div>}</div><button onClick={()=>setActionResult(null)} className="touch-target rounded-lg text-textMuted hover:text-text" aria-label={tr("Tutup hasil")}><X size={14}/></button></div></Card>}
+      {priorityItems.length ? <Card className="border-accent/15 bg-accent/5 p-4 animate-licia-slide-in"><div className="flex items-start justify-between gap-3"><div><p className="text-2xs font-bold uppercase tracking-[.15em] text-accent">{tr("Susunan prioritas siap")}</p><h3 className="mt-1 font-display text-xl text-text">{tr("Licia sudah menyusun langkahnya.")}</h3><p className="mt-1 text-xs leading-relaxed text-textMuted">{priorityPlan?.focus || tr("Mulai dari pekerjaan yang paling berdampak dan paling dekat dengan waktunya.")}</p></div><button onClick={()=>setPriorityPlan(null)} className="touch-target rounded-lg text-textMuted hover:text-text" aria-label={tr("Tutup hasil prioritas")}><X size={14}/></button></div><div className="mt-3 space-y-2">{priorityItems.map((item,index)=><div key={`${item.title}-${index}`} className="rounded-2xl border border-border bg-surface p-3"><div className="flex items-start gap-2.5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-2xs font-bold text-accent">{index+1}</span><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-text">{item.title}</p>{item.reason&&<p className="mt-0.5 text-2xs leading-relaxed text-textMuted">{item.reason}</p>}{item.action&&<p className="mt-1 text-2xs font-semibold text-accent">{tr("Langkah: {action}", { action: item.action })}</p>}</div>{item.estimated_minutes ? <span className="shrink-0 rounded-full bg-bg px-2 py-1 text-2xs text-textMuted">{tr("{estimated_minutes} mnt", { estimated_minutes: item.estimated_minutes })}</span> : null}</div></div>)}</div><div className="mt-3 flex flex-wrap gap-2"><button onClick={()=>void scheduleOpenTasks(priorityItems.map(item=>item.id).filter((id): id is string => Boolean(id)))} disabled={Boolean(quickAction)} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent px-3 text-2xs font-semibold text-white">{tr("Jadwalkan prioritas")}</button><Link href="/focus" className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-bg px-3 text-2xs font-semibold text-textMuted hover:text-accent">{tr("Mulai fokus")}</Link></div></Card> : actionResult && <Card className={clsx("border-accent/15 bg-accent/5 p-4 animate-licia-slide-in", actionResult.tone === "warning" && "border-danger/15 bg-danger/5", actionResult.tone === "success" && "border-success/15 bg-success/5")}><div className="flex items-start gap-3"><span className="rounded-2xl bg-accent/10 p-3 text-accent"><CheckCircle2 size={16}/></span><div className="min-w-0 flex-1"><p className="text-2xs font-bold uppercase tracking-[.15em] text-accent">{actionResult.title}</p><p className="mt-1 text-xs leading-relaxed text-textMuted">{actionResult.message}</p>{actionResult.items.length>0&&<div className="mt-2 flex flex-wrap gap-1.5">{actionResult.items.slice(0,6).map((item)=><span key={item} className="rounded-full border border-border bg-surface px-2.5 py-1 text-2xs font-semibold text-text">{item}</span>)}</div>}</div><button onClick={()=>setActionResult(null)} className="touch-target rounded-lg text-textMuted hover:text-text" aria-label={tr("Tutup hasil")}><X size={14}/></button></div></Card>}
       <section className="task-bridge-grid grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { icon: CalendarDays, label: tr("Agenda → Tugas"), text: tr("Jadikan agenda hari ini sebagai tugas yang langsung terhubung."), action: convertAgendaToTasks, busy: "agenda-task" },
           { icon: Inbox, label: tr("Inbox → Tugas"), text: tr("Ubah tangkapan Inbox terbuka menjadi tugas nyata."), action: convertInboxToTasks, busy: "inbox-task" },
           { icon: CalendarClock, label: tr("Tugas → Agenda"), text: tr("Cari celah waktu hari ini dan jadwalkan tugas terbuka."), action: scheduleOpenTasks, busy: "task-agenda" },
           { icon: AlarmClock, label: tr("Agenda → Pengingat"), text: tr("Buat pengingat untuk agenda hari ini tanpa membuka halaman lain."), action: createAgendaReminders, busy: "reminders" },
-        ].map((item, index) => { const Icon = item.icon; const busy = quickAction === item.busy; return <button key={item.label} onClick={() => void item.action()} disabled={Boolean(quickAction)} style={{ animationDelay: `${index * 60}ms` }} className="task-bridge-card group flex min-w-0 items-center gap-3 rounded-[1.35rem] border border-border bg-surface p-3.5 text-left animate-licia-card-in disabled:cursor-wait disabled:opacity-60"><span className="shrink-0 rounded-2xl bg-accent/10 p-2.5 text-accent transition group-hover:scale-110">{busy ? <Loader2 size={15} className="animate-spin" /> : <Icon size={15} />}</span><span className="min-w-0 flex-1"><b className="block break-words text-xs text-text">{item.label}</b><span className="mt-0.5 block break-words text-[9px] leading-relaxed text-textMuted">{item.text}</span></span><ArrowRight size={13} className="shrink-0 text-textMuted transition group-hover:translate-x-1 group-hover:text-accent" /></button>; })}
+        ].map((item, index) => { const Icon = item.icon; const busy = quickAction === item.busy; return <button key={item.label} onClick={() => void item.action()} disabled={Boolean(quickAction)} style={{ animationDelay: `${index * 60}ms` }} className="task-bridge-card group flex min-w-0 items-center gap-3 rounded-[1.35rem] border border-border bg-surface p-3.5 text-left animate-licia-card-in disabled:cursor-wait disabled:opacity-60"><span className="shrink-0 rounded-2xl bg-accent/10 p-2.5 text-accent transition group-hover:scale-110">{busy ? <Loader2 size={15} className="animate-spin" /> : <Icon size={15} />}</span><span className="min-w-0 flex-1"><b className="block break-words text-xs text-text">{item.label}</b><span className="mt-0.5 block break-words text-2xs leading-relaxed text-textMuted">{item.text}</span></span><ArrowRight size={13} className="shrink-0 text-textMuted transition group-hover:translate-x-1 group-hover:text-accent" /></button>; })}
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
         <Card className="overflow-hidden p-0">
-          <div className="border-b border-border p-4 sm:p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex items-center gap-2"><Layers3 size={15} className="text-accent" /><h2 className="font-display text-lg text-text">{tr("Ruang kerja")}</h2></div><p className="mt-1 text-[10px] text-textMuted">{filtered.length} {tr("tugas terlihat ·")} {stats.done} {tr("sudah selesai")}</p></div><div className="flex shrink-0 gap-1 rounded-xl border border-border bg-bg p-1"><button onClick={() => setLayout("list")} className={clsx("touch-target inline-flex items-center justify-center rounded-lg px-2", layout === "list" ? "bg-surface text-accent shadow-sm" : "text-textMuted")} title={tr("Tampilan daftar")} aria-label={tr("Tampilan daftar")} aria-pressed={layout === "list"}><List size={16} /></button><button onClick={() => setLayout("board")} aria-pressed={layout === "board"} className={clsx("touch-target inline-flex items-center justify-center rounded-lg px-2", layout === "board" ? "bg-surface text-accent shadow-sm" : "text-textMuted")} title={tr("Tampilan papan")} aria-label={tr("Tampilan papan")}><Columns3 size={16} /></button><button onClick={() => setLayout("matrix")} aria-pressed={layout === "matrix"} className={clsx("touch-target inline-flex items-center justify-center rounded-lg px-2", layout === "matrix" ? "bg-surface text-accent shadow-sm" : "text-textMuted")} title={tr("Matriks Eisenhower")} aria-label={tr("Matriks Eisenhower")}><LayoutGrid size={16} /></button><button onClick={() => setLayout("week")} aria-pressed={layout === "week"} className={clsx("touch-target inline-flex items-center justify-center rounded-lg px-2", layout === "week" ? "bg-surface text-accent shadow-sm" : "text-textMuted")} title={tr("Tampilan minggu")} aria-label={tr("Tampilan minggu")}><CalendarRange size={16} /></button></div></div>
+          <div className="border-b border-border p-4 sm:p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex items-center gap-2"><Layers3 size={15} className="text-accent" /><h2 className="font-display text-lg text-text">{tr("Ruang kerja")}</h2></div><p className="mt-1 text-2xs text-textMuted">{tr("{filtered_length} tugas terlihat · {done} sudah selesai", { filtered_length: filtered.length, done: stats.done })}</p></div><div className="flex shrink-0 gap-1 rounded-xl border border-border bg-bg p-1" role="group" aria-label={t("Tampilan tugas")}>{([["list", List, "Daftar"], ["board", Columns3, "Papan Kanban"], ["matrix", Grid2X2, "Matriks Eisenhower"], ["week", CalendarRange, "Pekan"]] as const).map(([mode, ViewIcon, label]) => <button key={mode} type="button" onClick={() => setLayout(mode)} aria-pressed={layout === mode} className={clsx("touch-target inline-flex items-center justify-center rounded-lg px-2", layout === mode ? "bg-surface text-accent shadow-sm" : "text-textMuted")} title={t(label)} aria-label={t(label)}><ViewIcon size={16} aria-hidden="true" /></button>)}</div></div>
             <div className="mt-4 flex min-w-0 flex-col gap-2 lg:flex-row"><div className="relative min-w-0 flex-1"><Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-textMuted" /><TextInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tr("Cari tugas…")} className="pl-9" /></div><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"><option value="next">{tr("Urutkan: deadline")}</option><option value="priority">{tr("Urutkan: prioritas")}</option><option value="effort">{tr("Urutkan: durasi")}</option></select></div>
-            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">{filterItems.map((item) => <button key={item.id} onClick={() => setFilter(item.id)} className={clsx("shrink-0 rounded-xl border px-3 py-2 text-[10px] font-semibold transition", filter === item.id ? "border-accent bg-accent text-white shadow-sm" : "border-border bg-surface text-textMuted hover:border-accent/30 hover:text-accent")}>{item.label}</button>)}</div>
-            <div className="mt-3 flex items-center justify-between gap-2"><label className="inline-flex items-center gap-2 text-[10px] text-textMuted"><input type="checkbox" checked={showDone} onChange={(event) => setShowDone(event.target.checked)} className="accent-[rgb(var(--accent-rgb))]" /> {tr("Tampilkan selesai")}</label><span className="text-[10px] text-textMuted">{timezone.replace("Asia/", "")}</span></div>
+            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">{filterItems.map((item) => <button key={item.id} onClick={() => setFilter(item.id)} className={clsx("shrink-0 rounded-xl border px-3 py-2 text-2xs font-semibold transition", filter === item.id ? "border-accent bg-accent text-white shadow-sm" : "border-border bg-surface text-textMuted hover:border-accent/30 hover:text-accent")}>{item.label}</button>)}</div>
+            <div className="mt-3 flex items-center justify-between gap-2"><label className="inline-flex items-center gap-2 text-2xs text-textMuted"><input type="checkbox" checked={showDone} onChange={(event) => setShowDone(event.target.checked)} className="accent-[rgb(var(--accent-rgb))]" /> {" "}{tr("Tampilkan selesai")}</label><span className="text-2xs text-textMuted">{timezone.replace("Asia/", "")}</span></div>
           </div>
 
           <div className="p-3 sm:p-5">
-            {loading ? <div className="space-y-2">{[1, 2, 3].map((item) => <div key={item} className="h-28 animate-licia-shimmer rounded-2xl bg-bg" />)}</div> : !filtered.length ? <EmptyState title={tr("Belum ada tugas di sini")} description={filter === "all" ? tr("Gunakan Tambah Cepat atau minta Licia menarik tugas dari agenda, Inbox, atau project.") : tr("Coba ubah filter atau pencarian.")} /> : layout !== "list" ? (
-              <TaskViews mode={layout} tasks={filtered} timezone={timezone} onPatch={patchTask} onToggleDone={(task) => setStatus(task as Task, task.status === "done" ? "todo" : "done")} onOpen={(task) => { setLayout("list"); setExpandedId(task.id); }} />
-            ) : <div className="space-y-2.5">{filtered.map((task, index) => <TaskCard key={task.id} task={task} index={index} />)}</div>}
+            {loading ? <div className="space-y-2">{[1, 2, 3].map((item) => <div key={item} className="h-28 animate-licia-shimmer rounded-2xl bg-bg" />)}</div> : !filtered.length ? <EmptyState examples={["kirim laporan besok jam 9 pagi !1","telepon dokter Jumat sore","bayar listrik tanggal 20"]} exampleMode="task" title={tr("Belum ada tugas di sini")} description={filter === "all" ? tr("Gunakan Tambah Cepat atau minta Licia menarik tugas dari agenda, Inbox, atau project.") : tr("Coba ubah filter atau pencarian.")} /> : layout === "board" ? (
+              <TaskKanban tasks={filtered} timezone={timezone} onOpen={openFromView} onPatch={patchTask} />
+            ) : layout === "matrix" ? (
+              <TaskMatrix tasks={filtered} timezone={timezone} onOpen={openFromView} onPatch={patchTask} />
+            ) : layout === "week" ? (
+              <TaskWeek tasks={filtered} timezone={timezone} onOpen={openFromView} onPatch={patchTask} />
+            ) : <div className="space-y-2.5">{filtered.map((task, index) => <TaskCard key={task.id} task={task} index={index} />)}<p className="px-1 pt-1 text-2xs text-textMuted">{t("Pintasan: J/K pindah · X selesai · E ubah · Enter buka · # hapus")}</p></div>}
           </div>
         </Card>
 
         <div className="space-y-4">
-          <Card className="border-accent/15 bg-gradient-to-br from-accent/10 via-surface to-surface p-4 sm:p-5"><div className="flex items-start gap-3"><span className="rounded-2xl bg-accent/10 p-3 text-accent animate-licia-float"><Sparkles size={18} /></span><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.13em] text-accent">{tr("Licia melihat konteks")}</p><h3 className="mt-1 font-display text-xl text-text">{tr("Tugas pendek yang bisa diselesaikan sekarang.")}</h3><p className="mt-1 text-[11px] leading-relaxed text-textMuted">{tr("Ini bukan prioritas otomatis. Gunakan sebagai shortlist saat kamu punya energi rendah atau celah waktu kecil.")}</p></div></div><div className="mt-4 space-y-2">{shortTasks.length ? shortTasks.map((task) => <a key={task.id} href={`/focus?task=${task.id}`} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-surface/85 p-3 transition hover:-translate-y-0.5 hover:border-accent/25"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-bg text-accent"><Timer size={14} /></span><div className="min-w-0 flex-1"><p className="break-words text-xs font-semibold text-text">{task.title}</p><p className="mt-0.5 text-[10px] text-textMuted">{task.estimated_minutes} {tr("menit")}</p></div><ArrowRight size={14} className="shrink-0 text-textMuted" /></a>) : <p className="rounded-2xl bg-bg p-3 text-[10px] leading-relaxed text-textMuted">{tr("Belum ada tugas pendek yang cocok. Tambahkan estimasi durasi agar Licia bisa membantu memilih langkah kecil.")}</p>}</div></Card>
-          <Card className="p-4 sm:p-5"><div className="flex items-center gap-2"><Target size={15} className="text-accent" /><h3 className="font-display text-lg text-text">{tr("Hubungkan dengan Life OS")}</h3></div><div className="mt-3 grid gap-2">{[{ href: "/calendar", label: tr("Kalender"), text: tr("Jadikan slot waktu menjadi tindakan nyata.") }, { href: "/inbox", label: tr("Smart Inbox"), text: tr("Pindahkan ide mentah menjadi tugas yang bisa dieksekusi.") }, { href: "/goals-projects", label: tr("Target & Proyek"), text: tr("Tempelkan pekerjaan ke tujuan yang lebih besar.") }].map((item) => <a key={item.href} href={item.href} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-bg p-3 transition hover:-translate-y-0.5 hover:border-accent/25"><span className="min-w-0 flex-1"><b className="block text-xs text-text">{item.label}</b><span className="mt-0.5 block break-words text-[10px] leading-relaxed text-textMuted">{item.text}</span></span><ArrowRight size={14} className="shrink-0 text-accent" /></a>)}</div><a href="/guide" className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-semibold text-accent hover:underline">{tr("Pelajari semua alur di Panduan")} <ArrowRight size={12} /></a></Card>
+          <Card className="border-accent/15 bg-gradient-to-br from-accent/10 via-surface to-surface p-4 sm:p-5"><div className="flex items-start gap-3"><span className="rounded-2xl bg-accent/10 p-3 text-accent animate-licia-float"><Sparkles size={18} /></span><div className="min-w-0"><p className="text-2xs font-bold uppercase tracking-[0.13em] text-accent">{tr("Licia melihat konteks")}</p><h3 className="mt-1 font-display text-xl text-text">{tr("Tugas pendek yang bisa diselesaikan sekarang.")}</h3><p className="mt-1 text-2xs leading-relaxed text-textMuted">{tr("Ini bukan prioritas otomatis. Gunakan sebagai shortlist saat kamu punya energi rendah atau celah waktu kecil.")}</p></div></div><div className="mt-4 space-y-2">{shortTasks.length ? shortTasks.map((task) => <a key={task.id} href={`/focus?task=${task.id}`} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-surface/85 p-3 transition hover:-translate-y-0.5 hover:border-accent/25"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-bg text-accent"><Timer size={14} /></span><div className="min-w-0 flex-1"><p className="break-words text-xs font-semibold text-text">{task.title}</p><p className="mt-0.5 text-2xs text-textMuted">{tr("{estimated_minutes} menit", { estimated_minutes: task.estimated_minutes })}</p></div><ArrowRight size={14} className="shrink-0 text-textMuted" /></a>) : <p className="rounded-2xl bg-bg p-3 text-2xs leading-relaxed text-textMuted">{tr("Belum ada tugas pendek yang cocok. Tambahkan estimasi durasi agar Licia bisa membantu memilih langkah kecil.")}</p>}</div></Card>
+          <Card className="p-4 sm:p-5"><div className="flex items-center gap-2"><Target size={15} className="text-accent" /><h3 className="font-display text-lg text-text">{tr("Hubungkan dengan Life OS")}</h3></div><div className="mt-3 grid gap-2">{[{ href: "/calendar", label: "Kalender", text: "Jadikan slot waktu menjadi tindakan nyata." }, { href: "/inbox", label: "Smart Inbox", text: tr("Pindahkan ide mentah menjadi tugas yang bisa dieksekusi.") }, { href: "/goals-projects", label: "Target & Proyek", text: tr("Tempelkan pekerjaan ke tujuan yang lebih besar.") }].map((item) => <a key={item.href} href={item.href} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-bg p-3 transition hover:-translate-y-0.5 hover:border-accent/25"><span className="min-w-0 flex-1"><b className="block text-xs text-text">{item.label}</b><span className="mt-0.5 block break-words text-2xs leading-relaxed text-textMuted">{item.text}</span></span><ArrowRight size={14} className="shrink-0 text-accent" /></a>)}</div><a href="/guide" className="mt-3 inline-flex items-center gap-1.5 text-2xs font-semibold text-accent hover:underline">{tr("Pelajari semua alur di Panduan")}{" "}<ArrowRight size={12} /></a></Card>
         </div>
       </section>
     </div>

@@ -8,10 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, notifyToast } from "@/components/ui";
 import { clsx } from "clsx";
 import { enqueueMutation, requestBackgroundSync, getDeviceId } from "@/lib/pwa/offlineQueue";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
 export function QuickCapture() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const supabase = createClient();
   const router = useRouter();
   const [mode, setMode] = useState<"task" | "note">("task");
@@ -31,7 +31,7 @@ export function QuickCapture() {
       const payload = mode === "task" ? { title: content, status: "todo", priority: "medium" } : { title: content.slice(0, 80), content };
       if (!navigator.onLine) {
         const queued = await enqueueMutation({ userId: user.id, deviceId: getDeviceId(), entityType, operation: "create", payload, conflictStrategy: "server" });
-        if (!queued) throw new Error(tr("Antrean offline penuh."));
+        if (!queued) throw new Error("Antrean offline penuh.");
         await requestBackgroundSync();
         setValue(""); setOfflineSaved(true);
         window.setTimeout(() => setOfflineSaved(false), 2200);
@@ -43,7 +43,7 @@ export function QuickCapture() {
       setValue(""); setSaved(true); router.refresh();
       window.setTimeout(() => setSaved(false), 1800);
     } catch (error) {
-      notifyToast({ title: tr("Capture belum tersimpan"), message: error instanceof Error ? error.message : tr("Terjadi kesalahan."), tone: "error" });
+      notifyToast({ title: "Capture belum tersimpan", message: error instanceof Error ? error.message : tr("Terjadi kesalahan."), tone: "error" });
     } finally { setSaving(false); }
   }
 
@@ -60,16 +60,16 @@ export function QuickCapture() {
             <p className="text-xs text-textMuted">{tr("Tuangkan ide sebelum lewat. Tidak perlu membuka modul lain.")}</p>
           </div>
           <Link href={mode === "task" ? "/tasks" : "/notes"} className="text-xs text-textMuted hover:text-accent transition flex items-center gap-1 shrink-0">
-            {tr("Buka")} {mode === "task" ? "tugas" : "catatan"}
+            {tr("Buka")}{" "}{mode === "task" ? tr("tugas") : tr("catatan")}
             <ArrowUpRight size={12} />
           </Link>
         </div>
 
         <div className="grid grid-cols-2 gap-1 rounded-xl bg-bg p-1 border border-border max-w-xs">
           <button onClick={() => setMode("task")} className={clsx("rounded-lg px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1.5", mode === "task" ? "bg-surface text-accent shadow-sm" : "text-textMuted hover:text-text")}>
-            <ListPlus size={13} /> {tr("Tugas")}</button>
+            <ListPlus size={13} /> {" "}{tr("Tugas")}</button>
           <button onClick={() => setMode("note")} className={clsx("rounded-lg px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1.5", mode === "note" ? "bg-surface text-accent shadow-sm" : "text-textMuted hover:text-text")}>
-            <FileText size={13} /> {tr("Catatan")}</button>
+            <FileText size={13} /> {" "}{tr("Catatan")}</button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -85,7 +85,7 @@ export function QuickCapture() {
             disabled={saving || !value.trim()}
             className="rounded-xl bg-accent text-white px-4 py-2.5 text-sm font-medium transition hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {offlineSaved ? <><CloudUpload size={16} /> {tr("Tersimpan offline")}</> : saved ? <Check size={16} /> : saving ? tr("Menyimpan…") : tr("Simpan")}
+            {offlineSaved ? <><CloudUpload size={16} /> {" "}{tr("Tersimpan offline")}</> : saved ? <Check size={16} /> : saving ? tr("Menyimpan…") : tr("Simpan")}
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLanguage } from "@/components/LanguageProvider";
+import { documentLocale } from "@/lib/format";
 
 type NumberFormat = "number" | "integer" | "idr";
 
@@ -17,16 +17,16 @@ type Props = {
   className?: string;
 };
 
-function formatValue(value: number, format: NumberFormat, locale: string = "id-ID"): string {
+function formatValue(value: number, format: NumberFormat): string {
   if (format === "idr") {
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(documentLocale(), {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
     }).format(Math.round(value));
   }
 
-  return new Intl.NumberFormat(locale, {
+  return new Intl.NumberFormat(documentLocale(), {
     maximumFractionDigits: format === "integer" ? 0 : 2,
   }).format(format === "integer" ? Math.round(value) : value);
 }
@@ -37,7 +37,6 @@ export function AnimatedNumber({
   duration = 420,
   className = "",
 }: Props) {
-  const { locale } = useLanguage();
   const [display, setDisplay] = useState(value);
   const previous = useRef(value);
 
@@ -67,7 +66,7 @@ export function AnimatedNumber({
     return () => cancelAnimationFrame(frame);
   }, [value, duration]);
 
-  const text = useMemo(() => formatValue(display, format, locale), [display, format]);
+  const text = useMemo(() => formatValue(display, format), [display, format]);
 
   return (
     <span className={`licia-v32-number-in inline-block tabular-nums ${className}`}>

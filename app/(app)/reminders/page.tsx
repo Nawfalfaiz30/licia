@@ -6,8 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, EmptyState, PrimaryButton, SoftButton, TextInput, notifyToast } from "@/components/ui";
 import { ensureTimezoneOffset } from "@/lib/date";
 import { mutateEntity } from "@/lib/sync/client";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
+import { documentLocale } from "@/lib/format";
 type Reminder = {
   id: string;
   title: string;
@@ -28,8 +29,8 @@ type Reminder = {
   updated_at?: string;
 };
 
-function fmt(iso: string, locale: string = "id-ID") {
-  return new Date(iso).toLocaleString(locale, {
+function fmt(iso: string) {
+  return new Date(iso).toLocaleString(documentLocale(), {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -47,7 +48,7 @@ function isoInput(date = new Date()) {
 const ACTIVE_STATUSES = ["pending", "waiting_for_device", "failed", "processing"];
 
 export default function RemindersPage() {
-  const { tr, locale } = useLanguage();
+  const { t: tr, locale } = useLanguage();
   const supabase = createClient();
   const [rows, setRows] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +78,7 @@ export default function RemindersPage() {
       setTimezone(profile?.timezone || "Asia/Jakarta");
       setRows((data as Reminder[]) || []);
     } catch (e) {
-      if (!quiet) notifyToast({ title: tr("Pengingat tidak termuat"), message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
+      if (!quiet) notifyToast({ title: "Pengingat tidak termuat", message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -119,9 +120,9 @@ export default function RemindersPage() {
       setForm({ title: "", body: "", when: isoInput(new Date(Date.now() + 30 * 60000)) });
       setOpen(false);
       await load();
-      notifyToast({ title: tr("Pengingat dibuat"), message: tr("Akan diingatkan pada {0}.", [fmt(remindAt, locale)]), tone: "success" });
+      notifyToast({ title: "Pengingat dibuat", message: tr("Akan diingatkan pada {fmt}.", { fmt: fmt(remindAt) }), tone: "success" });
     } catch (e) {
-      notifyToast({ title: tr("Pengingat gagal dibuat"), message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
+      notifyToast({ title: "Pengingat gagal dibuat", message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
     } finally { setBusy(false); }
   }
 
@@ -133,12 +134,12 @@ export default function RemindersPage() {
       if (!res.ok) throw new Error(data.error || tr("Dispatch gagal."));
       await load();
       notifyToast({
-        title: tr("Reminder engine dijalankan"),
-        message: tr("{0} terkirim · {1} menunggu · {2} gagal.", [data.delivered ?? 0, data.waiting ?? 0, data.failed ?? 0]),
+        title: "Reminder engine dijalankan",
+        message: tr("{v} terkirim · {v2} menunggu · {v3} gagal.", { v: data.delivered ?? 0, v2: data.waiting ?? 0, v3: data.failed ?? 0 }),
         tone: data.failed ? "error" : "success",
       });
     } catch (e) {
-      notifyToast({ title: tr("Dispatch gagal"), message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
+      notifyToast({ title: "Dispatch gagal", message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
     } finally { setDispatching(false); }
   }
 
@@ -150,9 +151,9 @@ export default function RemindersPage() {
       if (!res.ok) throw new Error(data.error || tr("Sinkronisasi gagal."));
       await runDispatch();
       await load();
-      notifyToast({ title: tr("Reminder agenda disinkronkan"), message: tr("{0} reminder baru dibuat untuk data 14 hari ke depan.", [data.created ?? 0]), tone: "success" });
+      notifyToast({ title: "Reminder agenda disinkronkan", message: tr("{v} reminder baru dibuat untuk data 14 hari ke depan.", { v: data.created ?? 0 }), tone: "success" });
     } catch (e) {
-      notifyToast({ title: tr("Sinkronisasi gagal"), message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
+      notifyToast({ title: "Sinkronisasi gagal", message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
     } finally { setSyncing(false); }
   }
 
@@ -163,9 +164,9 @@ export default function RemindersPage() {
       const result = await mutateEntity({ entityType: "reminder", operation: "update", entityId: id, baseVersion: current?.version ?? null, payload: patch });
       if (!result.ok) throw new Error(result.error || tr("Perubahan gagal disimpan."));
       await load(true);
-      notifyToast({ title: successTitle, message: tr("Status pengingat diperbarui."), tone: "success" });
+      notifyToast({ title: successTitle, message: "Status pengingat diperbarui.", tone: "success" });
     } catch (e) {
-      notifyToast({ title: tr("Perubahan gagal"), message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
+      notifyToast({ title: "Perubahan gagal", message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
     } finally { setActionId(null); }
   }
 
@@ -185,7 +186,7 @@ export default function RemindersPage() {
       if (!result.ok) throw new Error(result.error || tr("Gagal menghapus pengingat."));
       await load(true);
     } catch (e) {
-      notifyToast({ title: tr("Gagal menghapus"), message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
+      notifyToast({ title: "Gagal menghapus", message: e instanceof Error ? e.message : tr("Coba lagi."), tone: "error" });
     } finally { setActionId(null); }
   }
 
@@ -198,15 +199,15 @@ export default function RemindersPage() {
   return <div className="space-y-6 licia-v33-page-in">
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-accent"><Bell size={14}/> {tr("MESIN PENGINGAT")}</p>
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-accent"><Bell size={14}/> {" "}{tr("MESIN PENGINGAT")}</p>
         <h1 className="mt-1 font-display text-3xl text-text">{tr("Pengingat")}</h1>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-textMuted">{tr("Satu engine untuk pengingat manual, agenda, dan aksi AI. Status delivery serta error server dapat dilacak dari sini.")}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <SoftButton onClick={()=>void syncDefaults()} disabled={syncing}>{syncing?<RefreshCw size={13} className="animate-spin"/>:<RefreshCw size={13}/>} {tr("Sinkronkan agenda")}</SoftButton>
-        <SoftButton onClick={()=>void runDispatch()} disabled={dispatching}>{dispatching?<RefreshCw size={13} className="animate-spin"/>:<Zap size={13}/>} {tr("Jalankan sekarang")}</SoftButton>
-        <SoftButton onClick={()=>void load()} disabled={loading}><RefreshCw size={13} className={loading?"animate-spin":""}/> {tr("Segarkan")}</SoftButton>
-        <PrimaryButton onClick={()=>setOpen(v=>!v)}><Plus size={15}/> {tr("Pengingat baru")}</PrimaryButton>
+        <SoftButton onClick={()=>void syncDefaults()} disabled={syncing}>{syncing?<RefreshCw size={13} className="animate-spin"/>:<RefreshCw size={13}/>} {" "}{tr("Sinkronkan agenda")}</SoftButton>
+        <SoftButton onClick={()=>void runDispatch()} disabled={dispatching}>{dispatching?<RefreshCw size={13} className="animate-spin"/>:<Zap size={13}/>} {" "}{tr("Jalankan sekarang")}</SoftButton>
+        <SoftButton onClick={()=>void load()} disabled={loading}><RefreshCw size={13} className={loading?"animate-spin":""}/> {" "}{tr("Segarkan")}</SoftButton>
+        <PrimaryButton onClick={()=>setOpen(v=>!v)}><Plus size={15}/> {" "}{tr("Pengingat baru")}</PrimaryButton>
       </div>
     </header>
 
@@ -217,12 +218,12 @@ export default function RemindersPage() {
       <Card className="p-4"><p className="text-xs text-textMuted">{tr("Gagal")}</p><p className="mt-1 font-display text-2xl text-danger">{failed.length}</p></Card>
     </div>
 
-    {failed.length > 0 && <Card className="border-danger/15 bg-danger/5 p-4"><div className="flex gap-3"><span className="rounded-xl bg-danger/10 p-2 text-danger"><AlertTriangle size={15}/></span><div><p className="text-sm font-semibold text-text">{tr("Ada pengingat yang gagal dikirim")}</p><p className="mt-1 text-[10px] leading-relaxed text-textMuted">{tr("Periksa error delivery di kartu pengingat atau gunakan tombol jadwalkan ulang. Worker akan mencoba kembali pada dispatch berikutnya setelah status pending.")}</p></div></div></Card>}
+    {failed.length > 0 && <Card className="border-danger/15 bg-danger/5 p-4"><div className="flex gap-3"><span className="rounded-xl bg-danger/10 p-2 text-danger"><AlertTriangle size={15}/></span><div><p className="text-sm font-semibold text-text">{tr("Ada pengingat yang gagal dikirim")}</p><p className="mt-1 text-2xs leading-relaxed text-textMuted">{tr("Periksa error delivery di kartu pengingat atau gunakan tombol jadwalkan ulang. Worker akan mencoba kembali pada dispatch berikutnya setelah status pending.")}</p></div></div></Card>}
 
-    {open&&<Card className="border-accent/20 bg-accent/5"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-text">{tr("Buat pengingat")}</p><p className="mt-1 text-[10px] text-textMuted">{tr("Timezone akun:")} {timezone}</p></div><button onClick={()=>setOpen(false)} className="rounded-lg p-2 text-textMuted hover:bg-surface" aria-label={tr("Tutup")}><X size={14}/></button></div><div className="mt-4 grid gap-3 md:grid-cols-2"><TextInput value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder={tr("Contoh: Berangkat ke kampus")}/><TextInput value={form.body} onChange={e=>setForm({...form,body:e.target.value})} placeholder={tr("Catatan: urus akademik dulu")}/><label className="block"><span className="text-[10px] font-bold uppercase tracking-wider text-textMuted">{tr("Waktu")}</span><input type="datetime-local" value={form.when} onChange={e=>setForm({...form,when:e.target.value})} className="field-v27 mt-1 w-full"/></label></div><div className="mt-3 flex justify-end"><PrimaryButton onClick={()=>void add()} disabled={busy}>{busy?<RefreshCw size={14} className="animate-spin"/>:<Check size={14}/>} {busy?tr("Menyimpan…"):tr("Simpan pengingat")}</PrimaryButton></div></Card>}
+    {open&&<Card className="border-accent/20 bg-accent/5"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-text">{tr("Buat pengingat")}</p><p className="mt-1 text-2xs text-textMuted">{tr("Timezone akun: {timezone}", { timezone })}</p></div><button onClick={()=>setOpen(false)} className="rounded-lg p-2 text-textMuted hover:bg-surface" aria-label={tr("Tutup")}><X size={14}/></button></div><div className="mt-4 grid gap-3 md:grid-cols-2"><TextInput value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder={tr("Contoh: Berangkat ke kampus")}/><TextInput value={form.body} onChange={e=>setForm({...form,body:e.target.value})} placeholder={tr("Catatan: urus akademik dulu")}/><label className="block"><span className="text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Waktu")}</span><input type="datetime-local" value={form.when} onChange={e=>setForm({...form,when:e.target.value})} className="field-v27 mt-1 w-full"/></label></div><div className="mt-3 flex justify-end"><PrimaryButton onClick={()=>void add()} disabled={busy}>{busy?<RefreshCw size={14} className="animate-spin"/>:<Check size={14}/>} {busy?tr("Menyimpan…"):tr("Simpan pengingat")}</PrimaryButton></div></Card>}
 
-    <section><div className="mb-3 flex items-center justify-between"><h2 className="font-display text-xl text-text">{tr("Akan datang")}</h2><span className="text-[10px] text-textMuted">{upcoming.length} {tr("aktif")}</span></div>{loading?<Card className="p-8 text-center"><RefreshCw size={18} className="mx-auto animate-spin text-accent"/></Card>:!upcoming.length?<EmptyState title={tr("Belum ada pengingat aktif")} description={tr("Buat satu pengingat manual atau minta Licia mengaturnya dari chat.")}/>:<div className="grid gap-3 lg:grid-cols-2">{upcoming.map(r=><Card key={r.id} className="min-w-0 p-4"><div className="flex items-start gap-3"><span className="rounded-xl bg-accent/10 p-2.5 text-accent"><Clock3 size={16}/></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="break-words text-sm font-semibold text-text">{r.title}</p>{r.status==="failed"&&<span className="rounded-full bg-danger/10 px-2 py-0.5 text-[9px] font-semibold text-danger">{tr("Gagal")}</span>}{r.status==="waiting_for_device"&&<span className="rounded-full bg-accent/10 px-2 py-0.5 text-[9px] font-semibold text-accent">{tr("Menunggu perangkat")}</span>}{new Date(r.remind_at).getTime()<=Date.now()&&r.status!=="sent"&&<span className="rounded-full bg-danger/10 px-2 py-0.5 text-[9px] font-semibold text-danger">{tr("Jatuh tempo")}</span>}</div><p className="mt-1 text-xs text-accent">{fmt(r.remind_at, locale)}</p>{r.body&&<p className="mt-2 break-words text-[11px] leading-relaxed text-textMuted">{r.body}</p>}<div className="mt-2 flex flex-wrap gap-1.5"><span className="rounded-full bg-bg px-2 py-1 text-[9px] text-textMuted">{r.target_type}</span>{r.offset_minutes!=null&&<span className="rounded-full bg-bg px-2 py-1 text-[9px] text-textMuted">H-{r.offset_minutes} {tr("menit")}</span>}<span className="rounded-full bg-bg px-2 py-1 text-[9px] text-textMuted">{tr("Percobaan")} {r.delivery_attempts||0}</span></div>{r.last_error&&<p className="mt-2 break-words rounded-lg bg-danger/5 px-2.5 py-2 text-[9px] leading-relaxed text-danger">{r.last_error}</p>}</div><div className="flex shrink-0 flex-col gap-1">{r.status==="failed"&&<button disabled={actionId===r.id} onClick={()=>void retry(r.id)} className="rounded-lg border border-border p-2 text-textMuted hover:text-accent disabled:opacity-50" title={tr("Jadwalkan ulang")}><RefreshCw size={13}/></button>}<button disabled={actionId===r.id} onClick={()=>void cancel(r.id)} className="rounded-lg border border-border p-2 text-textMuted hover:text-accent disabled:opacity-50" title={tr("Batalkan")}><Bell size={13}/></button><button disabled={actionId===r.id} onClick={()=>void remove(r.id)} className="rounded-lg p-2 text-textMuted hover:text-danger disabled:opacity-50" title={tr("Hapus")}><Trash2 size={13}/></button></div></div></Card>)}</div>}</section>
+    <section><div className="mb-3 flex items-center justify-between"><h2 className="font-display text-xl text-text">{tr("Akan datang")}</h2><span className="text-2xs text-textMuted">{tr("{upcoming_length} aktif", { upcoming_length: upcoming.length })}</span></div>{loading?<Card className="p-8 text-center"><RefreshCw size={18} className="mx-auto animate-spin text-accent"/></Card>:!upcoming.length?<EmptyState title={tr("Belum ada pengingat aktif")} description={tr("Buat satu pengingat manual atau minta Licia mengaturnya dari chat.")}/>:<div className="grid gap-3 lg:grid-cols-2">{upcoming.map(r=><Card key={r.id} className="min-w-0 p-4"><div className="flex items-start gap-3"><span className="rounded-xl bg-accent/10 p-2.5 text-accent"><Clock3 size={16}/></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="break-words text-sm font-semibold text-text">{r.title}</p>{r.status==="failed"&&<span className="rounded-full bg-danger/10 px-2 py-0.5 text-2xs font-semibold text-danger">{tr("Gagal")}</span>}{r.status==="waiting_for_device"&&<span className="rounded-full bg-accent/10 px-2 py-0.5 text-2xs font-semibold text-accent">{tr("Menunggu perangkat")}</span>}{new Date(r.remind_at).getTime()<=Date.now()&&r.status!=="sent"&&<span className="rounded-full bg-danger/10 px-2 py-0.5 text-2xs font-semibold text-danger">{tr("Jatuh tempo")}</span>}</div><p className="mt-1 text-xs text-accent">{fmt(r.remind_at)}</p>{r.body&&<p className="mt-2 break-words text-2xs leading-relaxed text-textMuted">{r.body}</p>}<div className="mt-2 flex flex-wrap gap-1.5"><span className="rounded-full bg-bg px-2 py-1 text-2xs text-textMuted">{r.target_type}</span>{r.offset_minutes!=null&&<span className="rounded-full bg-bg px-2 py-1 text-2xs text-textMuted">{tr("H-{offset_minutes} menit", { offset_minutes: r.offset_minutes })}</span>}<span className="rounded-full bg-bg px-2 py-1 text-2xs text-textMuted">{tr("Percobaan")}{" "}{r.delivery_attempts||0}</span></div>{r.last_error&&<p className="mt-2 break-words rounded-lg bg-danger/5 px-2.5 py-2 text-2xs leading-relaxed text-danger">{r.last_error}</p>}</div><div className="flex shrink-0 flex-col gap-1">{r.status==="failed"&&<button disabled={actionId===r.id} onClick={()=>void retry(r.id)} className="rounded-lg border border-border p-2 text-textMuted hover:text-accent disabled:opacity-50" title={tr("Jadwalkan ulang")}><RefreshCw size={13}/></button>}<button disabled={actionId===r.id} onClick={()=>void cancel(r.id)} className="rounded-lg border border-border p-2 text-textMuted hover:text-accent disabled:opacity-50" title={tr("Batalkan")}><Bell size={13}/></button><button disabled={actionId===r.id} onClick={()=>void remove(r.id)} className="rounded-lg p-2 text-textMuted hover:text-danger disabled:opacity-50" title={tr("Hapus")}><Trash2 size={13}/></button></div></div></Card>)}</div>}</section>
 
-    {past.length>0&&<section><h2 className="mb-3 font-display text-xl text-text">{tr("Riwayat")}</h2><div className="grid gap-2">{past.slice(0,30).map(r=><div key={r.id} className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="break-words text-xs font-semibold text-text">{r.title}</p><span className="rounded-full bg-bg px-2 py-0.5 text-[9px] text-textMuted">{r.status}</span></div><p className="mt-1 text-[9px] text-textMuted">{fmt(r.remind_at, locale)} {tr("· percobaan")} {r.delivery_attempts||0}</p>{r.last_error&&<p className="mt-1 break-words text-[9px] text-danger">{r.last_error}</p>}</div><button disabled={actionId===r.id} onClick={()=>void remove(r.id)} className="rounded-lg p-2 text-textMuted hover:text-danger disabled:opacity-50" aria-label={tr("Hapus riwayat")}><Trash2 size={13}/></button></div>)}</div></section>}
+    {past.length>0&&<section><h2 className="mb-3 font-display text-xl text-text">{tr("Riwayat")}</h2><div className="grid gap-2">{past.slice(0,30).map(r=><div key={r.id} className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="break-words text-xs font-semibold text-text">{r.title}</p><span className="rounded-full bg-bg px-2 py-0.5 text-2xs text-textMuted">{r.status}</span></div><p className="mt-1 text-2xs text-textMuted">{tr("{fmt} · percobaan", { fmt: fmt(r.remind_at) })}{" "}{r.delivery_attempts||0}</p>{r.last_error&&<p className="mt-1 break-words text-2xs text-danger">{r.last_error}</p>}</div><button disabled={actionId===r.id} onClick={()=>void remove(r.id)} className="rounded-lg p-2 text-textMuted hover:text-danger disabled:opacity-50" aria-label={tr("Hapus riwayat")}><Trash2 size={13}/></button></div>)}</div></section>}
   </div>;
 }

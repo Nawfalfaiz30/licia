@@ -1,3 +1,4 @@
+import { documentLocale } from "@/lib/format";
 // IMPORTANT: never use `date.toISOString().slice(0, 10)` to get a "YYYY-MM-DD"
 // label for a local calendar date — toISOString() converts to UTC first, which
 // silently shifts the date by a day for anyone in a UTC+ timezone (like WIB)
@@ -172,7 +173,7 @@ export function formatTimeInTimezone(value: string | Date | null | undefined, ti
   if (!value) return "-";
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat(documentLocale(), {
     timeZone: timezone,
     hour: "2-digit",
     minute: "2-digit",
@@ -184,7 +185,7 @@ export function formatDateTimeInTimezone(value: string | Date | null | undefined
   if (!value) return "-";
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat(documentLocale(), {
     timeZone: timezone,
     weekday: "long",
     day: "numeric",

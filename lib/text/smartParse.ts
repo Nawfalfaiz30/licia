@@ -16,8 +16,7 @@ import { dateStrInTimezone, localDateTimeToIso } from "@/lib/date";
 
 export type SmartPriority = "high" | "medium" | "low";
 export type SmartChipKind = "date" | "time" | "priority" | "tag" | "money";
-/** `ymd`/`todayYmd` (chip tanggal) dan `amount` (chip uang) memungkinkan UI menampilkan label sesuai bahasa dan menawarkan aksi. */
-export type SmartChip = { kind: SmartChipKind; label: string; raw: string; ymd?: string; todayYmd?: string; amount?: number };
+export type SmartChip = { kind: SmartChipKind; label: string; raw: string };
 
 export type SmartParseResult = {
   original: string;
@@ -39,10 +38,17 @@ export type SmartParseOptions = {
   timezone?: string;
   /** Buang #tag dari judul. Set false bila tujuan penyimpanan tidak punya kolom tag (mis. tugas). */
   stripTags?: boolean;
+  /** Bahasa label chip; bawaan "id". */
+  lang?: ChipLang;
 };
 
 const DAY_NAMES_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"] as const;
 const MONTH_NAMES_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"] as const;
+const DAY_NAMES_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const MONTH_NAMES_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/** Bahasa label chip (v0.57). Parser tetap mengenali ID + EN; ini hanya memengaruhi teks yang ditampilkan. */
+export type ChipLang = "id" | "en";
 
 // 0 = Minggu ... 6 = Sabtu. "minggu" polos sengaja TIDAK dikenali (ambigu dengan "minggu depan").
 const WEEKDAYS: Array<{ re: string; day: number }> = [
@@ -141,13 +147,16 @@ function validYmd(y: number, m: number, d: number): boolean {
 }
 
 /** Label singkat untuk chip: "Hari ini", "Besok", "Lusa", atau "Sen, 12 Okt". */
-export function formatChipDate(ymd: string, todayYmd: string): string {
-  if (ymd === todayYmd) return "Hari ini";
-  if (ymd === addDaysYmd(todayYmd, 1)) return "Besok";
-  if (ymd === addDaysYmd(todayYmd, 2)) return "Lusa";
+export function formatChipDate(ymd: string, todayYmd: string, lang: ChipLang = "id"): string {
+  const en = lang === "en";
+  if (ymd === todayYmd) return en ? "Today" : "Hari ini";
+  if (ymd === addDaysYmd(todayYmd, 1)) return en ? "Tomorrow" : "Besok";
+  if (ymd === addDaysYmd(todayYmd, 2)) return en ? "In 2 days" : "Lusa";
   const { y, m, d } = parseYmd(ymd);
   const sameYear = y === parseYmd(todayYmd).y;
-  return `${DAY_NAMES_ID[weekdayOf(ymd)]}, ${d} ${MONTH_NAMES_ID[m - 1]}${sameYear ? "" : " " + y}`;
+  const day = (en ? DAY_NAMES_EN : DAY_NAMES_ID)[weekdayOf(ymd)];
+  const month = (en ? MONTH_NAMES_EN : MONTH_NAMES_ID)[m - 1];
+  return en ? `${day}, ${month} ${d}${sameYear ? "" : ", " + y}` : `${day}, ${d} ${month}${sameYear ? "" : " " + y}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -221,7 +230,7 @@ export function parseSmartCapture(input: string, options: SmartParseOptions = {}
   const setPriority = (p: SmartPriority, raw: string) => {
     if (priority) return;
     priority = p;
-    chips.push({ kind: "priority", label: p === "high" ? "Prioritas tinggi" : p === "low" ? "Prioritas rendah" : "Prioritas sedang", raw: raw.trim() });
+    chips.push({ kind: "priority", label: options.lang === "en" ? (p === "high" ? "High priority" : p === "low" ? "Low priority" : "Medium priority") : (p === "high" ? "Prioritas tinggi" : p === "low" ? "Prioritas rendah" : "Prioritas sedang"), raw: raw.trim() });
   };
   take(/(^|\s)(?:!{1}([123])|p([123]))(?=\s|[.,;!?]|$)/i, (m) => {
     const n = m[2] || m[3];
@@ -381,11 +390,11 @@ export function parseSmartCapture(input: string, options: SmartParseOptions = {}
   /* 8. Uang (informasi saja; tidak dibuang dari judul) */
   const money = findMoneyMentions(original);
   const amount = money.length ? money[0].amount : null;
-  for (const mm of money.slice(0, 3)) chips.push({ kind: "money", label: formatRupiah(mm.amount), raw: mm.raw, amount: mm.amount });
+  for (const mm of money.slice(0, 3)) chips.push({ kind: "money", label: formatRupiah(mm.amount), raw: mm.raw });
 
   /* 9. Chip tanggal & jam di urutan paling depan */
   const lead: SmartChip[] = [];
-  if (dueDate) lead.push({ kind: "date", label: formatChipDate(dueDate, today), raw: "", ymd: dueDate, todayYmd: today });
+  if (dueDate) lead.push({ kind: "date", label: formatChipDate(dueDate, today, options.lang ?? "id"), raw: "" });
   if (dueTime) lead.push({ kind: "time", label: dueTime, raw: "" });
   const orderedChips = [...lead, ...chips];
 

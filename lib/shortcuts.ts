@@ -56,13 +56,23 @@ export const SHORTCUT_HELP: ShortcutGroup[] = [
     ],
   },
   {
-    title: "Daftar (Tugas, Inbox, Catatan)",
+    title: "Daftar tugas",
     items: [
-      { keys: ["J"], label: "Item berikutnya" },
-      { keys: ["K"], label: "Item sebelumnya" },
-      { keys: ["X"], label: "Selesai / pilih item" },
-      { keys: ["E"], label: "Ubah item" },
-      { keys: ["Enter"], label: "Buka detail item" },
+      { keys: ["J"], label: "Tugas berikutnya" },
+      { keys: ["K"], label: "Tugas sebelumnya" },
+      { keys: ["X"], label: "Tandai selesai / buka lagi" },
+      { keys: ["E"], label: "Ubah tugas" },
+      { keys: ["Enter"], label: "Buka / tutup detail" },
+      { keys: ["#"], label: "Hapus (bisa diurungkan)" },
+      { keys: ["Ctrl/⌘", "Z"], label: "Urungkan aksi terakhir di notifikasi" },
+    ],
+  },
+  {
+    title: "Palet perintah",
+    items: [
+      { keys: [">"], label: "Hanya perintah (tema, bahasa, ukuran teks…)" },
+      { keys: ["/"], label: "Hanya halaman" },
+      { keys: ["?"], label: "Cari data di semua modul" },
     ],
   },
   {
@@ -70,3 +80,9 @@ export const SHORTCUT_HELP: ShortcutGroup[] = [
     items: Object.entries(GO_TO).map(([key, target]) => ({ keys: ["G", key === "/" ? "/" : key.toUpperCase()], label: target.label })),
   },
 ];
+
+/** Event kustom v0.57: dibuka dari palet, dibaca KeyboardShortcuts. */
+export const SHORTCUTS_HELP_EVENT = "licia:open-shortcuts";
+export const PALETTE_OPEN_EVENT = "licia:open-palette";
+/** detail: { mode?: "task" | "note" | "inbox" | "ai"; text?: string } */
+export type QuickCaptureRequest = { mode?: "task" | "note" | "inbox" | "ai"; text?: string };

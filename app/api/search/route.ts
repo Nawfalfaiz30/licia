@@ -1,4 +1,3 @@
-import { localeOf, readLanguageCookie } from "@/lib/i18n";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/security";
@@ -24,7 +23,6 @@ function writeSearchCache(key: string, results: Array<Record<string, unknown>>) 
 }
 
 export async function GET(req: Request){
-  const searchLocale = localeOf(readLanguageCookie(req.headers.get("cookie")));
   const supabase=await createClient();
   const {data:{user}}=await supabase.auth.getUser();
   if(!user) return NextResponse.json({results:[]},{status:401});
@@ -52,7 +50,7 @@ export async function GET(req: Request){
     supabase.from("schedule_blocks").select("id,title,block_date,start_time,end_time").eq("user_id",user.id).or(`title.ilike.${like}`).order("block_date",{ascending:true}).limit(8),
   ]);
   const results=[
-    ...((tasks.data||[]).map((x:any)=>({id:x.id,type:"Tugas",title:x.title,detail:x.status==="done"?"Selesai":(x.due_at?new Date(x.due_at).toLocaleDateString(searchLocale,{day:"numeric",month:"short"}):"Tanpa tenggat"),href:"/tasks"}))),
+    ...((tasks.data||[]).map((x:any)=>({id:x.id,type:"Tugas",title:x.title,detail:x.status==="done"?"Selesai":(x.due_at?new Date(x.due_at).toLocaleDateString("id-ID",{day:"numeric",month:"short"}):"Tanpa tenggat"),href:"/tasks"}))),
     ...((projects.data||[]).map((x:any)=>({id:x.id,type:"Proyek",title:x.name,detail:x.status,href:"/projects"}))),
     ...((goals.data||[]).map((x:any)=>({id:x.id,type:"Target",title:x.title,detail:x.status,href:"/goals"}))),
     ...((notes.data||[]).map((x:any)=>({id:x.id,type:"Catatan",title:x.title||"Tanpa judul",detail:previewPlainText(x.content, 90) || "Catatan",href:"/notes"}))),

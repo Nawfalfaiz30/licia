@@ -11,7 +11,7 @@ import { useLanguage } from "@/components/LanguageProvider";
 import { haptic } from "@/lib/interaction";
 
 export function BottomNav() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const pathname = usePathname();
   const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -23,7 +23,7 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="licia-bottom-nav md:hidden fixed bottom-0 inset-x-0 z-20 bg-surface/98 border-t border-border backdrop-blur-xl">
+      <nav className="licia-bottom-nav md:hidden fixed bottom-0 inset-x-0 z-nav bg-surface/98 border-t border-border backdrop-blur-xl">
         <div className="grid grid-cols-5">
           {visiblePrimary.map((item) => {
             const active = pathname?.startsWith(item.href);
@@ -34,7 +34,7 @@ export function BottomNav() {
                 href={item.href}
                 onPointerDown={() => haptic("selection")}
                 className={clsx(
-                  "licia-v32-interactive licia-v32-ripple flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition",
+                  "licia-v32-interactive licia-v32-ripple flex flex-col items-center gap-1 py-2.5 text-2xs font-medium transition",
                   active ? "text-accent" : "text-textMuted"
                 )}
               >
@@ -47,7 +47,7 @@ export function BottomNav() {
             onPointerDown={() => haptic("selection")}
             onClick={() => setMoreOpen(true)}
             className={clsx(
-              "licia-v32-interactive licia-v32-ripple flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition",
+              "licia-v32-interactive licia-v32-ripple flex flex-col items-center gap-1 py-2.5 text-2xs font-medium transition",
               isInMore ? "text-accent" : "text-textMuted"
             )}
             aria-label={tr("Buka semua fitur di Lainnya")}

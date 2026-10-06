@@ -1,178 +1,220 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Circle, Clock3, GripVertical } from "lucide-react";
 import { clsx } from "clsx";
-import { CalendarClock, Check, Clock3, GripVertical } from "lucide-react";
 import { useLanguage } from "@/components/LanguageProvider";
-import { QUADRANTS, dueDayOf, quadrantOf, quadrantPatch, weekDays, weekPatch, type Quadrant, type ViewTask } from "@/lib/tasks/views";
+import {
+  QUADRANT_ORDER, STATUS_ORDER, bucketWeek, clearDuePatch, dayPatch, isEmptyPatch, quadrantOf, quadrantPatch, statusPatch, weekDays, weekStartYmd,
+  type Quadrant, type TaskPatch, type TaskStatus, type ViewTask, type WeekStart,
+} from "@/lib/tasks/views";
+import { addDaysYmd } from "@/lib/text/smartParse";
 import { dateStrInTimezone } from "@/lib/date";
 
-export type BoardTask = ViewTask & { title: string; estimated_minutes: number | null };
-type Status = ViewTask["status"];
-type Patch = { priority?: ViewTask["priority"]; due_at?: string | null; status?: Status };
-
-type Props = {
-  mode: "board" | "matrix" | "week";
-  tasks: BoardTask[];
+type Common = {
+  tasks: ViewTask[];
   timezone: string;
-  onPatch: (task: BoardTask, patch: Patch, label: string) => void | Promise<void>;
-  onToggleDone: (task: BoardTask) => void | Promise<void>;
-  onOpen: (task: BoardTask) => void;
+  onOpen: (task: ViewTask) => void;
+  /** `summary` sudah diterjemahkan, mis. "Dipindah ke Hari ini". */
+  onPatch: (task: ViewTask, patch: TaskPatch, summary: string) => void;
 };
 
-const STATUSES: Array<{ id: Status; label: string }> = [
-  { id: "todo", label: "Berikutnya" },
-  { id: "in_progress", label: "Dikerjakan" },
-  { id: "done", label: "Selesai" },
-];
+const DRAG_MIME = "application/x-licia-task";
+
+const STATUS_LABEL: Record<TaskStatus, string> = { todo: "Berikutnya", in_progress: "Dikerjakan", done: "Selesai" };
+const STATUS_ICON: Record<TaskStatus, typeof Circle> = { todo: Circle, in_progress: Clock3, done: CheckCircle2 };
+const STATUS_TONE: Record<TaskStatus, string> = { todo: "text-textMuted", in_progress: "text-accent", done: "text-success" };
+const PRIORITY_DOT = { low: "bg-textMuted", medium: "bg-accent", high: "bg-danger" } as const;
+const PRIORITY_LABEL = { low: "Prioritas rendah", medium: "Prioritas sedang", high: "Prioritas tinggi" } as const;
+
 const QUADRANT_META: Record<Quadrant, { title: string; hint: string; tone: string }> = {
-  doFirst: { title: "Kerjakan dulu", hint: "Penting · mendesak", tone: "border-danger/25 bg-danger/5" },
-  schedule: { title: "Jadwalkan", hint: "Penting · tidak mendesak", tone: "border-accent/25 bg-accent/5" },
-  quick: { title: "Selesaikan cepat", hint: "Tidak penting · mendesak", tone: "border-border bg-bg/60" },
-  later: { title: "Nanti / tinjau", hint: "Tidak penting · tidak mendesak", tone: "border-border bg-bg/40" },
+  do: { title: "Kerjakan sekarang", hint: "Penting & mendesak", tone: "border-danger/30 bg-danger/5" },
+  plan: { title: "Jadwalkan", hint: "Penting, belum mendesak", tone: "border-accent/30 bg-accent/5" },
+  quick: { title: "Selesaikan cepat", hint: "Mendesak, kurang penting", tone: "border-border bg-bg/60" },
+  later: { title: "Nanti / lepaskan", hint: "Tidak penting & tidak mendesak", tone: "border-border bg-bg/40" },
 };
-const PRIORITY_TONE = { high: "bg-danger/10 text-danger", medium: "bg-accent/10 text-accent", low: "bg-bg text-textMuted" } as const;
 
-function Column({ title, hint, count, tone, active, droppable = true, onDropTask, children, tr }: {
-  title: string; hint?: string; count: number; tone?: string; active: boolean; droppable?: boolean;
-  onDropTask: (taskId: string) => void; children: React.ReactNode; tr: (k: string) => string;
+function useDragState() {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overKey, setOverKey] = useState<string | null>(null);
+  return { dragId, setDragId, overKey, setOverKey };
+}
+
+type MoveOption = { value: string; label: string };
+
+function MiniCard({ task, timezone, onOpen, options, onMove, onDragStart, onDragEnd, dragging }: {
+  task: ViewTask; timezone: string; onOpen: (t: ViewTask) => void; options: MoveOption[]; onMove: (value: string) => void;
+  onDragStart: (id: string) => void; onDragEnd: () => void; dragging: boolean;
 }) {
-  const [over, setOver] = useState(false);
+  const { t, locale } = useLanguage();
+  const Icon = STATUS_ICON[task.status];
+  const due = task.due_at ? new Intl.DateTimeFormat(locale, { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(task.due_at)) : null;
+  const overdue = Boolean(task.due_at && task.status !== "done" && new Date(task.due_at).getTime() < Date.now());
+  return (
+    <article
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData(DRAG_MIME, task.id); e.dataTransfer.setData("text/plain", task.title); e.dataTransfer.effectAllowed = "move"; onDragStart(task.id); }}
+      onDragEnd={onDragEnd}
+      className={clsx("group cursor-grab rounded-xl border bg-surface p-2.5 shadow-sm transition active:cursor-grabbing", dragging && "opacity-40", overdue ? "border-danger/30" : "border-border")}
+    >
+      <div className="flex items-start gap-2">
+        <GripVertical size={13} className="mt-0.5 shrink-0 text-textMuted/60" aria-hidden="true" />
+        <Icon size={14} className={clsx("mt-0.5 shrink-0", STATUS_TONE[task.status])} aria-hidden="true" />
+        <button type="button" onClick={() => onOpen(task)} className="min-w-0 flex-1 text-left">
+          <span className={clsx("block break-words text-xs font-semibold leading-snug text-text", task.status === "done" && "text-textMuted line-through")}>{task.title}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-2xs text-textMuted">
+            <span className="inline-flex items-center gap-1"><span className={clsx("h-1.5 w-1.5 rounded-full", PRIORITY_DOT[task.priority])} aria-hidden="true" /><span className="sr-only">{t(PRIORITY_LABEL[task.priority])}</span></span>
+            {due && <span className={overdue ? "font-semibold text-danger" : ""}>{due}</span>}
+            {task.estimated_minutes ? <span>{t("{n} mnt", { n: task.estimated_minutes })}</span> : null}
+          </span>
+        </button>
+      </div>
+      {/* Alternatif non-seret (WCAG 2.5.7): layar sentuh dan pengguna keyboard memindahkan lewat pilihan ini. */}
+      <label className="mt-2 block">
+        <span className="sr-only">{t("Pindahkan {title}", { title: task.title })}</span>
+        <select value="" onChange={(e) => { if (e.target.value) onMove(e.target.value); }} className="min-h-9 w-full rounded-lg border border-border bg-bg px-2 text-2xs font-semibold text-textMuted">
+          <option value="">{t("Pindahkan ke…")}</option>
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </label>
+    </article>
+  );
+}
+
+function DropColumn({ id, over, onOver, onDropId, children, className, label }: { id: string; over: string | null; onOver: (key: string | null) => void; onDropId: (taskId: string) => void; children: React.ReactNode; className?: string; label: string }) {
   return (
     <section
-      aria-label={title}
-      onDragOver={(e) => { if (droppable) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (!over) setOver(true); } }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => { if (!droppable) return; e.preventDefault(); setOver(false); const id = e.dataTransfer.getData("text/plain"); if (id) onDropTask(id); }}
-      className={clsx("min-w-0 rounded-2xl border p-2.5 transition", tone ?? "border-border bg-bg/45", over && "ring-2 ring-accent/50", !active && "opacity-95")}
+      aria-label={label}
+      onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG_MIME)) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; onOver(id); } }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onOver(null); }}
+      onDrop={(e) => { e.preventDefault(); const taskId = e.dataTransfer.getData(DRAG_MIME); onOver(null); if (taskId) onDropId(taskId); }}
+      className={clsx("min-w-0 rounded-2xl border p-2.5 transition", over === id ? "border-accent bg-accent/10 ring-2 ring-accent/30" : "", className)}
     >
-      <header className="flex items-start justify-between gap-2 px-1.5 py-1.5">
-        <div className="min-w-0"><p className="truncate text-[11px] font-bold uppercase tracking-[.1em] text-textMuted">{title}</p>{hint && <p className="text-[11px] text-textMuted">{tr(hint)}</p>}</div>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-bold text-textMuted">{count}</span>
-      </header>
-      <div className="space-y-2">{children}</div>
-      {!count && <p className="px-2 py-4 text-center text-[11px] text-textMuted">{droppable ? tr("Seret tugas ke sini") : tr("Tidak ada")}</p>}
+      {children}
     </section>
   );
 }
 
-export function TaskViews({ mode, tasks, timezone, onPatch, onToggleDone, onOpen }: Props) {
-  const { tr, locale } = useLanguage();
-  const [dragId, setDragId] = useState<string | null>(null);
-  const now = new Date();
-  const today = dateStrInTimezone(now, timezone);
-  const byId = (id: string) => tasks.find((t) => t.id === id);
-  const open = tasks.filter((t) => t.status !== "done");
+/* ------------------------------- Kanban ------------------------------- */
 
-  const dueText = (task: BoardTask) => {
-    if (!task.due_at) return tr("Tanpa tenggat");
-    return new Intl.DateTimeFormat(locale, { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(task.due_at));
+export function TaskKanban({ tasks, timezone, onOpen, onPatch }: Common) {
+  const { t } = useLanguage();
+  const drag = useDragState();
+  const byId = useMemo(() => new Map(tasks.map((x) => [x.id, x])), [tasks]);
+  const move = (task: ViewTask, status: TaskStatus) => {
+    const patch = statusPatch(task, status);
+    if (patch) onPatch(task, patch, t("Dipindah ke {to}", { to: t(STATUS_LABEL[status]) }));
   };
-
-  const renderCard = (task: BoardTask, moves: Array<{ value: string; label: string }>) => {
-    const done = task.status === "done";
-    return (
-      <div
-        key={task.id}
-        data-list-item
-        draggable
-        onDragStart={(e) => { e.dataTransfer.setData("text/plain", task.id); e.dataTransfer.effectAllowed = "move"; setDragId(task.id); }}
-        onDragEnd={() => setDragId(null)}
-        className={clsx("group rounded-xl border border-border bg-surface p-2.5 shadow-sm transition", dragId === task.id && "opacity-50", done && "opacity-70")}
-      >
-        <div className="flex items-start gap-2">
-          <GripVertical size={14} className="mt-0.5 hidden shrink-0 cursor-grab text-textMuted sm:block" aria-hidden />
-          <button type="button" data-list-action="toggle" onClick={() => void onToggleDone(task)} aria-label={done ? tr("Tandai belum selesai") : tr("Tandai selesai")} aria-pressed={done} className={clsx("touch-target mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border", done ? "border-success bg-success text-white" : "border-border text-transparent hover:border-accent")}><Check size={12} /></button>
-          <button type="button" data-list-action="edit" onClick={() => onOpen(task)} className={clsx("min-w-0 flex-1 break-words text-left text-xs font-semibold text-text hover:text-accent", done && "line-through")}>{task.title}</button>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className={clsx("rounded-full px-2 py-0.5 font-semibold", PRIORITY_TONE[task.priority])}>{tr({ high: "Tinggi", medium: "Sedang", low: "Rendah" }[task.priority])}</span>
-          <span className="inline-flex items-center gap-1 text-textMuted"><CalendarClock size={11} aria-hidden />{dueText(task)}</span>
-          {task.estimated_minutes ? <span className="inline-flex items-center gap-1 text-textMuted"><Clock3 size={11} aria-hidden />{task.estimated_minutes} {tr("mnt")}</span> : null}
-        </div>
-        <label className="mt-2 block">
-          <span className="sr-only">{tr("Pindahkan ke")}</span>
-          <select value="" onChange={(e) => { const v = e.target.value; if (v) { e.target.value = ""; moveTask(task, v); } }} className="min-h-8 w-full rounded-lg border border-border bg-bg px-2 text-[11px] text-textMuted">
-            <option value="">{tr("Pindahkan ke…")}</option>
-            {moves.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
-        </label>
-      </div>
-    );
-  };
-
-  const fmtDay = (day: string) => new Intl.DateTimeFormat(locale, { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }).format(new Date(`${day}T12:00:00Z`));
-
-  function moveTask(task: BoardTask, target: string) {
-    if (mode === "board") {
-      if (task.status !== target) void onPatch(task, { status: target as Status }, tr(STATUSES.find((s) => s.id === target)?.label ?? target));
-    } else if (mode === "matrix") {
-      const patch = quadrantPatch(task, target as Quadrant, timezone, new Date());
-      if (Object.keys(patch).length) void onPatch(task, patch, tr(QUADRANT_META[target as Quadrant].title));
-    } else {
-      const day = target === "none" ? null : target;
-      if (dueDayOf(task, timezone) !== day) void onPatch(task, weekPatch(task, day, timezone), day ? fmtDay(day) : tr("Tanpa tanggal"));
-    }
-  }
-  const drop = (target: string) => (id: string) => { const task = byId(id); if (task) moveTask(task, target); setDragId(null); };
-
-  if (mode === "board") {
-    return (
-      <div className="grid gap-3 lg:grid-cols-3">
-        {STATUSES.map((s) => {
-          const items = tasks.filter((t) => t.status === s.id);
-          return (
-            <Column key={s.id} tr={tr} title={tr(s.label)} count={items.length} active={!!dragId} onDropTask={drop(s.id)}>
-              {items.map((t) => renderCard(t, STATUSES.filter((x) => x.id !== t.status).map((x) => ({ value: x.id, label: tr(x.label) }))))}
-            </Column>
-          );
-        })}
-      </div>
-    );
-  }
-
-  if (mode === "matrix") {
-    return (
-      <div>
-        <p className="mb-2 text-[11px] leading-relaxed text-textMuted">{tr("Penting = prioritas tinggi. Mendesak = jatuh tempo dalam 48 jam. Memindahkan tugas mengubah prioritas/tenggatnya, dan bisa diurungkan.")}</p>
-        <div className="grid gap-3 md:grid-cols-2">
-          {QUADRANTS.map((q) => {
-            const items = open.filter((t) => quadrantOf(t, now) === q);
-            return (
-              <Column key={q} tr={tr} title={tr(QUADRANT_META[q].title)} hint={QUADRANT_META[q].hint} tone={QUADRANT_META[q].tone} count={items.length} active={!!dragId} onDropTask={drop(q)}>
-                {items.map((t) => renderCard(t, QUADRANTS.filter((x) => x !== q).map((x) => ({ value: x, label: tr(QUADRANT_META[x].title) }))))}
-              </Column>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  const days = weekDays(now, timezone);
-  const overdue = open.filter((t) => { const d = dueDayOf(t, timezone); return d !== null && d < today; });
-  const undated = open.filter((t) => !t.due_at);
-  const dayMoves = [...days.map((d) => ({ value: d.day, label: fmtDay(d.day) })), { value: "none", label: tr("Tanpa tanggal") }];
+  const options = STATUS_ORDER.map((s) => ({ value: s, label: t(STATUS_LABEL[s]) }));
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="grid min-w-[62rem] grid-cols-8 gap-2.5 lg:min-w-0">
-        <Column tr={tr} title={tr("Terlambat")} tone="border-danger/25 bg-danger/5" count={overdue.length} active={!!dragId} droppable={false} onDropTask={() => undefined}>
-          {overdue.map((t) => renderCard(t, dayMoves))}
-        </Column>
-        {days.map(({ day, isToday }) => {
-          const items = open.filter((t) => dueDayOf(t, timezone) === day);
+    <div className="grid gap-3 lg:grid-cols-3">
+      {STATUS_ORDER.map((status) => {
+        const items = tasks.filter((x) => x.status === status);
+        const Icon = STATUS_ICON[status];
+        return (
+          <DropColumn key={status} id={status} over={drag.overKey} onOver={drag.setOverKey} onDropId={(id) => { const task = byId.get(id); if (task) move(task, status); drag.setDragId(null); }} label={t(STATUS_LABEL[status])} className="border-border bg-bg/45">
+            <div className="flex items-center justify-between px-1.5 py-1.5">
+              <div className="flex items-center gap-2"><Icon size={13} className={STATUS_TONE[status]} aria-hidden="true" /><h3 className="text-2xs font-bold uppercase tracking-[0.12em] text-textMuted">{t(STATUS_LABEL[status])}</h3></div>
+              <span className="rounded-full bg-surface px-2 py-0.5 text-2xs font-bold text-textMuted">{items.length}</span>
+            </div>
+            <div className="space-y-2">
+              {items.map((task) => <MiniCard key={task.id} task={task} timezone={timezone} onOpen={onOpen} options={options} onMove={(v) => move(task, v as TaskStatus)} onDragStart={drag.setDragId} onDragEnd={() => { drag.setDragId(null); drag.setOverKey(null); }} dragging={drag.dragId === task.id} />)}
+              {!items.length && <p className="rounded-xl border border-dashed border-border p-4 text-center text-2xs text-textMuted">{t("Seret tugas ke sini")}</p>}
+            </div>
+          </DropColumn>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ------------------------- Matriks Eisenhower ------------------------- */
+
+export function TaskMatrix({ tasks, timezone, onOpen, onPatch }: Common) {
+  const { t } = useLanguage();
+  const drag = useDragState();
+  const now = new Date();
+  const open = tasks.filter((x) => x.status !== "done");
+  const byId = useMemo(() => new Map(open.map((x) => [x.id, x])), [open]);
+  const move = (task: ViewTask, target: Quadrant) => {
+    const patch = quadrantPatch(task, target, timezone);
+    if (!isEmptyPatch(patch)) onPatch(task, patch, t("Dipindah ke {to}", { to: t(QUADRANT_META[target].title) }));
+  };
+  const options = QUADRANT_ORDER.map((q) => ({ value: q, label: t(QUADRANT_META[q].title) }));
+  return (
+    <div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {QUADRANT_ORDER.map((q) => {
+          const items = open.filter((x) => quadrantOf(x, now) === q);
+          const meta = QUADRANT_META[q];
           return (
-            <Column key={day} tr={tr} title={isToday ? `${tr("Hari ini")} · ${fmtDay(day)}` : fmtDay(day)} tone={isToday ? "border-accent/30 bg-accent/5" : undefined} count={items.length} active={!!dragId} onDropTask={drop(day)}>
-              {items.map((t) => renderCard(t, dayMoves.filter((m) => m.value !== day)))}
-            </Column>
+            <DropColumn key={q} id={q} over={drag.overKey} onOver={drag.setOverKey} onDropId={(id) => { const task = byId.get(id); if (task) move(task, q); drag.setDragId(null); }} label={t(meta.title)} className={meta.tone}>
+              <div className="flex items-start justify-between gap-2 px-1.5 py-1.5">
+                <div><h3 className="text-xs font-bold text-text">{t(meta.title)}</h3><p className="text-2xs text-textMuted">{t(meta.hint)}</p></div>
+                <span className="rounded-full bg-surface px-2 py-0.5 text-2xs font-bold text-textMuted">{items.length}</span>
+              </div>
+              <div className="space-y-2">
+                {items.map((task) => <MiniCard key={task.id} task={task} timezone={timezone} onOpen={onOpen} options={options} onMove={(v) => move(task, v as Quadrant)} onDragStart={drag.setDragId} onDragEnd={() => { drag.setDragId(null); drag.setOverKey(null); }} dragging={drag.dragId === task.id} />)}
+                {!items.length && <p className="rounded-xl border border-dashed border-border/70 p-4 text-center text-2xs text-textMuted">{t("Kosong")}</p>}
+              </div>
+            </DropColumn>
           );
         })}
       </div>
-      <div className="mt-2.5">
-        <Column tr={tr} title={tr("Tanpa tanggal")} count={undated.length} active={!!dragId} onDropTask={drop("none")}>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{undated.map((t) => renderCard(t, dayMoves.filter((m) => m.value !== "none")))}</div>
-        </Column>
+      <p className="mt-3 text-2xs leading-relaxed text-textMuted">{t("Penting = prioritas tinggi. Mendesak = tenggat dalam 48 jam atau sudah lewat. Memindahkan tugas mengubah prioritas dan/atau tenggatnya — bisa diurungkan.")}</p>
+    </div>
+  );
+}
+
+/* ------------------------------- Minggu ------------------------------- */
+
+export function TaskWeek({ tasks, timezone, onOpen, onPatch, weekStartsOn = "monday" }: Common & { weekStartsOn?: WeekStart }) {
+  const { t, locale } = useLanguage();
+  const drag = useDragState();
+  const today = dateStrInTimezone(new Date(), timezone);
+  const [offset, setOffset] = useState(0);
+  const start = addDaysYmd(weekStartYmd(today, weekStartsOn), offset * 7);
+  const buckets = useMemo(() => bucketWeek(tasks, start, timezone), [tasks, start, timezone]);
+  const byId = useMemo(() => new Map(tasks.map((x) => [x.id, x])), [tasks]);
+  const dayFmt = new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const dayLabel = (ymd: string) => dayFmt.format(new Date(`${ymd}T00:00:00Z`));
+  const days = weekDays(start);
+  const options: MoveOption[] = [...days.map((ymd) => ({ value: ymd, label: dayLabel(ymd) })), { value: "none", label: t("Tanpa tanggal") }];
+
+  const move = (task: ViewTask, target: string) => {
+    const patch = target === "none" ? clearDuePatch() : dayPatch(task, target, timezone);
+    if (target !== "none" && patch.due_at === task.due_at) return;
+    if (target === "none" && !task.due_at) return;
+    onPatch(task, patch, target === "none" ? t("Tenggat dihapus") : t("Dipindah ke {to}", { to: dayLabel(target) }));
+  };
+  const rangeLabel = `${dayLabel(days[0])} – ${dayLabel(days[6])}`;
+  const card = (task: ViewTask) => <MiniCard key={task.id} task={task} timezone={timezone} onOpen={onOpen} options={options} onMove={(v) => move(task, v)} onDragStart={drag.setDragId} onDragEnd={() => { drag.setDragId(null); drag.setOverKey(null); }} dragging={drag.dragId === task.id} />;
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-text" aria-live="polite">{rangeLabel}</p>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => setOffset((v) => v - 1)} aria-label={t("Pekan sebelumnya")} className="touch-target rounded-xl border border-border bg-surface text-textMuted hover:text-text"><ChevronLeft size={16} aria-hidden="true" /></button>
+          <button type="button" onClick={() => setOffset(0)} disabled={offset === 0} className="min-h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-textMuted hover:text-text disabled:opacity-50">{t("Pekan ini")}</button>
+          <button type="button" onClick={() => setOffset((v) => v + 1)} aria-label={t("Pekan berikutnya")} className="touch-target rounded-xl border border-border bg-surface text-textMuted hover:text-text"><ChevronRight size={16} aria-hidden="true" /></button>
+        </div>
       </div>
+      <div className="overflow-x-auto pb-2">
+        <div className="grid min-w-[56rem] grid-cols-8 gap-2">
+          {buckets.days.map(({ ymd, tasks: dayTasks }) => (
+            <DropColumn key={ymd} id={ymd} over={drag.overKey} onOver={drag.setOverKey} onDropId={(id) => { const task = byId.get(id); if (task) move(task, ymd); drag.setDragId(null); }} label={dayLabel(ymd)} className={clsx("bg-bg/45", ymd === today ? "border-accent/40" : "border-border")}>
+              <div className="flex items-center justify-between px-1 pb-1.5"><h3 className={clsx("text-2xs font-bold", ymd === today ? "text-accent" : "text-textMuted")}>{dayLabel(ymd)}</h3>{ymd === today && <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-2xs font-bold text-accent">{t("Hari ini")}</span>}</div>
+              <div className="space-y-2">{dayTasks.map(card)}{!dayTasks.length && <p className="py-3 text-center text-2xs text-textMuted/70">—</p>}</div>
+            </DropColumn>
+          ))}
+          <DropColumn id="none" over={drag.overKey} onOver={drag.setOverKey} onDropId={(id) => { const task = byId.get(id); if (task) move(task, "none"); drag.setDragId(null); }} label={t("Tanpa tanggal")} className="border-dashed border-border bg-surface">
+            <div className="flex items-center justify-between px-1 pb-1.5"><h3 className="text-2xs font-bold text-textMuted">{t("Tanpa tanggal")}</h3><span className="rounded-full bg-bg px-1.5 py-0.5 text-2xs font-bold text-textMuted">{buckets.unscheduled.length}</span></div>
+            <div className="space-y-2">{buckets.unscheduled.slice(0, 20).map(card)}{!buckets.unscheduled.length && <p className="py-3 text-center text-2xs text-textMuted/70">—</p>}</div>
+          </DropColumn>
+        </div>
+      </div>
+      {buckets.outside.length > 0 && <p className="mt-2 text-2xs text-textMuted">{t("{n} tugas lain bertenggat di luar pekan ini.", { n: buckets.outside.length })}</p>}
     </div>
   );
 }

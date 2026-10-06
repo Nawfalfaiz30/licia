@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export function Sidebar() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -34,7 +34,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-5 overflow-y-auto no-scrollbar">
         {navGroups.map((group) => (
           <div key={t(group.i18nKey)}>
-            <p className="licia-sidebar-label text-[11px] text-textMuted uppercase tracking-wide px-3 mb-1.5">{t(group.i18nKey)}</p>
+            <p className="licia-sidebar-label text-2xs text-textMuted uppercase tracking-wide px-3 mb-1.5">{t(group.i18nKey)}</p>
             <div className="space-y-1">
               {group.items.map((item) => {
                 const active = pathname?.startsWith(item.href);

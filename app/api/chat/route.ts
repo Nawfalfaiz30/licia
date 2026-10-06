@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateProfile } from "@/lib/getOrCreateProfile";
-import { readLanguageCookie } from "@/lib/i18n";
 import { buildSystemPrompt, AiMode } from "@/lib/ai/systemPrompt";
+import { languageDirective, languageFromCookieHeader } from "@/lib/ai/language";
 import { toolDefs, executeTool } from "@/lib/ai/tools";
 import { emitProgress, streamChatResponse, toolLabel } from "@/lib/ai/progress";
 import { buildConnectedContext } from "@/lib/ai/context";
@@ -592,7 +592,6 @@ export async function POST(req: Request) {
 }
 
 async function handleChatPost(req: Request) {
-  const uiLanguage = readLanguageCookie(req.headers.get("cookie"));
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
   const sizeError = assertJsonSize(req, 10 * 1024 * 1024);
@@ -1125,14 +1124,12 @@ async function handleChatPost(req: Request) {
   const selectedToolModel = selectAiToolModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const messages: RawMsg[] = [
     { role: "system", content: buildSystemPrompt(resolvedProfile?.display_name ?? null, timezone, clientNowIso ?? undefined, intelligenceContext, selectedMode, selectedResponseStyle as any, { aiReadAllData, aiAutoLink, aiProactive, aiSuggestActions, aiConfirmDestructive, aiConfirmMassive, aiDeniedDomains: deniedDomains }) },
-    { role: "system", content: uiLanguage === "en"
-      ? "UI LANGUAGE: English. The user's interface is set to English. Reply in English by default; if the user clearly writes in another language, reply in that language. Titles, notes, and other text you save through tools should follow the language the user wrote in. Date/time words such as 'tomorrow' are understood the same way as the Indonesian equivalents."
-      : "BAHASA ANTARMUKA: Indonesia. Balas dalam Bahasa Indonesia secara default; jika pengguna jelas menulis dalam bahasa lain, balas dalam bahasa itu. Judul dan catatan yang kamu simpan lewat tool mengikuti bahasa yang ditulis pengguna." },
     { role: "system", content: `AI ROUTING: model=${selectedAiModel}; contextMode=${aiReadAllData ? "all" : "smart"}; domains=${domains.join(",") || "overview"}. Jangan mengakses domain yang tidak disediakan toolset.` },
     ...(pendingAction ? [{ role: "system", content: `AKSI PENGHAPUSAN TERTUNDA: pengguna sebelumnya sudah melihat kandidat "${pendingAction.label || "item ini"}". Jika pesan sekarang jelas merupakan konfirmasi (mis. "iya", "ya", "hapus", "lanjutkan"), panggil tool ${pendingAction.tool} dengan argumen ${pendingAction.confirmField}=${pendingAction.id}. Jangan mencari kandidat baru kecuali tool gagal atau item sudah tidak ditemukan. Jika pengguna menolak/membatalkan, jangan panggil tool ini.` } as RawMsg] : []),
     { role: "system", content: `${confirmBulkActions || aiConfirmMassive ? "Untuk perubahan yang berpotensi mengubah banyak data sekaligus, verifikasi dulu targetnya dan lakukan secara bertahap." : "Untuk perubahan massal, tetap verifikasi target secara semantik sebelum bertindak."} ${aiConfirmDestructive ? "Penghapusan/perubahan destruktif memerlukan konfirmasi eksplisit untuk target yang ditemukan." : "Penghapusan tetap harus memakai target ID yang jelas dan jangan menghapus item ambigu."} ${aiAutoLink ? "Boleh menghubungkan entitas bila relasinya nyata dan dapat diverifikasi." : "Jangan menghubungkan entitas secara otomatis kecuali diminta."} ${aiSuggestActions ? "Aksi dapat dijalankan ketika instruksi pengguna jelas." : "Jangan melakukan write action kecuali pengguna memberikan instruksi eksplisit."}` },
     { role: "system", content: "ATURAN HAPUS AGENDA MASSAL: jika pengguna meminta menghapus semua/seluruh agenda atau jadwal dengan pengecualian tertentu (misalnya 'hapus semua agenda kecuali interview KEYENCE'), WAJIB gunakan get_schedule untuk memverifikasi target lalu gunakan delete_schedule_blocks_bulk satu kali. Kirim exclude_keywords/exclude_ids untuk item yang harus dipertahankan. Jangan membuat satu delete_schedule_block per agenda dan jangan menyatakan berhasil sampai hasil batch menunjukkan count penghapusan > 0 dan verifikasi selesai." },
     { role: "system", content: LICIA_AGENT_POLICY },
+    { role: "system", content: languageDirective(languageFromCookieHeader(req.headers.get("cookie"))) },
     { role: "system", content: conversationDecision.contextInstruction },
     { role: "system", content: [
       `REFERENSI AKTIF: entityIds=${conversationDecision.state.activeEntityIds.join(", ") || "none"}.`,

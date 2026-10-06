@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleButton } from "@/components/auth/GoogleButton";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
 export default function LoginPage() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const router = useRouter();
   const supabase = createClient();
   const [email, setEmail] = useState("");
@@ -45,7 +45,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-text outline-none focus:ring-2 focus:ring-accent"
-              placeholder="kamu@email.com"
+              placeholder={tr("kamu@email.com")}
             />
           </div>
           <div>
@@ -67,7 +67,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full rounded-xl bg-accent text-white py-3 font-medium hover:opacity-90 transition disabled:opacity-60"
           >
-            {loading ? "Masuk..." : tr("Masuk")}
+            {loading ? tr("Masuk...") : tr("Masuk")}
           </button>
         </form>
 

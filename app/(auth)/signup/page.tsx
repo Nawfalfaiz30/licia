@@ -5,10 +5,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { getAuthCallbackUrl } from "@/lib/authRedirect";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
 export default function SignupPage() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const supabase = createClient();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -85,7 +85,7 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-text outline-none focus:ring-2 focus:ring-accent"
-              placeholder="kamu@email.com"
+              placeholder={tr("kamu@email.com")}
             />
           </div>
           <div>

@@ -7,6 +7,7 @@ import { dateStrInTimezone, startOfWeekIsoForTimezone } from "@/lib/date";
 import { enforceSameOrigin, rateLimit } from "@/lib/security";
 import { chatCompletion, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
 import { selectAiModel } from "@/lib/ai/modelRouter";
+import { languageDirective, languageFromCookieHeader } from "@/lib/ai/language";
 
 export const runtime = "nodejs";
 
@@ -96,6 +97,7 @@ export async function POST(req: Request) {
           role: "system",
           content: `Buat rencana minggu yang realistis, bukan jadwal yang penuh. Zona waktu ${timezone}. Minggu ${weekStart} sampai ${weekEnd}. Gunakan tugas, agenda, target, kebiasaan, dan fokus yang diberikan. Utamakan deadline yang dekat, sisakan ruang kosong, jangan membuat acara sebelum jam 07:00 atau setelah 22:00. Hasil harus JSON {"summary":string,"days":[{"date":"YYYY-MM-DD","focus":string,"blocks":[{"start_time":"HH:MM","end_time":"HH:MM","title":string,"task_id":string|null,"reason":string}]}],"risks":[string]}. Maksimal 3 blok rekomendasi per hari dan total jangan terlalu padat. Gunakan task_id hanya bila blok memang untuk tugas tersebut.`,
         },
+        { role: "system", content: languageDirective(languageFromCookieHeader(req.headers.get("cookie"))) },
         { role: "user", content: JSON.stringify(payload) },
       ],
     }), 2);

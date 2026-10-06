@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { zIndexTheme } from "./lib/zIndex";
 
 const config: Config = {
   darkMode: "class",
@@ -8,8 +9,6 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Skala z-index tunggal (A4). Jangan memakai z-[nn] literal; pilih token sesuai lapisannya.
-      zIndex: { banner: "80", nav: "100", fab: "105", popover: "120", install: "140", drawer: "170", sheet: "180", palette: "220", modal: "240", toast: "300", system: "400" },
       colors: {
         bg: "var(--bg)",
         surface: "var(--surface)",
@@ -25,6 +24,11 @@ const config: Config = {
       fontFamily: {
         display: ["var(--font-display)", "serif"],
         body: ["var(--font-body)", "sans-serif"],
+      },
+      zIndex: zIndexTheme,
+      // Skala teks berbasis rem: ikut pengaturan ukuran teks pengguna. Minimum 11 px (v0.57); sebelumnya 8–10 px.
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
       borderRadius: {
         xl2: "1.75rem",

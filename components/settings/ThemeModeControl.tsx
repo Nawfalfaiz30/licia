@@ -13,7 +13,7 @@ const OPTIONS: Array<{ key: ThemeMode; label: string; hint: string; icon: typeof
 ];
 
 export function ThemeModeControl({ value, onChange }: { value: ThemeMode; onChange: (value: ThemeMode) => void }) {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const [active, setActive] = useState<ThemeMode>(value);
 
   useEffect(() => { setActive(value); }, [value]);
@@ -33,7 +33,7 @@ export function ThemeModeControl({ value, onChange }: { value: ThemeMode; onChan
 
   return <div className="grid gap-2 sm:grid-cols-3">
     {OPTIONS.map(({ key, label, hint, icon: Icon }) => <button type="button" key={key} onClick={() => choose(key)} aria-pressed={active === key} className={clsx("rounded-2xl border p-3 text-left transition", active === key ? "border-accent/30 bg-accent/5" : "border-border bg-bg hover:border-accent/20")}>
-      <div className="flex items-center gap-2"><span className={clsx("grid h-9 w-9 place-items-center rounded-xl", active === key ? "bg-accent text-white" : "bg-surface text-textMuted")}><Icon size={17}/></span><span><span className="block text-xs font-semibold text-text">{tr(label)}</span><span className="mt-0.5 block text-[10px] text-textMuted">{tr(hint)}</span></span></div>
+      <div className="flex items-center gap-2"><span className={clsx("grid h-9 w-9 place-items-center rounded-xl", active === key ? "bg-accent text-white" : "bg-surface text-textMuted")}><Icon size={17}/></span><span><span className="block text-xs font-semibold text-text">{tr(label)}</span><span className="mt-0.5 block text-2xs text-textMuted">{tr(hint)}</span></span></div>
     </button>)}
   </div>;
 }

@@ -3,9 +3,8 @@ import { Fraunces, Playfair_Display, Poppins, Plus_Jakarta_Sans, Inter, Nunito }
 import "./globals.css";
 import { ToastProvider } from "@/components/ui";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import { getServerLanguage } from "@/lib/i18n-server";
 import { ThemeSync } from "@/components/layout/ThemeSync";
-import { OverlayGuard } from "@/components/ui/OverlayGuard";
-import { getServerLanguage } from "@/lib/i18n/server";
 
 // Semua kandidat font dimuat sekaligus (masing-masing dapat CSS variable
 // sendiri), supaya pilihan font di Pengaturan bisa langsung berpindah tanpa
@@ -27,7 +26,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Licia",
-  description: "Asisten pribadi AI untuk kehidupan sehari-hari · Your personal AI assistant for everyday life",
+  description: "Asisten pribadi AI untuk kehidupan sehari-harimu",
   icons: { icon: "/licia-avatar.png" },
   manifest: "/manifest.webmanifest",
 };
@@ -48,16 +47,10 @@ const themeInitScript = `
     if (isDark) document.documentElement.classList.add('dark');
     document.documentElement.dataset.theme = (!theme || theme === 'system' || theme === 'light' || theme === 'dark') ? (theme || 'system') : 'system';
 
-    var accentHex = localStorage.getItem('licia-accent-hex');
-    if (accentHex) {
-      var m = /^#?([0-9a-fA-F]{6})$/.exec(accentHex.trim());
-      if (m) {
-        var h = m[1];
-        var r = parseInt(h.slice(0, 2), 16);
-        var g = parseInt(h.slice(2, 4), 16);
-        var b = parseInt(h.slice(4, 6), 16);
-        document.documentElement.style.setProperty('--accent-rgb', r + ' ' + g + ' ' + b);
-      }
+    var accentTokens = localStorage.getItem('licia-accent-tokens');
+    if (accentTokens) {
+      var tokens = JSON.parse(accentTokens);
+      for (var tk in tokens) { if (/^--accent-(fill|ink)-(light|dark)-rgb$/.test(tk) && /^\d{1,3} \d{1,3} \d{1,3}$/.test(tokens[tk])) document.documentElement.style.setProperty(tk, tokens[tk]); }
     }
 
     // Latar disimpan terpisah per mode — pakai yang sesuai mode aktif sekarang.
@@ -70,7 +63,6 @@ const themeInitScript = `
     var language = localStorage.getItem('licia-language') === 'en' ? 'en' : 'id';
     document.documentElement.lang = language;
     document.documentElement.dataset.language = language;
-    if (document.cookie.indexOf('licia-language=') === -1) document.cookie = 'licia-language=' + language + '; path=/; max-age=31536000; samesite=lax';
 
     var density = localStorage.getItem('licia-density') || 'comfortable';
     if (density === 'compact' || density === 'comfortable' || density === 'spacious') document.documentElement.dataset.density = density;
@@ -88,7 +80,7 @@ const themeInitScript = `
     var chatStyle = localStorage.getItem('licia-chat-style') || 'soft';
     if (chatStyle === 'soft' || chatStyle === 'minimal' || chatStyle === 'glass') document.documentElement.dataset.chatStyle = chatStyle;
     var textScale = localStorage.getItem('licia-text-scale') || 'normal';
-    if (textScale === 'small' || textScale === 'normal' || textScale === 'large') document.documentElement.dataset.textScale = textScale;
+    if (textScale === 'small' || textScale === 'normal' || textScale === 'large' || textScale === 'xlarge') document.documentElement.dataset.textScale = textScale;
     var animations = localStorage.getItem('licia-page-animations');
     document.documentElement.dataset.pageAnimations = animations === 'false' ? 'false' : 'true';
     var aiMode = localStorage.getItem('licia-default-ai-mode');
@@ -118,7 +110,7 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="font-body min-h-screen"><ToastProvider /><ThemeSync /><OverlayGuard /><LanguageProvider initialLanguage={language}>{children}</LanguageProvider></body>
+      <body className="font-body min-h-screen"><LanguageProvider initialLanguage={language}><ToastProvider /><ThemeSync />{children}</LanguageProvider></body>
     </html>
   );
 }

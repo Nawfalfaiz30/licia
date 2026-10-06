@@ -11,13 +11,14 @@ export async function GET(req: Request) {
   const limited = rateLimit(`onboarding:${user.id}`, 30, 60_000);
   if (limited) return limited;
 
-  const [profile, goals, projects, tasks, finance, habits] = await Promise.all([
+  const [profile, goals, projects, tasks, finance, habits, notes] = await Promise.all([
     client.from("users").select("display_name").eq("id", user.id).maybeSingle(),
     client.from("goals").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     client.from("projects").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     client.from("tasks").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     client.from("expenses").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     client.from("habits").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    client.from("brain_dump_notes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
   ]);
 
   return NextResponse.json({
@@ -28,6 +29,7 @@ export async function GET(req: Request) {
       task: (tasks.count ?? 0) > 0,
       finance: (finance.count ?? 0) > 0,
       habit: (habits.count ?? 0) > 0,
+      note: (notes.count ?? 0) > 0,
     }
   }, { headers: { "Cache-Control": "private, no-store" } });
 }

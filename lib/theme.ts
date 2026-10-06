@@ -1,4 +1,5 @@
-import { accessibleAccent, parseHex, toHex } from "@/lib/a11y/contrast";
+import { deriveAccentTokens, rgbTriple } from "@/lib/contrast";
+
 export function hexToRgbTriple(hex: string): string | null {
   const clean = hex.trim().replace(/^#/, "");
   const match = /^([0-9a-fA-F]{6})$/.exec(clean);
@@ -53,42 +54,45 @@ export const fontPresets = [
 ];
 
 
-function cssColor(name: string, fallback: string) {
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return parseHex(value) ?? parseHex(fallback)!;
-}
+export const ACCENT_TOKENS_STORAGE_KEY = "licia-accent-tokens";
 
-/** Terapkan aksen yang sudah dijamin terbaca (WCAG AA) di mode terang/gelap saat ini; pilihan asli tetap tersimpan. */
-function paintAccent(hex: string) {
+/**
+ * Menerapkan aksen kustom sebagai DUA peran per mode (v0.57): isian (bg-accent + teks putih) dan tinta
+ * (text-accent di atas latar). Keduanya diturunkan otomatis agar lolos WCAG AA, apa pun warna yang dipilih.
+ */
+export function applyAccent(hex: string) {
+  if (!hexToRgbTriple(hex)) return false;
+  const tokens = deriveAccentTokens(hex);
+  const props: Record<string, string> = {
+    "--accent-fill-light-rgb": rgbTriple(tokens.lightFill),
+    "--accent-ink-light-rgb": rgbTriple(tokens.lightInk),
+    "--accent-fill-dark-rgb": rgbTriple(tokens.darkFill),
+    "--accent-ink-dark-rgb": rgbTriple(tokens.darkInk),
+  };
   const root = document.documentElement;
-  const dark = root.classList.contains("dark");
-  const result = accessibleAccent(hex, [cssColor("--bg", dark ? "#0f1220" : "#eef1f7"), cssColor("--surface", dark ? "#171b2e" : "#ffffff")], dark);
-  if (!result) return false;
-  const [r, g, b] = result.accent.map(Math.round);
-  root.style.setProperty("--accent-rgb", `${r} ${g} ${b}`);
-  root.style.setProperty("--on-accent", toHex(result.onAccent));
+  for (const [key, value] of Object.entries(props)) root.style.setProperty(key, value);
+  try {
+    localStorage.setItem(ACCENT_STORAGE_KEY, hex);
+    localStorage.setItem(ACCENT_TOKENS_STORAGE_KEY, JSON.stringify(props));
+  } catch {}
   return true;
 }
 
-export function applyAccent(hex: string) {
-  if (!hexToRgbTriple(hex)) return false;
-  localStorage.setItem(ACCENT_STORAGE_KEY, hex);
-  return paintAccent(hex);
-}
-
-/** Dipanggil saat mode terang/gelap berganti agar kontras aksen dihitung ulang. */
-export function reapplyStoredAccent() {
+export function resetAccent() {
+  const root = document.documentElement;
+  for (const key of ["--accent-fill-light-rgb", "--accent-ink-light-rgb", "--accent-fill-dark-rgb", "--accent-ink-dark-rgb", "--accent-rgb"]) root.style.removeProperty(key);
   try {
-    const hex = localStorage.getItem(ACCENT_STORAGE_KEY);
-    if (hex) paintAccent(hex);
-    else { document.documentElement.style.removeProperty("--on-accent"); }
+    localStorage.removeItem(ACCENT_STORAGE_KEY);
+    localStorage.removeItem(ACCENT_TOKENS_STORAGE_KEY);
   } catch {}
 }
 
-export function resetAccent() {
-  document.documentElement.style.removeProperty("--accent-rgb");
-  document.documentElement.style.removeProperty("--on-accent");
-  localStorage.removeItem(ACCENT_STORAGE_KEY);
+/** Pengguna lama hanya punya hex tersimpan: turunkan token sekali saat aplikasi dimuat. */
+export function ensureAccentTokens() {
+  try {
+    const hex = localStorage.getItem(ACCENT_STORAGE_KEY);
+    if (hex && !localStorage.getItem(ACCENT_TOKENS_STORAGE_KEY)) applyAccent(hex);
+  } catch {}
 }
 
 function isDarkMode() {
@@ -100,7 +104,6 @@ export function applyBackground(hex: string) {
   if (!/^#[0-9a-fA-F]{6}$/.test(clean)) return false;
   document.documentElement.style.setProperty("--bg", clean);
   localStorage.setItem(isDarkMode() ? BG_DARK_STORAGE_KEY : BG_LIGHT_STORAGE_KEY, clean);
-  reapplyStoredAccent();
   return true;
 }
 
@@ -138,6 +141,18 @@ export function getStoredFont(): string {
 }
 
 
+export type TextScale = "small" | "normal" | "large" | "xlarge";
+export const TEXT_SCALES: TextScale[] = ["small", "normal", "large", "xlarge"];
+export const TEXT_SCALE_PERCENT: Record<TextScale, number> = { small: 93.75, normal: 100, large: 112.5, xlarge: 125 };
+export const resolveTextScale = (value: unknown): TextScale => (TEXT_SCALES as unknown[]).includes(value) ? (value as TextScale) : "normal";
+
+export function applyTextScale(value: unknown): TextScale {
+  const scale = resolveTextScale(value);
+  if (typeof document !== "undefined") document.documentElement.dataset.textScale = scale;
+  try { localStorage.setItem("licia-text-scale", scale); } catch {}
+  return scale;
+}
+
 export type ThemeMode = "light" | "dark" | "system";
 
 export function resolveThemeIsDark(mode: ThemeMode): boolean {
@@ -153,6 +168,5 @@ export function applyThemePreference(mode: string): ThemeMode {
   document.documentElement.dataset.theme = safe;
   try { localStorage.setItem("licia-theme", safe); } catch {}
   applyBackgroundForCurrentMode();
-  reapplyStoredAccent();
   return safe;
 }

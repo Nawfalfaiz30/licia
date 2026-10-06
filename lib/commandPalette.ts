@@ -29,60 +29,74 @@ export function moveActive(current: number, delta: 1 | -1 | "first" | "last", le
   return (base + delta + length) % length;
 }
 
-/* ───────── v0.57 · A2: palet perintah yang bisa menjalankan aksi ───────── */
+/* ------------------------------------------------------------------ */
+/* v0.57 — palet aksi: perintah ">", halaman "/", data "?" + buat tugas */
+/* ------------------------------------------------------------------ */
 
-export type PaletteMode = "all" | "task" | "inbox" | "expense" | "commands";
-export type PaletteQuery = { mode: PaletteMode; text: string };
+export type PaletteScope = "all" | "commands" | "pages" | "data";
+export type PaletteKind = "create-task" | "command" | "page" | "result";
+
+export type PaletteItem = {
+  id: string;
+  kind: PaletteKind;
+  label: string;
+  /** Kata kunci tambahan yang ikut dicocokkan (mis. label dalam bahasa lain). */
+  keywords?: string;
+  hint?: string;
+  href?: string;
+  commandId?: string;
+  /** Teks mentah (untuk create-task). */
+  payload?: string;
+  group: string;
+};
+
+/** Awalan: ">" perintah, "/" halaman, "?" cari data. Selain itu: semuanya. */
+export function parsePaletteQuery(raw: string): { scope: PaletteScope; text: string } {
+  const trimmed = String(raw ?? "").replace(/^\s+/, "");
+  const head = trimmed.charAt(0);
+  if (head === ">") return { scope: "commands", text: trimmed.slice(1).trim() };
+  if (head === "/") return { scope: "pages", text: trimmed.slice(1).trim() };
+  if (head === "?") return { scope: "data", text: trimmed.slice(1).trim() };
+  return { scope: "all", text: trimmed.trim() };
+}
+
+function match<T extends PaletteItem>(items: readonly T[], text: string): T[] {
+  return filterPalette(items.map((item) => ({ ...item, href: `${item.keywords ?? ""} ${item.href ?? ""}`.trim() })), text)
+    .map((hit) => items.find((item) => item.id === hit.id)!)
+    .filter(Boolean);
+}
+
+export const PALETTE_DEFAULT_COMMANDS = 5;
+export const PALETTE_MAX_PER_GROUP = 6;
 
 /**
- * Awalan: `t `/`+ ` buat tugas, `i ` catat ke Inbox, `$ `/`e ` catat pengeluaran, `>` hanya perintah sistem.
- * Tanpa awalan = mode "all" (halaman + perintah + hasil pencarian + tawaran membuat tugas/Inbox dari teks bebas).
+ * Menyusun daftar akhir yang tampil. Aturan penempatan "Buat tugas" (agar Enter pada teks bebas berarti sesuatu):
+ *  - bila ada halaman/perintah yang cocok → "Buat tugas" tampil SETELAH keduanya (jangan menyaingi navigasi);
+ *  - bila tidak ada yang cocok → "Buat tugas" tampil paling atas.
  */
-export function parsePaletteQuery(raw: string): PaletteQuery {
-  const value = raw.replace(/^\s+/, "");
-  const prefixed = /^([t+$ie>])(\s+|(?=>))(.*)$/is.exec(value);
-  const lead = value[0]?.toLowerCase();
-  if (value.startsWith(">")) return { mode: "commands", text: value.slice(1).trim() };
-  if (prefixed && prefixed[2]) {
-    const text = prefixed[3].trim();
-    if (lead === "t" || lead === "+") return { mode: "task", text };
-    if (lead === "i") return { mode: "inbox", text };
-    if (lead === "$" || lead === "e") return { mode: "expense", text };
+export function composePalette(input: {
+  query: string;
+  pages: readonly PaletteItem[];
+  commands: readonly PaletteItem[];
+  results: readonly PaletteItem[];
+  createTask: PaletteItem | null;
+}): { scope: PaletteScope; text: string; items: PaletteItem[] } {
+  const { scope, text } = parsePaletteQuery(input.query);
+  const items: PaletteItem[] = [];
+  if (scope === "commands") {
+    items.push(...match(input.commands, text));
+  } else if (scope === "pages") {
+    items.push(...match(input.pages, text));
+  } else if (scope === "data") {
+    items.push(...input.results);
+  } else if (!text) {
+    items.push(...input.commands.slice(0, PALETTE_DEFAULT_COMMANDS), ...input.pages);
+  } else {
+    const pages = match(input.pages, text).slice(0, PALETTE_MAX_PER_GROUP);
+    const commands = match(input.commands, text).slice(0, PALETTE_MAX_PER_GROUP);
+    const create = input.createTask ? [input.createTask] : [];
+    if (pages.length + commands.length === 0) items.push(...create, ...input.results);
+    else items.push(...pages, ...commands, ...create, ...input.results);
   }
-  return { mode: "all", text: value.trim() };
-}
-
-export type CreateActionId = "create-task" | "create-inbox" | "create-expense";
-/** Aksi pembuatan yang ditawarkan untuk sebuah kueri. `hasAmount` = ada nominal Rupiah di teks. */
-export function createActionsFor(query: PaletteQuery, hasAmount: boolean): CreateActionId[] {
-  const { mode, text } = query;
-  if (!text || text.length < 2) return [];
-  if (mode === "task") return ["create-task"];
-  if (mode === "inbox") return ["create-inbox"];
-  if (mode === "expense") return hasAmount ? ["create-expense"] : [];
-  if (mode === "commands") return [];
-  const out: CreateActionId[] = [];
-  if (text.length >= 3) out.push("create-task", "create-inbox");
-  if (hasAmount) out.push("create-expense");
-  return out;
-}
-
-export type SystemCommandId = "theme-light" | "theme-dark" | "theme-system" | "lang-id" | "lang-en" | "quick-capture" | "shortcuts-help" | "start-focus" | "open-notifications";
-export type SystemCommand = { id: SystemCommandId; label: string; keywords: string };
-export const SYSTEM_COMMANDS: readonly SystemCommand[] = [
-  { id: "theme-light", label: "Mode terang", keywords: "tema theme light terang appearance tampilan" },
-  { id: "theme-dark", label: "Mode gelap", keywords: "tema theme dark gelap appearance tampilan" },
-  { id: "theme-system", label: "Ikuti perangkat", keywords: "tema theme system otomatis device perangkat" },
-  { id: "lang-id", label: "Bahasa Indonesia", keywords: "bahasa language indonesia ganti bahasa" },
-  { id: "lang-en", label: "English", keywords: "bahasa language english inggris switch language" },
-  { id: "quick-capture", label: "Simpan cepat", keywords: "capture tangkap catat simpan quick" },
-  { id: "shortcuts-help", label: "Bantuan pintasan keyboard", keywords: "shortcut pintasan keyboard bantuan help" },
-  { id: "start-focus", label: "Mulai sesi fokus", keywords: "focus fokus timer pomodoro mulai start" },
-] as const;
-
-/** Menyaring perintah sistem memakai label terjemahan + kata kunci (dua bahasa). */
-export function filterCommands(commands: readonly SystemCommand[], query: string, translate: (label: string) => string = (x) => x): SystemCommand[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [...commands];
-  return commands.filter((c) => translate(c.label).toLowerCase().includes(q) || c.label.toLowerCase().includes(q) || c.keywords.includes(q));
+  return { scope, text, items };
 }

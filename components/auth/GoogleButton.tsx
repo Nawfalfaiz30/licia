@@ -2,14 +2,14 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { getAuthCallbackUrl } from "@/lib/authRedirect";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
 // Google adalah SATU opsi tambahan, bukan pengganti email/password — sesuai
 // permintaan "opsional/tidak wajib". Perlu setup eksternal dulu (Google Cloud
 // OAuth client + provider Google diaktifkan di Supabase Auth) sebelum tombol
 // ini benar-benar berfungsi; lihat README bagian "Google Sign-In (opsional)".
 export function GoogleButton() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const supabase = createClient();
 
   async function handleGoogleLogin() {

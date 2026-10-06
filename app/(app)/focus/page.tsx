@@ -9,8 +9,8 @@ import { Card, PrimaryButton, SectionTitle } from "@/components/ui";
 import { startOfDayIsoForTimezone } from "@/lib/date";
 import { LiveClock } from "@/components/LiveClock";
 import { mutateEntity } from "@/lib/sync/client";
-import { useLanguage } from "@/components/LanguageProvider";
 
+import { useLanguage } from "@/components/LanguageProvider";
 type Task = { id: string; title: string; status: string; priority: string; due_at: string | null; estimated_minutes?: number | null };
 type Skill = { id: string; name: string; level: number; target_level: number };
 type Agenda = { id: string; title: string; block_date: string; start_time: string; end_time: string; location: string | null; task_id: string | null };
@@ -27,7 +27,7 @@ function fmt(v: number) {
 }
 
 export default function FocusPage() {
-  const { tr } = useLanguage();
+  const { t: tr } = useLanguage();
   const supabase = createClient();
   const sp = useSearchParams();
   const [presetTask] = useState(sp.get("task") || "");
@@ -204,7 +204,7 @@ export default function FocusPage() {
           skillId: selectedSkill,
         }));
       } catch {}
-      setMessage(tr("Sesi dijeda di {0}. Tekan Lanjutkan untuk meneruskan.", [fmt(pausedRemaining)]));
+      setMessage(tr("Sesi dijeda di {fmt}. Tekan Lanjutkan untuk meneruskan.", { fmt: fmt(pausedRemaining) }));
       return;
     }
 
@@ -230,7 +230,7 @@ export default function FocusPage() {
     try { localStorage.removeItem(STORAGE); } catch {}
     if (auto) {
       playSound(sound, soundRepeats);
-      setMessage(tr("Sesi selesai. Suara {0}.", [sound === "off" ? "dimatikan" : `diputar ${soundRepeats}×`]));
+      setMessage(tr("Sesi selesai. Suara {v}.", { v: sound === "off" ? "dimatikan" : `diputar ${soundRepeats}×` }));
     }
     if (!startedAt) {
       setRemaining(minutes * 60);
@@ -271,7 +271,7 @@ export default function FocusPage() {
     <div className="space-y-6 sm:space-y-8 animate-licia-in">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-accent"><Timer size={14}/> {tr("EXECUTE")}</p>
+          <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-accent"><Timer size={14}/> {" "}{tr("EXECUTE")}</p>
           <h1 className="font-display text-3xl text-text">{tr("Ruang Fokus")}</h1>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-textMuted">{tr("Satu ruang untuk satu pekerjaan. Atur durasi sendiri, pilih konteks yang relevan, lalu biarkan Licia mencatat hasilnya.")}</p>
         </div>
@@ -286,16 +286,16 @@ export default function FocusPage() {
               <span className={clsx("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition", running ? "animate-licia-glow border-accent/30 bg-accent/10 text-accent" : "border-border bg-bg text-textMuted")}>
                 <CircleDot size={13}/>{running ? tr("Sedang fokus") : tr("Siap fokus")}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg px-3 py-1.5 text-[11px] text-textMuted"><Gauge size={13} className="text-accent"/>{minutes} {tr("menit")}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg px-3 py-1.5 text-2xs text-textMuted"><Gauge size={13} className="text-accent"/>{tr("{minutes} menit", { minutes })}</span>
             </div>
 
             <div className="mx-auto my-7 grid w-full max-w-[min(84vw,410px)] place-items-center">
               <div className={clsx("relative aspect-square w-full rounded-full p-[7px] transition duration-700", running && "animate-licia-breathe")} style={{ background: `conic-gradient(rgb(var(--accent-rgb)) ${progress}%, rgb(var(--border)) ${progress}% 100%)` }}>
                 <div className="grid h-full w-full place-items-center rounded-full bg-surface shadow-inner">
                   <div className="px-4 text-center">
-                    <p className="text-[11px] font-semibold uppercase tracking-[.18em] text-textMuted">{tr("WAKTU TERSISA")}</p>
+                    <p className="text-2xs font-semibold uppercase tracking-[.18em] text-textMuted">{tr("WAKTU TERSISA")}</p>
                     <p className="mt-2 font-display text-[clamp(4.5rem,16vw,7.5rem)] leading-none tracking-tight text-text tabular-nums">{fmt(remaining)}</p>
-                    <p className="mx-auto mt-3 max-w-[18rem] break-words text-xs leading-relaxed text-textMuted">{selectedTaskTitle || tr("Belum memilih tugas")}{selectedSkillTitle ? ` · ${selectedSkillTitle}` : ""}</p>
+                    <p className="mx-auto mt-3 max-w-[18rem] break-words text-xs leading-relaxed text-textMuted">{selectedTaskTitle || tr("Belum memilih tugas")}{selectedSkillTitle ? tr(" · {selectedSkillTitle}", { selectedSkillTitle }) : ""}</p>
                   </div>
                 </div>
               </div>
@@ -303,39 +303,39 @@ export default function FocusPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="min-w-0">
-                <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-textMuted"><Target size={12}/> {tr("Tugas")}</span>
+                <span className="mb-1.5 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-textMuted"><Target size={12}/> {" "}{tr("Tugas")}</span>
                 <select value={selectedTask} onChange={(e) => setSelectedTask(e.target.value)} disabled={running} className="min-h-12 w-full min-w-0 rounded-xl border border-border bg-bg px-3 text-sm text-text outline-none focus:ring-2 focus:ring-accent/30"><option value="">{tr("Opsional — pilih tugas")}</option>{tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select>
               </label>
               <label className="min-w-0">
-                <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-textMuted"><Sparkles size={12}/> {tr("Skill")}</span>
+                <span className="mb-1.5 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-textMuted"><Sparkles size={12}/> {" "}{tr("Skill")}</span>
                 <select value={selectedSkill} onChange={(e) => setSelectedSkill(e.target.value)} disabled={running} className="min-h-12 w-full min-w-0 rounded-xl border border-border bg-bg px-3 text-sm text-text outline-none focus:ring-2 focus:ring-accent/30"><option value="">{tr("Opsional — pilih skill")}</option>{skills.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.level}%</option>)}</select>
               </label>
             </div>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
               <label className="min-w-0">
-                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-textMuted">{tr("Durasi manual · 1–240 menit")}</span>
+                <span className="mb-1.5 block text-2xs font-semibold uppercase tracking-wide text-textMuted">{tr("Durasi manual · 1–240 menit")}</span>
                 <div className="flex min-w-0 items-center rounded-xl border border-border bg-bg px-3">
                   <input aria-label={tr("Durasi fokus dalam menit")} type="number" min={1} max={240} value={customMinutes} disabled={running} onChange={(e) => setCustomMinutes(e.target.value)} onBlur={() => choose(Number(customMinutes) || 1)} onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }} className="min-h-12 min-w-0 flex-1 bg-transparent text-center text-base font-semibold text-text outline-none"/>
                   <span className="text-xs text-textMuted">{tr("menit")}</span>
                 </div>
               </label>
               <div className="flex items-end gap-2">
-                <PrimaryButton onClick={begin} className="min-h-12 min-w-32">{running ? <><Pause size={16}/> {tr("Jeda")}</> : <><Play size={16}/> {startedAt && remaining > 0 ? tr("Lanjutkan") : tr("Mulai")}</>}</PrimaryButton>
+                <PrimaryButton onClick={begin} className="min-h-12 min-w-32">{running ? <><Pause size={16}/> {" "}{tr("Jeda")}</> : <><Play size={16}/> {startedAt && remaining > 0 ? tr("Lanjutkan") : tr("Mulai")}</>}</PrimaryButton>
                 <button onClick={reset} className="touch-target rounded-xl border border-border px-3 text-textMuted transition hover:-translate-y-0.5 hover:text-text" title={tr("Reset sesi")} aria-label={tr("Reset sesi")}><RotateCcw size={17}/></button>
               </div>
             </div>
 
             <div className="mt-5 rounded-2xl border border-border bg-bg/55 p-3 sm:p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0"><p className="text-xs font-semibold text-text">{tr("Suara saat selesai")}</p><p className="mt-0.5 text-[11px] leading-relaxed text-textMuted">{tr("Pilihan suara akan diputar")} <strong className="text-text">{sound === "off" ? 0 : soundRepeats}×</strong> {tr("saat timer selesai.")}</p></div>
+                <div className="min-w-0"><p className="text-xs font-semibold text-text">{tr("Suara saat selesai")}</p><p className="mt-0.5 text-2xs leading-relaxed text-textMuted">{tr("Pilihan suara akan diputar")}{" "}<strong className="text-text">{sound === "off" ? 0 : soundRepeats}×</strong> {" "}{tr("saat timer selesai.")}</p></div>
                 <div className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-surface p-1 overflow-x-auto no-scrollbar">
                   <button onClick={() => { void saveSound("off"); }} className={clsx("touch-target flex items-center justify-center rounded-lg px-2.5 text-textMuted transition", sound === "off" && "bg-bg text-text")} title={tr("Tanpa suara")}><VolumeX size={15}/></button>
-                  {sounds.map((item) => <button key={item.v} onClick={() => { void saveSound(item.v); playSound(item.v, 1); }} className={clsx("min-h-11 shrink-0 rounded-lg px-3 text-[11px] font-medium transition hover:-translate-y-0.5", sound === item.v ? "bg-bg text-accent" : "text-textMuted")} title={tr("Preview {0}", [item.l])}>{item.l}</button>)}
+                  {sounds.map((item) => <button key={item.v} onClick={() => { void saveSound(item.v); playSound(item.v, 1); }} className={clsx("min-h-11 shrink-0 rounded-lg px-3 text-2xs font-medium transition hover:-translate-y-0.5", sound === item.v ? "bg-bg text-accent" : "text-textMuted")} title={tr("Preview {l}", { l: item.l })}>{item.l}</button>)}
                 </div>
               </div>
               <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 text-[11px] text-textMuted"><Volume2 size={13} className="text-accent"/> {tr("Pengulangan:")} <strong className="text-text">{soundRepeats}×</strong></div>
+                <div className="flex items-center gap-2 text-2xs text-textMuted"><Volume2 size={13} className="text-accent"/> {" "}{tr("Pengulangan:")}{" "}<strong className="text-text">{soundRepeats}×</strong></div>
                 <input aria-label={tr("Jumlah pengulangan suara")} type="range" min={1} max={10} value={soundRepeats} onChange={async (e) => { const v = Number(e.target.value); setSoundRepeats(v); const { data: { user } } = await supabase.auth.getUser(); if (user) { const { data: p } = await supabase.from("users").select("preferences").eq("id", user.id).single(); await supabase.from("users").update({ preferences: { ...((p as any)?.preferences || {}), focusSoundRepeats: v } }).eq("id", user.id); } }} className="w-full accent-[rgb(var(--accent-rgb))] sm:max-w-52"/>
               </div>
             </div>
@@ -347,8 +347,8 @@ export default function FocusPage() {
         <div className="space-y-5">
           <Card className="animate-licia-fade-delay-1"><SectionTitle><span className="flex items-center gap-2"><Timer size={17} className="text-accent"/>{tr("Sesi hari ini")}</span></SectionTitle><div className="grid grid-cols-2 gap-3"><div className="rounded-xl bg-bg p-4"><p className="text-xs text-textMuted">{tr("Fokus tercatat")}</p><p className="mt-1 font-display text-2xl text-accent tabular-nums">{focusToday}<span className="ml-1 text-sm text-textMuted">{tr("mnt")}</span></p></div><div className="rounded-xl bg-bg p-4"><p className="text-xs text-textMuted">{tr("Tugas aktif")}</p><p className="mt-1 font-display text-2xl text-text tabular-nums">{tasks.length}</p></div></div></Card>
           <Card className="animate-licia-fade-delay-2">
-            <SectionTitle action={<a href="/calendar" className="inline-flex items-center gap-1 text-xs text-textMuted hover:text-accent">{tr("Kalender")} <ArrowRight size={12}/></a>}>{tr("Agenda terdekat")}</SectionTitle>
-            {agenda[0] ? <div className="rounded-xl bg-bg p-4"><div className="flex gap-2"><CalendarDays size={16} className="mt-0.5 shrink-0 text-accent"/><div className="min-w-0"><p className="break-words text-sm font-semibold text-text">{agenda[0].title}</p><p className="mt-1 text-xs text-textMuted">{agenda[0].start_time.slice(0, 5)}–{agenda[0].end_time.slice(0, 5)}{agenda[0].location ? ` · ${agenda[0].location}` : ""}</p></div></div></div> : <p className="text-sm leading-relaxed text-textMuted">{tr("Tidak ada agenda berikutnya. Gunakan ruang kosong ini untuk satu sesi fokus yang tenang.")}</p>}
+            <SectionTitle action={<a href="/calendar" className="inline-flex items-center gap-1 text-xs text-textMuted hover:text-accent">{tr("Kalender")}{" "}<ArrowRight size={12}/></a>}>{tr("Agenda terdekat")}</SectionTitle>
+            {agenda[0] ? <div className="rounded-xl bg-bg p-4"><div className="flex gap-2"><CalendarDays size={16} className="mt-0.5 shrink-0 text-accent"/><div className="min-w-0"><p className="break-words text-sm font-semibold text-text">{agenda[0].title}</p><p className="mt-1 text-xs text-textMuted">{agenda[0].start_time.slice(0, 5)}–{agenda[0].end_time.slice(0, 5)}{agenda[0].location ? tr(" · {location}", { location: agenda[0].location }) : ""}</p></div></div></div> : <p className="text-sm leading-relaxed text-textMuted">{tr("Tidak ada agenda berikutnya. Gunakan ruang kosong ini untuk satu sesi fokus yang tenang.")}</p>}
           </Card>
           <Card className="border-accent/15 bg-accent/5 animate-licia-fade-delay-3"><div className="flex gap-3"><Sparkles size={18} className="mt-0.5 shrink-0 text-accent"/><div><p className="text-sm font-semibold text-text">{tr("Tips Focus")}</p><p className="mt-1 text-xs leading-relaxed text-textMuted">{tr("Pilih satu tugas besar, tentukan durasinya, lalu mulai. Tidak ada preset waktu yang memaksa ritmemu.")}</p></div></div></Card>
         </div>

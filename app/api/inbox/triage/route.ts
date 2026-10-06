@@ -7,6 +7,7 @@ import { dateStrInTimezone, offsetForTimezone } from "@/lib/date";
 import { assertJsonSize, enforceSameOrigin, rateLimit } from "@/lib/security";
 import { chatCompletion, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
 import { selectAiModel } from "@/lib/ai/modelRouter";
+import { languageDirective, languageFromCookieHeader } from "@/lib/ai/language";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
       model, ...generationOptions(model, 0.1), response_format: { type: "json_object" }, max_completion_tokens: 900,
       messages: [
         { role: "system", content: `Kamu adalah mesin triase Smart Inbox. Hari ini ${today} dalam zona ${timezone}. Untuk setiap item pilih tepat satu kind: task,note,idea,decision,learning. Buat title ringkas, reason satu kalimat, priority low/medium/high. due_at hanya jika deadline jelas dan pakai offset ${offset}; jangan mengarang. Balikkan JSON {"items":[{"id":string,"kind":string,"title":string,"reason":string,"due_at":string|null,"priority":string}]}.` },
+        { role: "system", content: languageDirective(languageFromCookieHeader(req.headers.get("cookie"))) },
         { role: "user", content: JSON.stringify(items.map((x, i) => ({ id: x.id ?? String(i), content: x.content }))) },
       ],
     }), 2);
