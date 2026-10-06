@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Cloud, CloudOff, RefreshCw, AlertTriangle } from "lucide-react";
 import { getDeviceId } from "@/lib/pwa/offlineQueue";
 import { applySyncedPreferences } from "@/lib/preferences";
+import { APP_VERSION } from "@/lib/appVersion";
 
 import { useLanguage } from "@/components/LanguageProvider";
 const CURSOR_KEY = "licia-sync-cursor-v2";
