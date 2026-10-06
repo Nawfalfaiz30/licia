@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     supabase.from("expenses").select("id,amount,category,occurred_at").eq("user_id", user.id).order("occurred_at", { ascending: false }).limit(limit),
     supabase.from("incomes").select("id,amount,source,occurred_at").eq("user_id", user.id).order("occurred_at", { ascending: false }).limit(limit),
     supabase.from("brain_dump_notes").select("id,title,content,updated_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(limit),
-    supabase.from("schedule_blocks").select("id,title,block_date,start_time,end_time").eq("user_id", user.id).gte("block_date", dateStrInTimezone(new Date(Date.now() - 3 * 86400000), timezone)).order("block_date", { ascending: true }).order("start_time", { ascending: true }).limit(limit),
+    supabase.from("schedule_blocks").select("id,title,block_date,start_time,end_time").eq("user_id", user.id).gte("block_date", dateStrInTimezone(new Date(), timezone)).order("block_date", { ascending: true }).order("start_time", { ascending: true }).limit(limit),
     supabase.from("goals").select("id,title,progress,updated_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(limit),
     supabase.from("projects").select("id,name,status,updated_at").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(limit),
     supabase.from("habit_checkins").select("id,checkin_date,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(limit),
