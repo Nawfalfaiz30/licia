@@ -109,6 +109,56 @@ export default async function DashboardPage() {
   const reminder = (reminders.data ?? [])[0];
   const categories = Object.entries((expensesMonth.data as Expense[] | null ?? []).reduce<Record<string, number>>((m, x) => { const key = x.category || "Lainnya"; m[key] = (m[key] || 0) + Number(x.amount || 0); return m; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 4);
   const signedNet = monthIncome - monthExpense;
+  const focusWeekDays = new Set((focusWeek.data ?? []).map((x) => String(x.started_at).slice(0, 10))).size;
+  const averageFocusPerDay = focusWeekDays ? Math.round(focusWeekMin / focusWeekDays) : 0;
+  const focusCapacity7d = averageFocusPerDay * 7;
+  const forecastEndMs = now.getTime() + 7 * 86400000;
+  const dueNext7d = openTasks.filter((task) => {
+    if (!task.due_at) return false;
+    const dueMs = new Date(task.due_at).getTime();
+    return Number.isFinite(dueMs) && dueMs >= now.getTime() && dueMs <= forecastEndMs;
+  });
+  const dueNext7dMinutes = dueNext7d.reduce((sum, task) => sum + Math.max(0, Number(task.estimated_minutes) || 0), 0);
+  const [localYear, localMonth] = today.split("-").map(Number);
+  const daysInMonth = Number.isFinite(localYear) && Number.isFinite(localMonth) ? new Date(Date.UTC(localYear, localMonth, 0)).getUTCDate() : 30;
+  const elapsedMonthDays = Math.max(1, Number(today.slice(8, 10)) || 1);
+  const projectedMonthlySpend = monthExpense > 0 ? Math.round(monthExpense / elapsedMonthDays * daysInMonth) : 0;
+  const briefPriorities = [...openTasks]
+    .sort((a, b) => {
+      const priorityWeight = (value: unknown) => value === "high" ? 3 : value === "medium" ? 2 : 1;
+      const aDue = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
+      const bDue = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
+      const aScore = (Number.isFinite(aDue) && aDue < now.getTime() ? 100 : 0) + priorityWeight(a.priority) * 20;
+      const bScore = (Number.isFinite(bDue) && bDue < now.getTime() ? 100 : 0) + priorityWeight(b.priority) * 20;
+      if (aScore !== bScore) return bScore - aScore;
+      return aDue - bDue;
+    })
+    .slice(0, 3);
+  const nearGoal = activeGoals.find((goal) => goal.target_date
+    && new Date(`${goal.target_date}T23:59:59`).getTime() >= now.getTime()
+    && new Date(`${goal.target_date}T23:59:59`).getTime() <= forecastEndMs
+    && Number(goal.progress || 0) < 70);
+  const nearSubscription = (subscriptions.data ?? []).find((subscription) => subscription.next_billing_date
+    && new Date(`${subscription.next_billing_date}T23:59:59`).getTime() >= now.getTime()
+    && new Date(`${subscription.next_billing_date}T23:59:59`).getTime() <= forecastEndMs);
+  const proactiveRisk = overdue.length
+    ? tr("{n} tugas melewati tenggat.", { n: overdue.length })
+    : nearGoal
+      ? tr("Target {title} mendekati batas dengan progres {progress}%.", { title: nearGoal.title, progress: Number(nearGoal.progress || 0) })
+      : nearSubscription
+        ? tr("Langganan {name} jatuh tempo dalam 7 hari.", { name: nearSubscription.name })
+        : inbox.data?.length
+          ? tr("{n} item Inbox masih belum diproses.", { n: inbox.data.length })
+          : null;
+  const proactiveRecommendation = overdue.length
+    ? tr("Selesaikan satu tugas terlambat sebelum menambah komitmen baru.")
+    : dueNext7dMinutes > 0 && focusCapacity7d > 0 && dueNext7dMinutes > focusCapacity7d
+      ? tr("Beban tugas berestimasi melebihi kapasitas fokus 7 hari; pertimbangkan memindahkan atau memecah satu tugas.")
+      : nextAgenda && priorityTask && priorityTask.due_at && new Date(priorityTask.due_at).getTime() < new Date(`${nextAgenda.block_date}T23:59:59`).getTime()
+        ? tr("Gunakan ruang sebelum agenda berikutnya untuk mengerjakan tugas prioritas.")
+        : inbox.data?.length
+          ? tr("Proses satu item Inbox agar tidak menambah beban mental.")
+          : tr("Pilih satu pekerjaan penting dan beri blok Fokus nyata hari ini.");
   const smartMove = overdue.length
     ? { eyebrow: tr("Prioritas sekarang"), title: overdue[0].title, detail: tr("Ada tugas yang sudah melewati tenggat. Selesaikan atau atur ulang sebelum mengambil beban baru."), href: "/tasks", cta: tr("Buka tugas"), tone: "danger" as const }
     : nextAgenda
@@ -191,7 +241,57 @@ export default async function DashboardPage() {
     </DashboardWidget>
 
     <DashboardWidget id="nextmove">
-    <section className="rounded-[1.5rem] border border-accent/15 bg-accent/5 p-4 sm:p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-center"><div className="flex min-w-0 items-start gap-3"><span className={clsx("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", smartMove.tone === "danger" ? "bg-danger/10 text-danger" : "bg-accent/10 text-accent")}><BrainCircuit size={16}/></span><div className="min-w-0"><p className="text-2xs font-bold uppercase tracking-[.14em] text-accent">{smartMove.eyebrow}</p><p className="mt-1 truncate text-sm font-semibold text-text">{smartMove.title}</p><p className="mt-1 line-clamp-2 text-2xs leading-relaxed text-textMuted">{smartMove.detail}</p></div></div><Link href={smartMove.href} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-surface px-3.5 text-2xs font-semibold text-text shadow-sm hover:text-accent sm:ml-auto">{smartMove.cta}<ArrowRight size={12}/></Link></div></section>
+    <section className="rounded-[1.5rem] border border-accent/15 bg-accent/5 p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-2xs font-bold uppercase tracking-[.14em] text-accent">{tr("LAPISAN PROAKTIF")}</p>
+          <h2 className="mt-1 font-display text-xl text-text">{tr("brief")}</h2>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-textMuted">{tr("Tiga prioritas, risiko, kapasitas, fokus, dan sinyal penting hari ini.")}</p>
+        </div>
+        <Link href="/insights" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-surface px-3.5 text-2xs font-semibold text-text shadow-sm hover:text-accent">
+          {tr("Buka review")}<ArrowRight size={11}/>
+        </Link>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-2xs font-bold uppercase tracking-[.14em] text-textMuted">{tr("Prioritas sekarang")}</p>
+            <span className={clsx("rounded-full px-2 py-1 text-2xs font-semibold", proactiveRisk ? "bg-danger/10 text-danger" : "bg-success/10 text-success")}>{proactiveRisk ? tr("Perlu perhatian") : tr("Tidak ada sinyal kritis")}</span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {briefPriorities.length ? briefPriorities.map((task) => (
+              <Link href="/tasks" key={task.id} className="group flex items-start gap-3 rounded-xl border border-border bg-bg p-3 transition hover:border-accent/30 hover:bg-accent/5">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent"><CheckCircle2 size={13}/></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words text-xs font-semibold text-text">{task.title}</span>
+                  <span className="mt-1 block text-2xs text-textMuted">{task.priority === "high" ? tr("Prioritas tinggi") : tr("Prioritas normal")}{task.due_at ? ` · ${whenLabel(task.due_at, timezone)}` : ` · ${tr("Tanpa tenggat")}`}</span>
+                </span>
+                <ArrowRight size={12} className="mt-1 shrink-0 text-textMuted group-hover:text-accent"/>
+              </Link>
+            )) : <p className="rounded-xl bg-bg p-3 text-xs text-textMuted">{tr("Tidak ada tugas terbuka. Hari ini bisa dipakai untuk menjaga ritme atau meninjau target.")}</p>}
+          </div>
+          {proactiveRisk && <div className="mt-3 rounded-xl border border-danger/15 bg-danger/5 p-3"><p className="text-2xs font-semibold text-danger">{tr("Risiko")}</p><p className="mt-1 text-2xs leading-relaxed text-textMuted">{proactiveRisk}</p></div>}
+          <div className="mt-3 rounded-xl border border-accent/15 bg-accent/5 p-3"><p className="text-2xs font-semibold text-accent">{tr("Rekomendasi Licia")}</p><p className="mt-1 text-2xs leading-relaxed text-textMuted">{proactiveRecommendation}</p></div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <div className="flex items-center justify-between gap-2"><p className="text-2xs font-bold uppercase tracking-[.14em] text-textMuted">{tr("Kapasitas & beban")}</p><span className="text-2xs text-textMuted">7 hari</span></div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-bg p-3"><p className="text-2xs text-textMuted">{tr("Fokus")}</p><p className="mt-1 font-display text-lg text-text">{focusCapacity7d ? `${focusCapacity7d}m` : "—"}</p><p className="mt-1 text-2xs text-textMuted">{focusWeekDays ? tr("berdasarkan {n} hari fokus", { n: focusWeekDays }) : tr("belum ada ritme fokus")}</p></div>
+            <div className="rounded-xl bg-bg p-3"><p className="text-2xs text-textMuted">{tr("Tugas jatuh tempo")}</p><p className="mt-1 font-display text-lg text-text">{dueNext7dMinutes ? `${dueNext7dMinutes}m` : "—"}</p><p className="mt-1 text-2xs text-textMuted">{tr("estimasi tersedia")}</p></div>
+            <div className="col-span-2 rounded-xl border border-border bg-bg p-3"><p className="text-2xs text-textMuted">{tr("Keuangan")}</p><p className="mt-1 text-sm font-semibold text-text">{projectedMonthlySpend ? rupiah(projectedMonthlySpend) : "—"}</p><p className="mt-1 text-2xs leading-relaxed text-textMuted">{projectedMonthlySpend ? tr("Proyeksi pengeluaran bulanan dari laju bulan berjalan; ini bukan prediksi pasti.") : tr("Belum ada pengeluaran bulan ini untuk diproyeksikan.")}</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-border bg-surface p-3.5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-2.5"><BrainCircuit size={15} className="mt-0.5 shrink-0 text-accent"/><div className="min-w-0"><p className="text-2xs font-bold uppercase tracking-[.14em] text-accent">{smartMove.eyebrow}</p><p className="mt-1 truncate text-xs font-semibold text-text">{smartMove.title}</p><p className="mt-1 text-2xs leading-relaxed text-textMuted">{smartMove.detail}</p></div></div>
+          <Link href={smartMove.href} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border bg-bg px-3.5 text-2xs font-semibold text-textMuted hover:border-accent/25 hover:text-accent">{smartMove.cta}<ArrowRight size={11}/></Link>
+        </div>
+      </div>
+    </section>
     </DashboardWidget>
 
     <DashboardWidget id="stats">
