@@ -46,7 +46,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
 
         <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-bg px-3 shadow-inner">
           <Search size={15} className="shrink-0 text-textMuted" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("Cari fitur atau workspace…")} className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-text outline-none placeholder:text-textMuted" aria-label={tr("Cari fitur atau workspace")} autoFocus />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("Cari fitur atau workspace…")} className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-text outline-none placeholder:text-textMuted" aria-label={tr("Cari fitur atau workspace")} />
           {query && <button onClick={() => setQuery("")} className="rounded-lg px-2 py-1 text-2xs font-semibold text-textMuted hover:text-text">{tr("Hapus")}</button>}
         </div>
 
