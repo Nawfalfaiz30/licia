@@ -107,6 +107,18 @@ export async function captureBeforeAction(supabase: SupabaseClient, userId: stri
     ]);
     return { rows, subtasks: subtasks ?? [], reminders: reminders ?? [] };
   }
+  if (toolName === "update_tasks_bulk") {
+    let query = supabase.from("tasks").select("*").eq("user_id", userId);
+    const ids = Array.isArray(args?.task_ids) ? args.task_ids.map(String).filter((id:string)=>id) : [];
+    if (ids.length) query = query.in("id", ids);
+    else if (typeof args?.keyword === "string" && args.keyword.trim()) query = query.ilike("title", `%${args.keyword.trim()}%`);
+    else return null;
+    const { data: rows, error } = await query;
+    if (error || !rows?.length) return error ? null : { rows: [], reminders: [] };
+    const rowIds = rows.map((row:any)=>String(row.id));
+    const { data: reminders } = await supabase.from("reminders").select("*").eq("user_id", userId).eq("target_type", "task").in("target_id", rowIds);
+    return { rows, reminders: reminders ?? [] };
+  }
   const deletion = DELETE_IDS[toolName];
   const meta = update || deletion;
   if (!meta?.table || !args?.[meta.field]) return null;
@@ -138,6 +150,11 @@ export function buildUndoRecord(toolName: string, result: any, before: any) {
   }
   if (toolName === "log_expenses_batch" && Array.isArray(result.expenses)) {
     return { operation: "create", table_name: "expenses", record_ids: result.expenses.map((r:any)=>r.id).filter(Boolean), before_snapshot: null, after_snapshot: result.expenses, undoable: true };
+  }
+  if (toolName === "update_tasks_bulk" && Array.isArray(result.updated) && before && Array.isArray(before.rows)) {
+    const ids = result.updated.map((row:any)=>row?.id).filter(Boolean);
+    if (!ids.length) return null;
+    return { operation: "update", table_name: "tasks", record_ids: ids, before_snapshot: { rows: before.rows, reminders: before.reminders ?? [] }, after_snapshot: result.updated, undoable: true };
   }
   const update = UPDATE_META[toolName];
   if (update && result["ok"] && before) {
