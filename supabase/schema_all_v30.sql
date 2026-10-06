@@ -1,3 +1,7 @@
+-- LEGACY SNAPSHOT — NOT THE CURRENT SOURCE OF TRUTH.
+-- Canonical migrations live in supabase/migrations/0001-0015.
+-- This file is retained for historical/bootstrap compatibility only.
+
 -- =========================================================
 -- Licia — SEMUA migrasi digabung jadi satu file, urutan sudah benar.
 -- Aman dijalankan ulang kapan saja (semua create table/policy/trigger

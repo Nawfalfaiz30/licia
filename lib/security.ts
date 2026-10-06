@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 type Bucket = { count: number; resetAt: number };
@@ -182,6 +183,36 @@ export function enforceSameOrigin(req: Request): NextResponse | null {
     forwardedProto: req.headers.get("x-forwarded-proto") || null,
   });
   return NextResponse.json({ error: "Permintaan lintas-origin tidak diizinkan." }, { status: 403 });
+}
+
+export async function distributedRateLimit(
+  supabase: SupabaseClient,
+  bucketKey: string,
+  limit: number,
+  windowMs: number,
+  localFallbackKey: string = bucketKey,
+): Promise<NextResponse | null> {
+  try {
+    const { data, error } = await supabase.rpc("licia_rate_limit", {
+      p_bucket_key: bucketKey,
+      p_limit: limit,
+      p_window_seconds: Math.max(1, Math.ceil(windowMs / 1000)),
+    });
+    if (!error && data && typeof data === "object") {
+      if ((data as { allowed?: unknown }).allowed === false) {
+        const retryAfter = Math.max(1, Number((data as { retry_after_seconds?: unknown }).retry_after_seconds) || Math.ceil(windowMs / 1000));
+        return new NextResponse(JSON.stringify({ error: "Terlalu banyak permintaan. Coba lagi sebentar." }), {
+          status: 429,
+          headers: { "content-type": "application/json", "retry-after": String(retryAfter) },
+        });
+      }
+      return null;
+    }
+    if (error) console.warn("Licia distributed rate limit unavailable; using local fallback", error);
+  } catch (error) {
+    console.warn("Licia distributed rate limit unavailable; using local fallback", error);
+  }
+  return rateLimit(localFallbackKey, limit, windowMs);
 }
 
 export function rateLimit(key: string, limit: number, windowMs: number): NextResponse | null {

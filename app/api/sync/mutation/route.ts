@@ -47,7 +47,7 @@ const ALLOWED: Record<string, { table: string; create: boolean; update: boolean;
   link: { table: "life_os_entity_links", create: true, update: true, remove: true },
 };
 
-const RESERVED = new Set(["id", "user_id", "version", "created_at", "updated_at", "deleted_at"]);
+const RESERVED = new Set(["id", "user_id", "version", "created_at", "updated_at", "deleted_at", "current_balance"]);
 
 function sanitizePayload(input: unknown) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
@@ -58,8 +58,20 @@ function sanitizePayload(input: unknown) {
   return out;
 }
 
-async function writeMutationStatus(admin: ReturnType<typeof createAdminClient>, mutationId: string, userId: string, patch: Record<string, unknown>) {
-  await admin.from("life_os_sync_mutations").update({ ...patch, updated_at: new Date().toISOString() }).eq("mutation_id", mutationId).eq("user_id", userId);
+async function writeMutationStatus(
+  admin: ReturnType<typeof createAdminClient>,
+  mutationId: string,
+  userId: string,
+  patch: Record<string, unknown>,
+  claimToken?: string,
+) {
+  let query = admin
+    .from("life_os_sync_mutations")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("mutation_id", mutationId)
+    .eq("user_id", userId);
+  if (claimToken) query = query.eq("claim_token", claimToken);
+  await query;
 }
 
 async function createConflict(admin: ReturnType<typeof createAdminClient>, input: {
@@ -137,6 +149,9 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const mutationId = String(body?.mutationId || randomUUID()).trim().slice(0, 180);
+  const claimToken = randomUUID();
+  const claimedAt = new Date().toISOString();
+  const leaseExpiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
   const deviceId = String(body?.deviceId || "unknown").trim().slice(0, 160);
   const entityType = String(body?.entityType || "").trim();
   const operation = String(body?.operation || "create").trim();
@@ -149,15 +164,32 @@ export async function POST(req: Request) {
   const supported = definition && ((operation === "create" && definition.create) || (operation === "update" && definition.update && entityId) || (operation === "delete" && definition.remove && entityId));
   if (!supported) return NextResponse.json({ error: "Mutation belum didukung untuk operasi ini." }, { status: 400 });
 
-  const { data: existing } = await admin.from("life_os_sync_mutations").select("mutation_id,status,response,error_message,created_at,updated_at").eq("mutation_id", mutationId).eq("user_id", user.id).maybeSingle();
+  const { data: existing } = await admin.from("life_os_sync_mutations")
+    .select("mutation_id,status,response,error_message,created_at,updated_at,claim_token,lease_expires_at")
+    .eq("mutation_id", mutationId)
+    .eq("user_id", user.id)
+    .maybeSingle();
   if (existing?.status === "done") return NextResponse.json({ ok: true, replayed: true, response: existing.response ?? null });
+
   let reclaimed = false;
   if (existing?.status === "processing") {
-    const staleBefore = new Date(Date.now() - 5 * 60_000).toISOString();
-    const { data: claimed } = await admin.from("life_os_sync_mutations").update({ updated_at: new Date().toISOString() }).eq("mutation_id", mutationId).eq("user_id", user.id).eq("status", "processing").lt("updated_at", staleBefore).select("mutation_id").maybeSingle();
-    if (claimed?.mutation_id === mutationId) reclaimed = true;
+    const nowIso = new Date().toISOString();
+    const { data: claimed } = await admin
+      .from("life_os_sync_mutations")
+      .update({ claim_token: claimToken, claimed_at: claimedAt, lease_expires_at: leaseExpiresAt, updated_at: claimedAt })
+      .eq("mutation_id", mutationId)
+      .eq("user_id", user.id)
+      .eq("status", "processing")
+      .or(`lease_expires_at.is.null,lease_expires_at.lte.${nowIso}`)
+      .select("mutation_id,claim_token")
+      .maybeSingle();
+    if (claimed?.mutation_id === mutationId && claimed.claim_token === claimToken) reclaimed = true;
     else {
-      const { data: current } = await admin.from("life_os_sync_mutations").select("status,response").eq("mutation_id", mutationId).eq("user_id", user.id).maybeSingle();
+      const { data: current } = await admin.from("life_os_sync_mutations")
+        .select("status,response")
+        .eq("mutation_id", mutationId)
+        .eq("user_id", user.id)
+        .maybeSingle();
       if (current?.status === "done") return NextResponse.json({ ok: true, replayed: true, response: current.response ?? null });
       return NextResponse.json({ ok: false, pending: true }, { status: 409 });
     }
@@ -172,6 +204,9 @@ export async function POST(req: Request) {
     operation,
     payload,
     status: "processing",
+    claim_token: claimToken,
+    claimed_at: claimedAt,
+    lease_expires_at: leaseExpiresAt,
   });
   if (claimError) {
     const retry = await admin.from("life_os_sync_mutations").select("status,response,error_message").eq("mutation_id", mutationId).eq("user_id", user.id).maybeSingle();
@@ -222,7 +257,7 @@ export async function POST(req: Request) {
       if (currentResult.error) throw new Error(currentResult.error.message);
       if (!currentResult.data) {
         const responseBody = { error: "Data target tidak ditemukan.", mutationId };
-        await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: "TARGET_NOT_FOUND", response: responseBody, completed_at: new Date().toISOString() });
+        await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: "TARGET_NOT_FOUND", response: responseBody, completed_at: new Date().toISOString() }, claimToken);
         return NextResponse.json(responseBody, { status: 404 });
       }
       const current = currentResult.data as Record<string, unknown>;
@@ -259,7 +294,7 @@ export async function POST(req: Request) {
             conflictingFields: merged.fields,
           });
           const responseBody = { conflict: true, conflictId, current, serverVersion, clientVersion: baseVersion, conflictingFields: merged.fields, strategy: conflictStrategy, smartMerge: history.historyComplete ? "available" : "unavailable" };
-          await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: "SYNC_CONFLICT", response: responseBody, completed_at: new Date().toISOString() });
+          await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: "SYNC_CONFLICT", response: responseBody, completed_at: new Date().toISOString() }, claimToken);
           return NextResponse.json({ ok: false, ...responseBody }, { status: 409 });
         }
 
@@ -285,11 +320,11 @@ export async function POST(req: Request) {
     }
 
     invalidateUserContext(user.id);
-    await writeMutationStatus(admin, mutationId, user.id, { status: "done", response, completed_at: new Date().toISOString(), error_message: null });
+    await writeMutationStatus(admin, mutationId, user.id, { status: "done", response, completed_at: new Date().toISOString(), error_message: null }, claimToken);
     return NextResponse.json({ ok: true, replayed: false, response });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Mutation gagal.";
-    await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: message, completed_at: new Date().toISOString() });
+    await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: message, completed_at: new Date().toISOString() }, claimToken);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

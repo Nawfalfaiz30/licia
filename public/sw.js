@@ -1,10 +1,31 @@
-const CACHE = 'licia-v57-pwa-r2';
+const CACHE_PREFIX = 'licia-pwa-';
+const FALLBACK_APP_VERSION = '0.57.0';
+let CACHE = CACHE_PREFIX + FALLBACK_APP_VERSION;
+let DB_VERSION = 4;
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/licia-avatar.png'];
 const DB_NAME = 'licia-pwa';
-const DB_VERSION = 4;
 const ACTIONS = 'offline_actions';
 const CONFLICTS = 'sync_conflicts';
+
+let versionMetadataPromise = null;
+
+function loadVersionMetadata() {
+  if (!versionMetadataPromise) {
+    versionMetadataPromise = (async () => {
+      try {
+        const response = await fetch('/version.json', { cache: 'no-store' });
+        if (!response.ok) return;
+        const meta = await response.json();
+        const appVersion = typeof meta?.appVersion === 'string' ? meta.appVersion.trim() : '';
+        const dbVersion = Number(meta?.pwaDbVersion);
+        if (appVersion) CACHE = CACHE_PREFIX + appVersion;
+        if (Number.isInteger(dbVersion) && dbVersion >= 1) DB_VERSION = dbVersion;
+      } catch {}
+    })();
+  }
+  return versionMetadataPromise;
+}
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -120,14 +141,15 @@ async function replayOfflineQueue() {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).catch(() => undefined));
+  event.waitUntil(loadVersionMetadata().then(() => caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).catch(() => undefined)));
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith('licia-') && key !== CACHE).map((key) => caches.delete(key))))
+    loadVersionMetadata()
+      .then(() => caches.keys())
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -198,7 +220,7 @@ self.addEventListener('fetch', (event) => {
   // pass through normally so app-router resources are not altered.
   if (!['script','style','image','font','manifest'].includes(req.destination)) return;
 
-  event.respondWith(caches.match(req).then((cached) => fetch(req).then((res) => {
+  event.respondWith(loadVersionMetadata().then(() => caches.match(req).then((cached) => fetch(req).then((res) => {
     if (res.ok) {
       const copy = res.clone();
       caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => undefined);

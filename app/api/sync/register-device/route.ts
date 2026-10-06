@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { APP_VERSION } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     device_id: deviceId,
     device_name: String(body?.deviceName || "Perangkat Licia").slice(0, 120),
     platform: String(body?.platform || "web").slice(0, 40),
-    app_version: String(body?.appVersion || "v31").slice(0, 40),
+    app_version: String(body?.appVersion || APP_VERSION).slice(0, 40),
     last_seen_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }, { onConflict: "user_id,device_id" }).select("id,device_id,device_name,platform,app_version,last_seen_at,last_sync_at").single();

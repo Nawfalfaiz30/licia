@@ -1,6 +1,5 @@
--- LEGACY SNAPSHOT — NOT THE CURRENT SOURCE OF TRUTH.
--- Canonical migrations live in supabase/migrations/0001-0015.
--- This file is retained for historical/bootstrap compatibility only.
+-- Canonical migration: supabase/migrations/0001_bootstrap_v30.sql
+-- Source lineage: supabase/schema_all_v30.sql
 
 -- =========================================================
 -- Licia — SEMUA migrasi digabung jadi satu file, urutan sudah benar.
@@ -740,10 +739,6 @@ create index if not exists idx_tasks_user_project on public.tasks(user_id, proje
 create index if not exists idx_tasks_user_area on public.tasks(user_id, area_id, status);
 create index if not exists idx_schedule_user_project on public.schedule_blocks(user_id, project_id);
 
--- V37 unified planning workspace: agenda items can be marked completed.
-alter table public.schedule_blocks add column if not exists completed_at timestamptz;
-create index if not exists idx_schedule_user_completed_date on public.schedule_blocks(user_id, completed_at, block_date);
-
 create table if not exists public.user_memories (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -1078,3 +1073,489 @@ alter table public.users add column if not exists preferences jsonb not null def
 comment on table public.reminders is 'One-shot reminders used by Licia notification/push engine. Agenda reminders are synchronized from schedule_blocks by target_id + offset_minutes.';
 comment on table public.push_subscriptions is 'Browser/PWA Web Push subscriptions. Endpoint is sensitive and only accessible server-side for dispatch.';
 comment on table public.notification_events is 'Persistent notification center events; reminders are converted to events when dispatch time arrives.';
+
+-- ===== Licia V30 core intelligence + reminder reliability =====
+-- Licia V30 core intelligence + reminder reliability migration.
+-- Safe to run after schema_all.sql / V28/V29 migrations.
+
+create table if not exists public.life_os_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  event_type text not null,
+  entity_type text not null,
+  entity_id uuid,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.life_os_events enable row level security;
+drop policy if exists "life_os_events_all_own" on public.life_os_events;
+create policy "life_os_events_all_own" on public.life_os_events
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create index if not exists idx_life_os_events_user_created on public.life_os_events(user_id, created_at desc);
+create index if not exists idx_life_os_events_user_type on public.life_os_events(user_id, event_type, created_at desc);
+
+
+create table if not exists public.ai_usage_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  model text not null,
+  endpoint text not null default 'chat',
+  input_tokens integer not null default 0,
+  output_tokens integer not null default 0,
+  total_tokens integer not null default 0,
+  created_at timestamptz not null default now()
+);
+alter table public.ai_usage_events enable row level security;
+drop policy if exists "ai_usage_events_all_own" on public.ai_usage_events;
+create policy "ai_usage_events_all_own" on public.ai_usage_events
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create index if not exists idx_ai_usage_events_user_created on public.ai_usage_events(user_id, created_at desc);
+
+create table if not exists public.system_health_heartbeats (
+  component text primary key,
+  status text not null default 'ok' check (status in ('ok','degraded','error')),
+  details jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.system_health_heartbeats enable row level security;
+-- No client policy by design. Only service-role/admin access is allowed.
+
+alter table public.reminders add column if not exists delivery_attempts integer not null default 0;
+alter table public.reminders add column if not exists last_error text;
+alter table public.notification_events add column if not exists delivery_attempts integer not null default 0;
+alter table public.notification_events add column if not exists last_delivery_error text;
+
+-- Remove duplicate active target-bound reminders before enforcing one active reminder per target.
+with ranked as (
+  select id,
+         row_number() over (
+           partition by user_id, target_type, target_id, offset_minutes
+           order by created_at desc, id desc
+         ) as rn
+  from public.reminders
+  where target_id is not null
+    and enabled = true
+    and status in ('pending','waiting_for_device','failed','processing')
+)
+update public.reminders r
+set enabled = false, status = 'cancelled', updated_at = now(), last_error = 'V30 duplicate cleanup'
+where r.id in (select id from ranked where rn > 1);
+
+create unique index if not exists uniq_reminders_one_active_bound_target_offset
+  on public.reminders(user_id, target_type, target_id, offset_minutes)
+  where target_id is not null
+    and offset_minutes is not null
+    and enabled = true
+    and status in ('pending','waiting_for_device','failed','processing');
+
+-- Database-level safety: deleting a task/schedule must never leave an active reminder behind.
+create or replace function public.licia_cancel_task_reminders_on_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.reminders
+  set enabled = false,
+      status = 'cancelled',
+      updated_at = now(),
+      last_error = 'Source task deleted'
+  where user_id = old.user_id
+    and target_type = 'task'
+    and target_id = old.id
+    and status in ('pending','waiting_for_device','failed','processing');
+  return old;
+end;
+$$;
+
+create or replace function public.licia_cancel_schedule_reminders_on_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.reminders
+  set enabled = false,
+      status = 'cancelled',
+      updated_at = now(),
+      last_error = 'Source schedule deleted'
+  where user_id = old.user_id
+    and target_type = 'schedule'
+    and target_id = old.id
+    and status in ('pending','waiting_for_device','failed','processing');
+  return old;
+end;
+$$;
+
+drop trigger if exists trg_licia_task_delete_cancel_reminders on public.tasks;
+create trigger trg_licia_task_delete_cancel_reminders
+after delete on public.tasks
+for each row execute function public.licia_cancel_task_reminders_on_delete();
+
+drop trigger if exists trg_licia_schedule_delete_cancel_reminders on public.schedule_blocks;
+create trigger trg_licia_schedule_delete_cancel_reminders
+after delete on public.schedule_blocks
+for each row execute function public.licia_cancel_schedule_reminders_on_delete();
+
+create or replace function public.licia_cancel_completed_task_reminder()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = 'done' and old.status is distinct from new.status then
+    update public.reminders
+    set enabled = false,
+        status = 'cancelled',
+        updated_at = now(),
+        last_error = 'Task completed'
+    where user_id = new.user_id
+      and target_type = 'task'
+      and target_id = new.id
+      and status in ('pending','waiting_for_device','failed','processing');
+  elsif new.due_at is null and old.due_at is distinct from new.due_at then
+    update public.reminders
+    set enabled = false,
+        status = 'cancelled',
+        updated_at = now(),
+        last_error = 'Task deadline removed'
+    where user_id = new.user_id
+      and target_type = 'task'
+      and target_id = new.id
+      and status in ('pending','waiting_for_device','failed','processing');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_licia_task_state_cancel_reminders on public.tasks;
+create trigger trg_licia_task_state_cancel_reminders
+after update of status, due_at on public.tasks
+for each row execute function public.licia_cancel_completed_task_reminder();
+
+comment on table public.life_os_events is 'V30 durable domain event stream for cross-module intelligence, diagnostics, and activity.';
+comment on table public.system_health_heartbeats is 'V30 server-side component heartbeats. Service-role only by design.';
+
+-- Licia V31 — Sync Core
+-- Run after schema_all_v30.sql / schema_v30_core_intelligence.sql.
+-- Idempotent migration for stronger multi-device + offline synchronization.
+
+create table if not exists public.life_os_sync_devices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  device_id text not null,
+  device_name text,
+  platform text,
+  app_version text,
+  last_seen_at timestamptz not null default now(),
+  last_sync_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(user_id, device_id)
+);
+alter table public.life_os_sync_devices enable row level security;
+drop policy if exists "life_os_sync_devices_all_own" on public.life_os_sync_devices;
+create policy "life_os_sync_devices_all_own" on public.life_os_sync_devices
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create index if not exists idx_sync_devices_user_seen on public.life_os_sync_devices(user_id, last_seen_at desc);
+
+create table if not exists public.life_os_sync_events (
+  sequence bigint generated always as identity primary key,
+  id uuid not null default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  entity_type text not null,
+  entity_id uuid,
+  operation text not null check (operation in ('create','update','delete')),
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.life_os_sync_events enable row level security;
+drop policy if exists "life_os_sync_events_select_own" on public.life_os_sync_events;
+create policy "life_os_sync_events_select_own" on public.life_os_sync_events for select using (auth.uid() = user_id);
+create index if not exists idx_sync_events_user_sequence on public.life_os_sync_events(user_id, sequence);
+create index if not exists idx_sync_events_user_created on public.life_os_sync_events(user_id, created_at desc);
+
+create table if not exists public.life_os_sync_mutations (
+  mutation_id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  device_id text,
+  entity_type text not null,
+  entity_id uuid,
+  operation text not null check (operation in ('create','update','delete')),
+  payload jsonb not null default '{}'::jsonb,
+  status text not null default 'processing' check (status in ('processing','done','failed')),
+  response jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  processed_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+alter table public.life_os_sync_mutations enable row level security;
+drop policy if exists "life_os_sync_mutations_all_own" on public.life_os_sync_mutations;
+create policy "life_os_sync_mutations_all_own" on public.life_os_sync_mutations for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create index if not exists idx_sync_mutations_user_created on public.life_os_sync_mutations(user_id, created_at desc);
+
+-- Optimistic concurrency/version field for core entities.
+alter table public.tasks add column if not exists version integer not null default 1;
+alter table public.schedule_blocks add column if not exists version integer not null default 1;
+alter table public.schedule_blocks add column if not exists updated_at timestamptz not null default now();
+alter table public.projects add column if not exists version integer not null default 1;
+alter table public.goals add column if not exists version integer not null default 1;
+alter table public.brain_dump_notes add column if not exists version integer not null default 1;
+alter table public.smart_inbox_items add column if not exists version integer not null default 1;
+alter table public.reminders add column if not exists version integer not null default 1;
+alter table public.user_memories add column if not exists version integer not null default 1;
+
+create or replace function public.licia_bump_version()
+returns trigger
+language plpgsql
+as $$
+begin
+  if TG_OP = 'UPDATE' then
+    new.version = coalesce(old.version, 1) + 1;
+    new.updated_at = now();
+  end if;
+  return new;
+end;
+$$;
+
+-- Generic event writer for the sync log.
+create or replace function public.licia_write_sync_event()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  row_user uuid;
+  row_id uuid;
+  data jsonb;
+begin
+  if TG_OP = 'DELETE' then
+    row_user := old.user_id;
+    row_id := old.id;
+    data := jsonb_build_object('deleted_at', now(), 'previous', to_jsonb(old));
+    insert into public.life_os_sync_events(user_id, entity_type, entity_id, operation, payload)
+    values (row_user, TG_ARGV[0], row_id, 'delete', data);
+    return old;
+  end if;
+  row_user := new.user_id;
+  row_id := new.id;
+  data := to_jsonb(new);
+  insert into public.life_os_sync_events(user_id, entity_type, entity_id, operation, payload)
+  values (row_user, TG_ARGV[0], row_id, lower(TG_OP), data);
+  return new;
+end;
+$$;
+
+-- Version triggers.
+drop trigger if exists trg_licia_task_version on public.tasks;
+create trigger trg_licia_task_version before update on public.tasks for each row execute function public.licia_bump_version();
+drop trigger if exists trg_licia_schedule_version on public.schedule_blocks;
+create trigger trg_licia_schedule_version before update on public.schedule_blocks for each row execute function public.licia_bump_version();
+drop trigger if exists trg_licia_project_version on public.projects;
+create trigger trg_licia_project_version before update on public.projects for each row execute function public.licia_bump_version();
+drop trigger if exists trg_licia_goal_version on public.goals;
+create trigger trg_licia_goal_version before update on public.goals for each row execute function public.licia_bump_version();
+drop trigger if exists trg_licia_note_version on public.brain_dump_notes;
+create trigger trg_licia_note_version before update on public.brain_dump_notes for each row execute function public.licia_bump_version();
+drop trigger if exists trg_licia_inbox_version on public.smart_inbox_items;
+create trigger trg_licia_inbox_version before update on public.smart_inbox_items for each row execute function public.licia_bump_version();
+drop trigger if exists trg_licia_reminder_version on public.reminders;
+create trigger trg_licia_reminder_version before update on public.reminders for each row execute function public.licia_bump_version();
+drop trigger if exists trg_licia_memory_version on public.user_memories;
+create trigger trg_licia_memory_version before update on public.user_memories for each row execute function public.licia_bump_version();
+
+-- Sync events. Deleting an entity becomes a tombstone event rather than disappearing.
+create trigger trg_licia_sync_tasks after insert or update or delete on public.tasks for each row execute function public.licia_write_sync_event('task');
+create trigger trg_licia_sync_schedule after insert or update or delete on public.schedule_blocks for each row execute function public.licia_write_sync_event('schedule');
+create trigger trg_licia_sync_projects after insert or update or delete on public.projects for each row execute function public.licia_write_sync_event('project');
+create trigger trg_licia_sync_goals after insert or update or delete on public.goals for each row execute function public.licia_write_sync_event('goal');
+create trigger trg_licia_sync_notes after insert or update or delete on public.brain_dump_notes for each row execute function public.licia_write_sync_event('note');
+create trigger trg_licia_sync_inbox after insert or update or delete on public.smart_inbox_items for each row execute function public.licia_write_sync_event('inbox');
+create trigger trg_licia_sync_reminders after insert or update or delete on public.reminders for each row execute function public.licia_write_sync_event('reminder');
+create trigger trg_licia_sync_memories after insert or update or delete on public.user_memories for each row execute function public.licia_write_sync_event('memory');
+
+-- Keep the stream bounded. The cleanup is intentionally conservative and is run by the worker endpoint.
+comment on table public.life_os_sync_events is 'V31 server-authoritative change stream for multi-device synchronization. Delete operations are represented as tombstones.';
+
+
+
+
+
+-- ============================================================
+-- LICIA V31 - SYNC CORE / MULTI-DEVICE / IDEMPOTENCY
+-- ============================================================
+
+create table if not exists public.life_os_sync_devices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  device_id text not null,
+  device_name text,
+  platform text,
+  app_version text,
+  last_seen_at timestamptz not null default now(),
+  last_sync_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, device_id)
+);
+
+create table if not exists public.life_os_sync_events (
+  sequence bigint generated always as identity primary key,
+  id uuid not null default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  entity_type text not null,
+  entity_id uuid,
+  operation text not null check (operation in ('create','update','delete')),
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (id)
+);
+
+create index if not exists life_os_sync_events_user_sequence_idx
+  on public.life_os_sync_events (user_id, sequence);
+create index if not exists life_os_sync_events_user_created_idx
+  on public.life_os_sync_events (user_id, created_at desc);
+
+create table if not exists public.life_os_sync_mutations (
+  mutation_id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  device_id text not null,
+  entity_type text not null,
+  entity_id uuid,
+  operation text not null check (operation in ('create','update','delete')),
+  payload jsonb not null default '{}'::jsonb,
+  status text not null default 'processing' check (status in ('processing','done','failed')),
+  response jsonb,
+  error_message text,
+  created_at timestamptz not null default now(),
+  completed_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists life_os_sync_mutations_user_created_idx
+  on public.life_os_sync_mutations (user_id, created_at desc);
+
+alter table public.life_os_sync_devices enable row level security;
+alter table public.life_os_sync_events enable row level security;
+alter table public.life_os_sync_mutations enable row level security;
+
+drop policy if exists life_os_sync_devices_select on public.life_os_sync_devices;
+create policy life_os_sync_devices_select on public.life_os_sync_devices
+  for select using (user_id = auth.uid());
+
+drop policy if exists life_os_sync_devices_insert on public.life_os_sync_devices;
+create policy life_os_sync_devices_insert on public.life_os_sync_devices
+  for insert with check (user_id = auth.uid());
+
+drop policy if exists life_os_sync_devices_update on public.life_os_sync_devices;
+create policy life_os_sync_devices_update on public.life_os_sync_devices
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists life_os_sync_events_select on public.life_os_sync_events;
+create policy life_os_sync_events_select on public.life_os_sync_events
+  for select using (user_id = auth.uid());
+
+drop policy if exists life_os_sync_mutations_select on public.life_os_sync_mutations;
+create policy life_os_sync_mutations_select on public.life_os_sync_mutations
+  for select using (user_id = auth.uid());
+
+drop policy if exists life_os_sync_mutations_insert on public.life_os_sync_mutations;
+create policy life_os_sync_mutations_insert on public.life_os_sync_mutations
+  for insert with check (user_id = auth.uid());
+
+drop policy if exists life_os_sync_mutations_update on public.life_os_sync_mutations;
+create policy life_os_sync_mutations_update on public.life_os_sync_mutations
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Versioning: one monotonic row-local version for conflict detection.
+do $$
+declare
+  _tbl text;
+begin
+  foreach _tbl in array array['tasks','schedule_blocks','projects','goals','brain_dump_notes','smart_inbox_items','reminders','user_memories'] loop
+    begin
+      execute format('alter table public.%I add column if not exists version integer not null default 1', _tbl);
+    exception when undefined_table then
+      null;
+    end;
+  end loop;
+end $$;
+
+alter table public.schedule_blocks add column if not exists updated_at timestamptz not null default now();
+
+create or replace function public.licia_bump_version()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.version := greatest(coalesce(old.version, 0) + 1, 1);
+  if to_jsonb(new) ? 'updated_at' then
+    new.updated_at := now();
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.licia_write_sync_event()
+returns trigger
+security definer
+set search_path = public
+language plpgsql
+as $$
+declare
+  entity uuid;
+  uid uuid;
+begin
+  if tg_op = 'DELETE' then
+    entity := old.id;
+    uid := old.user_id;
+    insert into public.life_os_sync_events (user_id, entity_type, entity_id, operation, payload)
+    values (uid, tg_table_name, entity, 'delete', jsonb_build_object('id', entity, 'version', coalesce(old.version, 0), 'deleted_at', now()));
+    return old;
+  end if;
+
+  entity := new.id;
+  uid := new.user_id;
+  insert into public.life_os_sync_events (user_id, entity_type, entity_id, operation, payload)
+  values (uid, tg_table_name, entity, case when tg_op='INSERT' then 'create' else 'update' end, to_jsonb(new));
+  return new;
+end;
+$$;
+
+revoke all on function public.licia_write_sync_event() from public, anon, authenticated;
+revoke all on function public.licia_bump_version() from public, anon, authenticated;
+
+do $$
+declare
+  tbl text;
+begin
+  foreach tbl in array array['tasks','schedule_blocks','projects','goals','brain_dump_notes','smart_inbox_items','reminders','user_memories'] loop
+    begin
+      execute format('drop trigger if exists %I on public.%I', 'trg_'||tbl||'_version', tbl);
+      execute format('create trigger %I before update on public.%I for each row execute function public.licia_bump_version()', 'trg_'||tbl||'_version', tbl);
+      execute format('drop trigger if exists %I on public.%I', 'trg_'||tbl||'_sync_event', tbl);
+      execute format('create trigger %I after insert or update or delete on public.%I for each row execute function public.licia_write_sync_event()', 'trg_'||tbl||'_sync_event', tbl);
+    exception when undefined_table then
+      null;
+    end;
+  end loop;
+end $$;
+
+-- Initial per-user device can be created lazily by the API; no seed required.
+
+
+-- Realtime delivery for low-latency cross-device invalidation.
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.life_os_sync_events;
+  exception when duplicate_object then
+    null;
+  exception when undefined_object then
+    null;
+  end;
+end $$;

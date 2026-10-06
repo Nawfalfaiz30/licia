@@ -115,7 +115,13 @@ if (isProd && !isCiBuildOnly) {
   if (!Number.isInteger(interval) || interval < 30000 || interval > 600000) errors.push("LICIA_REMINDER_WORKER_INTERVAL_MS harus berupa bilangan 30000–600000.");
 }
 
-for (const file of ["ecosystem.config.cjs", "deploy/nginx-licia.conf", "supabase/schema_all.sql", "supabase/schema_v31_sync.sql"]) {
+for (const file of [
+  "ecosystem.config.cjs",
+  "deploy/nginx-licia.conf",
+  "supabase/migrations/0001_bootstrap_v30.sql",
+  "supabase/migrations/0015_rate_limit_and_finance_summary.sql",
+  "config/licia-version.json",
+]) {
   if (!fs.existsSync(file)) errors.push(`File deployment wajib tidak ditemukan: ${file}`);
 }
 

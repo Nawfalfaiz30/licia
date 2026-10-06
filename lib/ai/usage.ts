@@ -24,6 +24,14 @@ export function dailyTokenLimit(): number {
 
 export async function getDailyTokenUsage(supabase: SupabaseClient, userId: string): Promise<number> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const { data, error } = await supabase.rpc("licia_get_ai_usage_total", { p_since: since });
+    if (!error && data != null) {
+      const total = Number(data);
+      if (Number.isFinite(total) && total >= 0) return total;
+    }
+  } catch {}
+
   const pageSize = 1000;
   let offset = 0;
   let total = 0;
