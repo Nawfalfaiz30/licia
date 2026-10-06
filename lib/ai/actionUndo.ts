@@ -31,8 +31,10 @@ export async function undoActionRecord(supabase: SupabaseClient, userId: string,
       if (!rows.length) return { ok: false, error: "Snapshot perubahan massal kosong." };
       for (const row of rows) {
         if (!row?.id) return { ok: false, error: "Snapshot perubahan massal memiliki row tanpa ID." };
+        const restorePayload = sanitizeBeforeForRestore(action.table_name, { row }) as Record<string, any> | null;
+        if (!restorePayload) return { ok: false, error: "Snapshot perubahan massal tidak dapat dipulihkan." };
         const restored = await supabase.from(action.table_name)
-          .update(sanitizeBeforeForRestore(action.table_name, { row }))
+          .update(restorePayload)
           .eq("id", String(row.id)).eq("user_id", userId);
         if (restored.error) return { ok: false, error: restored.error.message };
       }
@@ -44,8 +46,10 @@ export async function undoActionRecord(supabase: SupabaseClient, userId: string,
     }
     const row = action.before_snapshot?.row ?? action.before_snapshot;
     if (!row?.id) return { ok: false, error: "Snapshot perubahan tidak lengkap." };
+    const restorePayload = sanitizeBeforeForRestore(action.table_name, action.before_snapshot) as Record<string, any> | null;
+    if (!restorePayload) return { ok: false, error: "Snapshot perubahan tidak dapat dipulihkan." };
     const restored = await supabase.from(action.table_name)
-      .update(sanitizeBeforeForRestore(action.table_name, action.before_snapshot))
+      .update(restorePayload)
       .eq("id", String(row.id)).eq("user_id", userId);
     return restored.error ? { ok: false, error: restored.error.message } : { ok: true };
   }
@@ -87,10 +91,15 @@ async function verifyRestoredAction(supabase: SupabaseClient, userId: string, ac
   if (rows.length !== ids.length) return { ok: false, error: "Rollback belum lengkap: sebagian record target tidak ditemukan setelah pemulihan." };
   if (action.operation === "delete") return { ok: true };
   if (action.operation === "update") {
-    const expectedRows = Array.isArray(action.before_snapshot?.rows) ? action.before_snapshot.rows : action.before_snapshot?.row ? [action.before_snapshot.row] : [];
-    const expectedById = new Map(expectedRows.map((row: any) => [String(row.id), row]));
+    const expectedRows: Array<Record<string, any>> = Array.isArray(action.before_snapshot?.rows)
+      ? action.before_snapshot.rows as Array<Record<string, any>>
+      : action.before_snapshot?.row
+        ? [action.before_snapshot.row as Record<string, any>]
+        : [];
+    const actualRows = rows as Array<Record<string, any>>;
+    const expectedById = new Map<string, Record<string, any>>(expectedRows.map((row) => [String(row.id), row]));
     if (action.table_name === "tasks") {
-      for (const row of rows) {
+      for (const row of actualRows) {
         const expected = expectedById.get(String(row.id));
         if (!expected) continue;
         if (expected.status !== undefined && String(row.status) !== String(expected.status)) return { ok: false, error: "Status task belum kembali ke nilai semula." };

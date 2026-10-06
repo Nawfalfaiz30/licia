@@ -826,6 +826,10 @@ async function handleChatPost(req: Request) {
   const pendingAction = serverPendingActionRecord
     ? publicPendingAction(serverPendingActionRecord, legacyPendingAction)
     : legacyPendingAction;
+  const selectedAiModel = selectAiModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
+  const selectedToolModel = selectAiToolModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
+  const wantsActionContext = (aiProactive && (domains.includes("overview") || selectedMode !== "assistant" || /\b(analisis|review|evaluasi|rencanakan|prioritas|apa yang harus|saran)\b/i.test(effectiveMessage))) || /\b(buat|buatkan|jadwalkan|atur|rapikan|ubah|hapus|selesaikan|kerjakan|jalankan|ingatkan)\b/i.test(effectiveMessage);
+  const connectedContext = await buildConnectedContext(supabase, user.id, timezone, domains);
   const conversationalUndoIntent = isConversationalUndoIntent(message || "", new Date(clientNowIso || Date.now()), timezone);
   if (conversationalUndoIntent) {
     const latest = await loadLatestUndoableAction(supabase, user.id);
@@ -929,9 +933,6 @@ async function handleChatPost(req: Request) {
     const pendingBulkAction = saved.error ? null : { id: saved.data.id, expiresAt: saved.data.expires_at, actions: saved.data.actions, risk: "destructive", confidence: 0.99, requiresConfirmation: true };
     return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains: ["overview", "reminders"] as any, pendingAction: null, pendingBulkAction, pendingScheduleImport: pendingScheduleImport || null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: [], undoActionId: null });
   }
-  const wantsActionContext = (aiProactive && (domains.includes("overview") || selectedMode !== "assistant" || /\b(analisis|review|evaluasi|rencanakan|prioritas|apa yang harus|saran)\b/i.test(effectiveMessage))) || /\b(buat|buatkan|jadwalkan|atur|rapikan|ubah|hapus|selesaikan|kerjakan|jalankan|ingatkan)\b/i.test(effectiveMessage);
-  const selectedAiModel = selectAiModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
-  const selectedToolModel = selectAiToolModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const connectedContext = await buildConnectedContext(supabase, user.id, timezone, domains);
   const actionableContext = wantsActionContext ? await buildActionableContext(supabase, user.id, timezone) : { signals: [] as any[] };
 

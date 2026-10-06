@@ -2154,7 +2154,14 @@ async function getLifeGraph(ctx: HandlerCtx, args: any) {
   const config = baseConfig[entityType];
   if (!config) return { ok: false, error: "Entity type tidak didukung oleh Life Graph." };
 
-  const { data: root, error: rootError } = await ctx.supabase.from(config.table).select(config.select).eq("user_id", ctx.userId).eq("id", entityId).maybeSingle();
+  const rootQuery: any = ctx.supabase
+    .from(config.table)
+    .select(config.select)
+    .eq("user_id", ctx.userId)
+    .eq("id", entityId);
+  const rootResult: any = await rootQuery.maybeSingle();
+  const root: any = rootResult?.data;
+  const rootError: any = rootResult?.error;
   if (rootError) return { ok: false, error: rootError.message };
   if (!root) return { ok: false, status: "not_found", error: "Entity tidak ditemukan." };
 
