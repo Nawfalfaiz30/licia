@@ -17,8 +17,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
-      # package-lock.json is committed; use reproducible installs.
-      - run: npm ci --no-audit --no-fund
+      # One-time lockfile regeneration step for PCF. The next PCF commit will
+      # restore npm ci using the generated lockfile artifact.
+      - run: npm install --no-audit --no-fund
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcf-generated-package-lock
+          path: package-lock.json
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:unit
