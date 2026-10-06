@@ -29,6 +29,14 @@ const TABLES: Record<string, string> = {
   create_skill: "skills", update_skill: "skills", delete_skill: "skills",
 };
 
+const MANAGED_ENTITY_TABLES: Record<string, string> = {
+  area: "areas", expense: "expenses", income: "incomes", account: "accounts", budget: "budgets", subscription: "subscriptions",
+  journal_entry: "journal_entries", relation: "social_relations", interaction: "social_interactions", sleep: "sleep_logs",
+  hydration: "hydration_logs", caffeine: "caffeine_logs", meal: "meal_logs", medication: "medication_logs", fatigue: "fatigue_logs",
+  movement: "movement_logs", health_metric: "health_metrics", daily_plan: "daily_plans", reading_session: "reading_sessions",
+  milestone: "goal_milestones", link: "life_os_entity_links", notification_event: "notification_events", smart_inbox_item: "smart_inbox_items",
+  memory: "user_memories",
+};
 function findId(result: any) {
   if (!result || typeof result !== "object") return null;
   if (typeof result.deleted === "string") return { id: result.deleted, deleted: true };
@@ -240,14 +248,7 @@ export async function verifyMutationResult(
     return { ...result, remaining, verified, verification: verified ? "database-readback-bulk-delete" : "database-mismatch" };
   }
 
-const MANAGED_ENTITY_TABLES: Record<string, string> = {
-  area: "areas", expense: "expenses", income: "incomes", account: "accounts", budget: "budgets", subscription: "subscriptions",
-  journal_entry: "journal_entries", relation: "social_relations", interaction: "social_interactions", sleep: "sleep_logs",
-  hydration: "hydration_logs", caffeine: "caffeine_logs", meal: "meal_logs", medication: "medication_logs", fatigue: "fatigue_logs",
-  movement: "movement_logs", health_metric: "health_metrics", daily_plan: "daily_plans", reading_session: "reading_sessions",
-  milestone: "goal_milestones", link: "life_os_entity_links", notification_event: "notification_events", smart_inbox_item: "smart_inbox_items",
-  memory: "user_memories",
-};
+
 
 function managedValuesMatch(row: Record<string, any>, data: unknown) {
   if (!data || typeof data !== "object" || Array.isArray(data)) return false;
