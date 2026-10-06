@@ -1134,8 +1134,12 @@ async function handleChatPost(req: Request) {
 
   const selectedAiModel = selectAiModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const selectedToolModel = selectAiToolModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
+  const recentAssistantTaskCompletionProposal = /\b(?:tandai|selesaikan|centang|bereskan|complete)\b[\s\S]{0,120}\b(?:selesai|done|beres)\b/i.test(String(recentAssistantText || ""));
   const taskCompletionFollowUp = domains.includes("tasks")
-    && /\b(tandai|tandainya|selesaikan|centang|bereskan|complete)\b[\s\S]{0,80}\b(?:selesai|done|beres)\b/i.test(String(message || ""))
+    && (
+      /\b(tandai|tandainya|selesaikan|centang|bereskan|complete)\b[\s\S]{0,80}\b(?:selesai|done|beres)\b/i.test(String(message || ""))
+      || (isExplicitConfirmation(String(message || "")) && recentAssistantTaskCompletionProposal)
+    )
     && !/\b(?:tugas|task)\s+[^?!.]{2,100}\b/i.test(String(message || ""));
   const recentAssistantTaskTitles = taskCompletionFollowUp
     ? [...String(recentAssistantText || "").matchAll(/(?:^|\n)\s*(?:[-•*])\s*\*\*([^*\n]{2,140})\*\*/g)]
