@@ -21,7 +21,7 @@ export function BottomNav() {
     primaryNavItems.find((item) => item.href === "/dashboard"),
     todayNavItem,
     primaryNavItems.find((item) => item.href === "/chat"),
-    primaryNavItems.find((item) => item.href === "/capture"),
+    moreNavGroups.flatMap((group) => group.items).find((item) => item.href === "/finance"),
   ].filter((item): item is NonNullable<typeof item> => Boolean(item));
   const isPrimary = visiblePrimary.some((i) => pathname?.startsWith(i.href));
   const isInMore = !isPrimary && moreNavGroups.some((g) => g.items.some((i) => pathname?.startsWith(i.href)));
