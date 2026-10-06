@@ -938,7 +938,7 @@ async function handleChatPost(req: Request) {
   const recentAssistantTaskCompletionProposal = /\b(?:tandai|selesaikan|centang|bereskan|complete)\b[\s\S]{0,120}\b(?:selesai|done|beres)\b/i.test(String(recentAssistantText || ""));
   const taskStatusProposal = /\b(?:tandai|selesaikan|centang|bereskan|kembalikan|pulihkan|urungkan)\b[\s\S]{0,180}\b(?:selesai|done|beres|belum\s+selesai|todo|pending)\b/i.test(String(recentAssistantText || ""));
   const taskStatusFollowUp = domains.includes("tasks") && (
-    /\b(?:tandai|selesaikan|centang|bereskan|jadikan)\b/i.test(String(message || ""))
+    /\b(?:tandai|selesaikan|centang|bereskan|jadikan|kembalikan|pulihkan)\b/i.test(String(message || ""))
     || (isExplicitConfirmation(String(message || "")) && (recentAssistantTaskCompletionProposal || taskStatusProposal))
   );
 
@@ -958,7 +958,7 @@ async function handleChatPost(req: Request) {
     : (conversationDecision.followUp && conversationDecision.state.activeDomain === "tasks" && conversationDecision.state.activeScope?.explicit
       ? conversationDecision.state.activeScope
       : currentTaskScope);
-  const taskStatusTarget = /\b(?:belum\s+selesai|todo|pending|kembali(?:kan)?\s+ke\s+belum)\b/i.test(taskStatusSource)
+  const taskStatusTarget = /\b(?:belum\s+selesai|todo|pending|kembali(?:kan)?\s+ke\s+belum|kembalikan(?:lah)?|pulihkan(?:lah)?)\b/i.test(taskStatusSource)
     ? "todo"
     : "done";
 
