@@ -10,14 +10,14 @@ export type LifeOsCapability = {
 };
 
 const CAPABILITIES: LifeOsCapability[] = [
-  { key: "overview", label: "Beranda / Overview", route: "/dashboard", operations: ["read"], preferredTools: ["get_today_overview", "get_life_snapshot", "get_unified_life_snapshot"] },
+  { key: "overview", label: "Beranda / Overview", route: "/dashboard", operations: ["read"], preferredTools: ["get_today_overview", "get_life_snapshot", "get_unified_life_snapshot", "get_life_graph"] },
   { key: "today", label: "Hari Ini", route: "/today", operations: ["read"], preferredTools: ["get_today_overview", "get_life_snapshot"] },
-  { key: "tasks", label: "Tugas", route: "/tasks", operations: ["create", "read", "update", "delete"], preferredTools: ["create_task_with_subtasks", "get_tasks", "update_task", "update_tasks_bulk", "delete_task", "delete_tasks_bulk"], entities: ["tasks", "subtasks", "task_dependencies"] },
-  { key: "calendar", label: "Kalender / Agenda", route: "/calendar", operations: ["create", "read", "update", "delete"], preferredTools: ["create_daily_schedule", "get_schedule", "update_schedule_block", "delete_schedule_block", "delete_schedule_blocks_bulk"], entities: ["schedule_blocks"] },
+  { key: "tasks", label: "Tugas", route: "/tasks", operations: ["create", "read", "update", "delete"], preferredTools: ["create_task_with_subtasks", "get_tasks", "get_life_graph", "update_task", "update_tasks_bulk", "delete_task", "delete_tasks_bulk"], entities: ["tasks", "subtasks", "task_dependencies"] },
+  { key: "calendar", label: "Kalender / Agenda", route: "/calendar", operations: ["create", "read", "update", "delete"], preferredTools: ["create_daily_schedule", "get_schedule", "get_life_graph", "update_schedule_block", "delete_schedule_block", "delete_schedule_blocks_bulk"], entities: ["schedule_blocks"] },
   { key: "focus", label: "Fokus / Pomodoro", route: "/focus", operations: ["create", "read", "delete"], preferredTools: ["log_pomodoro_session", "get_pomodoro_sessions", "delete_pomodoro_session"], entities: ["pomodoro_sessions"] },
   { key: "finance", label: "Keuangan", route: "/finance", operations: ["create", "read", "update", "delete"], preferredTools: ["log_expense", "log_income", "get_expense_summary", "get_incomes", "update_expense", "update_income", "get_accounts", "create_account", "update_account", "delete_account", "transfer_money", "get_budgets", "create_budget", "update_budget", "delete_budget", "get_subscriptions", "create_subscription", "update_subscription", "delete_subscription"], entities: ["expenses", "incomes", "accounts", "account_transfers", "budgets", "subscriptions"] },
-  { key: "goals", label: "Target & Proyek", route: "/goals-projects", operations: ["create", "read", "update", "delete"], preferredTools: ["get_goals", "create_goal", "update_goal", "delete_goal"], entities: ["goals", "goal_milestones", "projects"] },
-  { key: "projects", label: "Proyek", route: "/goals-projects", operations: ["create", "read", "update", "delete"], preferredTools: ["get_projects", "create_project", "update_project", "delete_project"], entities: ["projects", "project_tasks"] },
+  { key: "goals", label: "Target & Proyek", route: "/goals-projects", operations: ["create", "read", "update", "delete"], preferredTools: ["get_goals", "get_life_graph", "create_goal", "update_goal", "delete_goal"], entities: ["goals", "goal_milestones", "projects"] },
+  { key: "projects", label: "Proyek", route: "/goals-projects", operations: ["create", "read", "update", "delete"], preferredTools: ["get_projects", "get_life_graph", "create_project", "update_project", "delete_project"], entities: ["projects", "project_tasks"] },
   { key: "knowledge", label: "Knowledge & Belajar", route: "/knowledge", operations: ["create", "read", "update", "delete"], preferredTools: ["get_notes", "create_note", "update_note", "delete_note", "get_skills", "create_skill", "update_skill", "delete_skill", "get_reading_list", "log_reading", "update_reading", "delete_reading"], entities: ["brain_dump_notes", "skills", "reading_logs", "reading_sessions", "vault_items"] },
   { key: "capture", label: "Tangkap / Smart Inbox", route: "/capture", operations: ["create", "read", "update", "delete"], preferredTools: ["capture_inbox_item", "create_task_from_inbox", "get_life_module_data", "manage_life_os_data"], entities: ["smart_inbox_items"] },
   { key: "health", label: "Kesehatan & Rutinitas", route: "/wellbeing", operations: ["create", "read", "update", "delete"], preferredTools: ["log_health", "get_health_summary", "delete_health_log", "manage_life_os_data"], entities: ["sleep_logs", "hydration_logs", "caffeine_logs", "meal_logs", "medication_logs", "fatigue_logs", "movement_logs", "health_metrics", "habits"] },
@@ -42,7 +42,7 @@ export function getLifeOsCapabilities(input?: { domain?: string; includeFields?:
   if (!selected.length) return { ok: false, error: `Domain "${wanted}" tidak ditemukan.`, available_domains: CAPABILITIES.map((x) => x.key) };
   return {
     ok: true,
-    catalog_version: "2.0",
+    catalog_version: "3.0",
     scope: wanted || "all",
     capabilities: selected.map((x) => {
       const base: Record<string, unknown> = { domain: x.key, label: x.label, route: x.route, operations: x.operations, entities: x.entities, preferred_tools: x.preferredTools };
