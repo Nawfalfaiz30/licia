@@ -1,4 +1,5 @@
 import { detectAiDomains, type AiDomain } from "@/lib/ai/toolRouting";
+import { resolveActionScope, type ActionScope } from "@/lib/ai/actionScope";
 
 export type ConversationOperation =
   | "read"
@@ -18,6 +19,7 @@ export type ConversationState = {
   lastUserText: string;
   lastActionTools: string[];
   updatedAt: number;
+  activeScope?: ActionScope;
 };
 
 export type ConversationDecision = {
@@ -183,6 +185,12 @@ export function buildConversationDecision(input: {
     ? input.state.activeOperation
     : currentOperation;
 
+  const rawScope = resolveActionScope(message);
+  const inheritedScope = (!rawScope.explicit && confirmsRecentMutationProposal)
+    ? resolveActionScope(recentAssistantText)
+    : (!rawScope.explicit && input.state?.activeScope ? input.state.activeScope : null);
+  const activeScope = rawScope.explicit ? rawScope : inheritedScope ?? rawScope;
+
   const state: ConversationState = {
     activeDomain,
     activeOperation,
@@ -191,6 +199,7 @@ export function buildConversationDecision(input: {
     lastUserText: message.slice(0, 1200),
     lastActionTools: Array.isArray(input.state?.lastActionTools) ? input.state!.lastActionTools!.slice(0, 8) : [],
     updatedAt: Date.now(),
+    activeScope,
   };
 
   const mutationExpected = mutationPattern.test(message) || confirmsRecentMutationProposal;
@@ -200,7 +209,8 @@ export function buildConversationDecision(input: {
     topicSwitched ? `PERGANTIAN TOPIK: ya. Topik sebelumnya (${previousDomain}) jangan dibawa sebagai intent aktif kecuali pengguna merujuknya secara eksplisit.` : "PERGANTIAN TOPIK: tidak terdeteksi.",
     followUp ? `PESAN LANJUTAN: ya. Gunakan konteks aktif sebelumnya hanya untuk referensi yang jelas.` : "PESAN LANJUTAN: tidak.",
     propertyFollowUp ? "EDIT PROPERTI: pertahankan domain dan entitas aktif; kata seperti catatan/keterangan/jumlah/tanggal adalah properti entity, bukan otomatis modul Notes." : "EDIT PROPERTI: tidak terdeteksi.",
-    "PRIORITAS PEMAHAMAN: pesan pengguna saat ini > konteks aktif > percakapan lama. Jangan gunakan nomor urut daftar sebagai database ID.",
+    `SCOPE AKSI: ${activeScope.explicit ? activeScope.label : "tidak ada scope waktu eksplisit"}. Jika pengguna menyebut "hari ini/besok/minggu ini/setelah hari ini", scope ini membatasi target mutation dan tidak boleh diabaikan.`,
+    "PRIORITAS PEMAHAMAN: pesan pengguna saat ini > scope aksi eksplisit > konteks aktif > percakapan lama. Jangan gunakan nomor urut daftar sebagai database ID.",
     confirmsRecentMutationProposal ? "KONFIRMASI AKSI: pengguna mengonfirmasi aksi mutation yang baru saja ditawarkan pada balasan sebelumnya. Pertahankan domain/entity dan jalankan operasi yang ditawarkan; jangan kembali hanya ke mode baca." : mutationExpected ? "PENGGUNA MEMINTA AKSI DATA: jawaban sukses hanya boleh diberikan setelah tool mutation berhasil dan hasilnya terverifikasi." : "Tidak ada kewajiban mutation dari kata kerja utama pesan ini.",
   ].join("\n");
 
