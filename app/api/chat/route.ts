@@ -1423,6 +1423,30 @@ async function handleChatPost(req: Request) {
         parsedArgs[activeIdSpec.field] = activeEntityIds[0];
       }
 
+      const activeIdSpecs: Record<string, { domain: AiDomain; field: string }> = {
+        update_schedule_block: { domain: "calendar", field: "block_id" },
+        update_expense: { domain: "finance", field: "expense_id" },
+        update_income: { domain: "finance", field: "income_id" },
+        update_account: { domain: "finance", field: "account_id" },
+        update_goal: { domain: "goals", field: "goal_id" },
+        update_note: { domain: "notes", field: "note_id" },
+        update_reading: { domain: "reading", field: "reading_id" },
+        update_project: { domain: "projects", field: "project_id" },
+        update_vault_item: { domain: "vault", field: "item_id" },
+        update_automation: { domain: "automations", field: "automation_id" },
+        update_habit: { domain: "habits", field: "habit_id" },
+        update_decision: { domain: "decisions", field: "decision_id" },
+        update_skill: { domain: "learning", field: "skill_id" },
+        update_reminder: { domain: "reminders", field: "reminder_id" },
+        update_subscription: { domain: "subscriptions", field: "subscription_id" },
+        mark_notification_read: { domain: "notifications", field: "notification_id" },
+        checkin_habit: { domain: "habits", field: "habit_id" },
+        uncheckin_habit: { domain: "habits", field: "habit_id" },
+      };
+      const activeIdSpec = activeIdSpecs[rawToolName];
+      if (activeIdSpec && !parsedArgs[activeIdSpec.field] && activeDomain === activeIdSpec.domain && activeEntityIds.length === 1) {
+        parsedArgs[activeIdSpec.field] = activeEntityIds[0];
+      }
       call.function.arguments = JSON.stringify(parsedArgs);
       const normalizedArgs = JSON.stringify(parsedArgs, Object.keys(parsedArgs).sort());
       const signature = `${executionToolName}:${normalizedArgs}`;
