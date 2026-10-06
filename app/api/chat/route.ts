@@ -763,6 +763,8 @@ async function handleChatPost(req: Request) {
     message: String(message || ""),
     state: conversationStateInput || null,
     recentAssistantText,
+    now: continuityReference,
+    timezone,
   });
   const domainsSet = new Set<AiDomain>(conversationDecision.effectiveDomains);
   const imageIntentText = String(message || "").toLowerCase();
