@@ -289,7 +289,7 @@ const ChatMessage = memo(function ChatMessage({ message, timezone, onDelete, onF
   const m = message;
   const isUser = m.role === "user";
   return (
-    <div className={clsx("group/chat-row flex items-end gap-2 py-0.5 animate-licia-slide-in", isUser ? "justify-end" : "justify-start", !isUser && !showAvatar && "pl-7 sm:pl-8")}>
+    <div className={clsx("group/chat-row flex items-end gap-2 py-1 animate-licia-slide-in", isUser ? "justify-end" : "justify-start", !isUser && !showAvatar && "pl-7 sm:pl-8")}>
       {!isUser && showAvatar && (
         <div className="relative mt-auto h-6 w-6 shrink-0 overflow-hidden rounded-lg ring-1 ring-border/80">
           <Image src="/licia-avatar.png" alt="Licia" fill sizes="24px" className="object-cover" />
@@ -297,8 +297,8 @@ const ChatMessage = memo(function ChatMessage({ message, timezone, onDelete, onF
       )}
       <div className={clsx("min-w-0", isUser ? "max-w-[90%] sm:max-w-[72%]" : "max-w-[92%] sm:max-w-[74%]")}>
         <div className={clsx(
-          "chat-bubble min-w-0 rounded-[1rem] px-3.5 py-2.5 text-[13px] leading-[1.52] shadow-[0_1px_0_rgba(255,255,255,.03)]",
-          isUser ? "chat-message-user rounded-br-md bg-accent text-white" : "chat-message-ai rounded-bl-md border border-border bg-bg/95 text-text"
+          "chat-bubble min-w-0 rounded-[1.15rem] px-3.5 py-3 text-[14px] leading-[1.65] shadow-[0_1px_0_rgba(255,255,255,.03)] sm:px-4", 
+          isUser ? "chat-message-user rounded-br-md bg-accent text-white" : "chat-message-ai rounded-bl-md border border-border/80 bg-bg text-text"
         )}>
           {m.imageUrl && <div className="relative mb-2 max-h-64 overflow-hidden rounded-xl bg-black/5"><img src={m.imageUrl} alt="Gambar terlampir" loading="lazy" decoding="async" className="block max-h-64 w-auto max-w-full object-contain" /></div>}
           {m.content ? (isUser ? <span className="whitespace-pre-wrap break-words">{m.content}</span> : <MarkdownLite text={m.content} />) : m.imageUrl ? <span className="text-xs opacity-80">Gambar terlampir</span> : <span className="text-xs opacity-70">Pesan tidak terbaca</span>}
@@ -754,8 +754,8 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
     ? latestAiMessage.aiMeta.domains.slice(0, 3).map((item) => item.replaceAll("_", " ")).join(" · ")
     : "Konteks cerdas";
   return (
-    <div data-chat-style={chatStyle} className={clsx("chat-v48 flex min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-border bg-surface", compact ? "h-[500px]" : "h-[calc(100dvh-108px)] min-h-[430px] max-h-[860px]")}>
-      <header className="chat-v48-header relative z-30 flex shrink-0 items-center gap-2.5 border-b border-border bg-surface px-3 py-2.5 sm:px-4">
+    <div data-chat-style={chatStyle} className={clsx("chat-v48 flex min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-border bg-surface", compact ? "h-[500px]" : "h-[calc(100dvh-108px)] min-h-[430px] max-h-[860px] sm:rounded-[1.5rem]")}>
+      <header className="chat-v48-header relative z-30 flex shrink-0 items-center gap-2.5 border-b border-border/80 bg-surface px-3 py-3 sm:px-4">
         <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-xl ring-1 ring-accent/15">
           <Image src="/licia-avatar.png" alt={tr("Licia")} fill sizes="32px" className="object-cover" />
         </div>
@@ -771,8 +771,8 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
         {showChatMenu&&<div className="chat-v48-menu absolute right-2 top-[3.6rem] z-40 w-[min(300px,calc(100vw-1rem))] rounded-2xl border border-border bg-surface p-2.5 shadow-2xl sm:right-4"><div className="grid gap-2 sm:grid-cols-2"><label className="rounded-xl border border-border bg-bg p-2.5"><span className="block text-2xs font-semibold text-textMuted">{tr("Mode")}</span><select value={mode} onChange={e=>{const value=e.target.value as AiMode;setMode(value);try{localStorage.setItem("licia-default-ai-mode",value);window.dispatchEvent(new CustomEvent("licia:preferences-change"));}catch{}}} className="mt-1 w-full bg-transparent text-xs font-semibold text-text outline-none"><option value="assistant">{tr("Assistant")}</option><option value="planner">{tr("Planner")}</option><option value="analyst">{tr("Analyst")}</option><option value="operator">{tr("Operator")}</option><option value="reflector">{tr("Reflektor")}</option></select></label><label className="rounded-xl border border-border bg-bg p-2.5"><span className="block text-2xs font-semibold text-textMuted">{tr("Jawaban")}</span><select value={responseStyle} onChange={e=>{const value=e.target.value;setResponseStyle(value);try{localStorage.setItem("licia-ai-response-style",value);window.dispatchEvent(new CustomEvent("licia:preferences-change"));}catch{}}} className="mt-1 w-full bg-transparent text-xs font-semibold text-text outline-none"><option value="concise">{tr("Ringkas")}</option><option value="normal">{tr("Normal")}</option><option value="detailed">{tr("Detail")}</option></select></label></div><div className="mt-2 grid gap-2 sm:grid-cols-2"><Link href="/guide" onClick={()=>setShowChatMenu(false)} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-border bg-bg text-2xs font-semibold text-textMuted hover:text-accent"><CircleHelp size={13}/> {" "}{tr("Panduan")}</Link><button onClick={clearChat} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-danger/15 bg-danger/5 text-2xs font-semibold text-danger"><Trash2 size={13}/> {" "}{tr("Bersihkan")}</button></div></div>}
       </header>
 
-      <div ref={scrollRef} className="chat-v48-pane min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-3 sm:px-4 sm:py-5">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 sm:gap-3.5">
+      <div ref={scrollRef} className="chat-v48-pane min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 sm:py-6">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3.5 sm:gap-4">
           {displayHistory.length === 0 && <section className="chat-v48-welcome rounded-[1.35rem] border border-accent/15 bg-accent/[.045] p-4 sm:p-5">
             <div className="flex items-start gap-3">
               <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-accent/15 bg-bg"><Image src="/licia-avatar.png" alt={tr("Licia")} fill sizes="44px" className="object-cover" /></div>
@@ -801,10 +801,10 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
         </div>
       </div>
 
-      <div className="chat-v48-composer shrink-0 border-t border-border bg-surface px-2.5 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 sm:px-4 sm:pb-3">
+      <div className="chat-v48-composer shrink-0 border-t border-border/80 bg-surface/95 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-4 sm:pb-3">
         <div className="mx-auto max-w-2xl">
           {pendingImage&&<div className="mb-1.5 flex items-center gap-2 rounded-xl border border-border bg-bg px-2.5 py-1.5"><div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg"><img src={pendingImage} alt={tr("Lampiran")} className="h-full w-full object-cover"/></div><span className="min-w-0 flex-1 truncate text-2xs text-textMuted">{tr("Gambar siap dikirim")}</span><button onClick={()=>setPendingImage(null)} className="touch-target text-textMuted hover:text-danger" aria-label={tr("Hapus gambar")}><X size={13}/></button></div>}
-          <div className="chat-v48-composer-row flex items-end gap-1.5 rounded-[1.15rem] border border-border bg-bg p-1.5"><button onClick={()=>fileInputRef.current?.click()} className="touch-target shrink-0 rounded-xl text-textMuted hover:bg-surface hover:text-accent" title={tr("Lampirkan gambar")} aria-label={tr("Lampirkan gambar")}><Paperclip size={16}/></button><input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePickImage} className="hidden"/><textarea ref={textareaRef} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={handleKeyDown} enterKeyHint={enterToSend ? "send" : "enter"} onPaste={handlePaste} disabled={loading} rows={1} placeholder={tr("Tulis ke Licia…")} className="max-h-28 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-sm leading-relaxed text-text outline-none placeholder:text-textMuted"/><button onClick={()=>void handleSend()} disabled={loading||compressingImage||(!input.trim()&&!pendingImage)} className="touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-md shadow-accent/15 transition hover:scale-[1.02] active:scale-95 disabled:opacity-40" title={tr("Kirim")} aria-label={tr("Kirim")}><Send size={16}/></button></div>
+          <div className="chat-v48-composer-row flex items-end gap-1.5 rounded-[1.25rem] border border-border/80 bg-bg p-1.5 shadow-sm transition focus-within:border-accent/45 focus-within:ring-4 focus-within:ring-accent/5"><button onClick={()=>fileInputRef.current?.click()} className="touch-target shrink-0 rounded-xl text-textMuted transition hover:bg-surface hover:text-accent" title={tr("Lampirkan gambar")} aria-label={tr("Lampirkan gambar")}><Paperclip size={16}/></button><input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePickImage} className="hidden"/><textarea ref={textareaRef} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={handleKeyDown} enterKeyHint={enterToSend ? "send" : "enter"} onPaste={handlePaste} disabled={loading} rows={1} placeholder={tr("Tulis ke Licia…")} className="max-h-36 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-1.5 py-2.5 text-sm leading-relaxed text-text outline-none placeholder:text-textMuted"/><button onClick={()=>void handleSend()} disabled={loading||compressingImage||(!input.trim()&&!pendingImage)} className="touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-md shadow-accent/15 transition hover:scale-[1.02] active:scale-95 disabled:opacity-40" title={tr("Kirim")} aria-label={tr("Kirim")}><Send size={16}/></button></div>
           <div className="mt-1 flex items-center justify-between gap-2 px-1"><p className="hidden truncate text-2xs text-textMuted sm:block">{enterToSend ? tr("Enter kirim · Shift+Enter baris baru") : tr("Enter baris baru · Ctrl/Cmd+Enter kirim")}</p><p className="truncate text-2xs text-textMuted">{compressingImage ? tr("Menyiapkan gambar…") : tr("Licia mengingat beberapa percakapan terakhir dan memilih konteks yang paling relevan")}</p></div>
         </div>
       </div>
