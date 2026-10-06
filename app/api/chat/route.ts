@@ -829,7 +829,6 @@ async function handleChatPost(req: Request) {
   const selectedAiModel = selectAiModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const selectedToolModel = selectAiToolModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const wantsActionContext = (aiProactive && (domains.includes("overview") || selectedMode !== "assistant" || /\b(analisis|review|evaluasi|rencanakan|prioritas|apa yang harus|saran)\b/i.test(effectiveMessage))) || /\b(buat|buatkan|jadwalkan|atur|rapikan|ubah|hapus|selesaikan|kerjakan|jalankan|ingatkan)\b/i.test(effectiveMessage);
-  const connectedContext = await buildConnectedContext(supabase, user.id, timezone, domains);
   const conversationalUndoIntent = isConversationalUndoIntent(message || "", new Date(clientNowIso || Date.now()), timezone);
   if (conversationalUndoIntent) {
     const latest = await loadLatestUndoableAction(supabase, user.id);
