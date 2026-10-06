@@ -211,12 +211,13 @@ export async function POST(req: Request) {
         data = transferResult;
         response = transferResult;
       }
-      if (entityType !== "accountTransfer") {
+      } else {
         const record = { ...(entityId ? { id: entityId } : {}), ...payload, user_id: user.id };
-      const result = await supabase.from(definition.table).insert(record).select("*").single();
-      if (result.error) throw new Error(result.error.message);
-      data = result.data;
-      response = { entityType, entityId: data?.id ?? null, record: data };
+        const result = await supabase.from(definition.table).insert(record).select("*").single();
+        if (result.error) throw new Error(result.error.message);
+        data = result.data;
+        response = { entityType, entityId: data?.id ?? null, record: data };
+      }
     } else {
       const currentResult = await supabase.from(definition.table).select("*").eq("id", entityId).eq("user_id", user.id).maybeSingle();
       if (currentResult.error) throw new Error(currentResult.error.message);
