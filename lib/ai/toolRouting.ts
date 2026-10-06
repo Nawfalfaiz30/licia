@@ -45,6 +45,7 @@ const deletePattern = /\b(hapus|delete|buang|hilangkan|hapuskan)\b/i;
 const updatePattern = /\b(ubah|edit|update|ganti|pindah|arsipkan|aktifkan|nonaktifkan|matikan|nyalakan|hubungkan)\b/i;
 const createPattern = /\b(buat|buatkan|catat|simpan|tambah|tambahkan|masukkan|input|import|jadwalkan|ubah jadi|jadikan|convert|konversi|log|check[-\s]?in|centang|tandai)\b/i;
 const actionPattern = new RegExp(`${deletePattern.source}|${updatePattern.source}|${createPattern.source}`, "i");
+const capabilityPattern = /\b(apa yang bisa|apa saja yang bisa|kemampuan|fitur|modul|crud|create|read|update|delete|semua data|seluruh data|life os|bisa melakukan|bisa ngapain)\b/i;
 
 function selectWriteNames(names: string[], text: string) {
   if (deletePattern.test(text)) {
@@ -104,13 +105,14 @@ export function selectReadToolDefs<T extends { function?: { name?: string } }>(d
   for (const readNames of Object.values(readTools)) {
     for (const name of readNames ?? []) names.add(name);
   }
-  ["get_unified_life_snapshot", "get_daily_brain", "get_ai_watchers", "get_life_module_data", "search_life_os", "resolve_calendar_date"].forEach((name) => names.add(name));
+  ["get_unified_life_snapshot", "get_daily_brain", "get_ai_watchers", "get_life_module_data", "search_life_os", "get_life_os_capabilities", "resolve_calendar_date"].forEach((name) => names.add(name));
   return defs.filter((d) => d.function?.name && names.has(d.function.name));
 }
 
 export function selectToolDefs<T extends { function?: { name?: string } }>(defs: T[], domains: AiDomain[], userText = "") {
   const names = new Set<string>();
   const wantsWrite = actionPattern.test(userText);
+  if (capabilityPattern.test(userText)) names.add("get_life_os_capabilities");
   const scheduleIntent = /\b(jadwal|kalender|kelas|kuliah|agenda|mata kuliah|meeting|rapat)\b/i.test(userText);
   // Fallback CRUD jangan diekspos untuk mutation kalender/jadwal ketika tool domain
   // khusus tersedia. Tanpa guard ini model dapat memilih manage_life_os_data dan
