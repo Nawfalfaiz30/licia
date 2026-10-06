@@ -4,6 +4,12 @@ plugins {
 }
 
 val liciaUrl = providers.gradleProperty("LICIA_URL").orElse("https://licia.site").get().trimEnd('/')
+val liciaHost = java.net.URI(liciaUrl).host ?: "licia.site"
+val liciaVersionFile = rootProject.file("../../config/licia-version.json")
+val liciaVersion = if (liciaVersionFile.exists()) {
+    val versionText = liciaVersionFile.readText()
+    Regex("""\"appVersion\"\s*:\s*\"([^\"]+)\"""").find(versionText)?.groupValues?.getOrNull(1) ?: "0.57.0"
+} else "0.57.0"
 
 android {
     namespace = "com.licia.lifeos"
@@ -14,9 +20,9 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = liciaVersion
         buildConfigField("String", "LICIA_URL", "\"$liciaUrl\"")
-        buildConfigField("String", "LICIA_HOST", "\"${java.net.URI(liciaUrl).host ?: "licia.site"}\"")
+        buildConfigField("String", "LICIA_HOST", "\"$liciaHost\"")
     }
 
     buildFeatures {
@@ -39,9 +45,11 @@ android {
     buildTypes {
         debug {
             manifestPlaceholders["allowCleartext"] = "true"
+            manifestPlaceholders["liciaHost"] = liciaHost
         }
         release {
             manifestPlaceholders["allowCleartext"] = "false"
+            manifestPlaceholders["liciaHost"] = liciaHost
             isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(
