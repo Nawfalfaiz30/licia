@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     ...(expenses.data ?? []).map((x:any)=>({id:`expense-${x.id}`,at:x.occurred_at,title:`- Rp ${Number(x.amount).toLocaleString("id-ID")}`,detail:`${x.category}`,kind:"Keuangan",href:"/finance"})),
     ...(incomes.data ?? []).map((x:any)=>({id:`income-${x.id}`,at:x.occurred_at,title:`+ Rp ${Number(x.amount).toLocaleString("id-ID")}`,detail:`${x.source}`,kind:"Keuangan",href:"/finance"})),
     ...(notes.data ?? []).map((x:any)=>({id:`note-${x.id}`,at:x.updated_at,title:x.title || previewPlainText(x.content, 100) || "Catatan",detail:"Catatan diperbarui",kind:"Catatan",href:"/notes"})),
-    ...(agendas.data ?? []).map((x:any)=>({id:`agenda-${x.id}`,at:`${x.block_date}T${x.start_time}`,title:x.title,detail:`Agenda ${String(x.start_time).slice(0,5)}–${String(x.end_time).slice(0,5)}`,kind:"Agenda",href:"/calendar"})),
+    ...(agendas.data ?? []).map((x:any)=>({id:`agenda-${x.id}`,at:`${x.block_date}T${String(x.start_time).slice(0,8)}`,title:x.title,detail:`Agenda ${String(x.start_time).slice(0,5)}–${String(x.end_time).slice(0,5)}`,kind:"Agenda",href:"/calendar"})),
     ...(goals.data ?? []).map((x:any)=>({id:`goal-${x.id}`,at:x.updated_at,title:x.title,detail:`Target ${Number(x.progress || 0)}%`,kind:"Target",href:"/goals"})),
     ...(projects.data ?? []).map((x:any)=>({id:`project-${x.id}`,at:x.updated_at,title:x.name,detail:`Proyek · ${x.status}`,kind:"Proyek",href:"/projects"})),
     ...(habits.data ?? []).map((x:any)=>({id:`habit-${x.id}`,at:x.created_at,title:"Rutinitas dicentang",detail:x.checkin_date,kind:"Rutinitas",href:"/habits"})),
