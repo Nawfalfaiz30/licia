@@ -1134,6 +1134,77 @@ async function handleChatPost(req: Request) {
 
   const selectedAiModel = selectAiModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
   const selectedToolModel = selectAiToolModel({ text: effectiveMessage, hasImage: Boolean(imageDataUrl), domains, mode: selectedMode });
+  const taskCompletionFollowUp = domains.includes("tasks")
+    && /\b(tandai|tandainya|selesaikan|centang|bereskan|complete)\b[\s\S]{0,80}\b(?:selesai|done|beres)\b/i.test(String(message || ""))
+    && !/\b(?:tugas|task)\s+[^?!.]{2,100}\b/i.test(String(message || ""));
+  const recentAssistantTaskTitles = taskCompletionFollowUp
+    ? [...String(recentAssistantText || "").matchAll(/(?:^|\n)\s*(?:[-•*])\s*\*\*([^*\n]{2,140})\*\*/g)]
+      .map((m) => String(m[1]).trim())
+      .filter(Boolean)
+      .slice(0, 20)
+    : [];
+
+  if (taskCompletionFollowUp && recentAssistantTaskTitles.length) {
+    const candidateIds = new Map<string, string>();
+    for (const title of recentAssistantTaskTitles) {
+      const result = await executeTool(
+        { supabase, userId: user.id, timezone },
+        "get_tasks",
+        JSON.stringify({ status: "all", keyword: title }),
+      );
+      for (const row of Array.isArray(result?.tasks) ? result.tasks : []) {
+        const id = String(row?.id || "").trim();
+        const rowTitle = String(row?.title || "").trim();
+        if (id && rowTitle && rowTitle.toLocaleLowerCase("id-ID") === title.toLocaleLowerCase("id-ID")) {
+          candidateIds.set(id, rowTitle);
+        }
+      }
+    }
+    const ids = [...candidateIds.keys()].slice(0, 30);
+    if (ids.length) {
+      const recovered = await executeAndVerifyMutation({
+        supabase,
+        userId: user.id,
+        timezone,
+        tool: "update_tasks_bulk",
+        args: { task_ids: ids, status: "done" },
+      });
+      const applied = recovered.applied;
+      const label = ids.length === 1 ? "1 tugas" : `${ids.length} tugas`;
+      const reply = applied
+        ? `Sudah. ${label} yang tadi ditampilkan sekarang ditandai selesai dan sudah diverifikasi.`
+        : `Aku menemukan ${label}, tetapi perubahan belum berhasil diverifikasi. ${String(recovered.result?.error || "Tidak ada perubahan terverifikasi.")}`;
+      if (applied) invalidateUserContext(user.id);
+      const displayName = String(resolvedProfile?.display_name || "").trim();
+      const displayReply = displayName && applied ? `${displayName}, ${reply}` : reply;
+      await saveServerChatTurn(supabase, user.id, "assistant", displayReply, typeof turnId === "string" ? turnId.slice(0, 120) : null, {
+        domains: ["tasks"],
+        mode: selectedMode,
+        verifiedActions: applied ? 1 : 0,
+      });
+      return NextResponse.json({
+        reply: displayReply,
+        turnMessages: [{ role: "assistant", content: displayReply }],
+        domains: ["tasks"],
+        pendingAction: null,
+        pendingActionId: null,
+        pendingBulkAction: null,
+        pendingScheduleImport: pendingScheduleImport || null,
+        visionUsed: Boolean(imageDataUrl),
+        mode: selectedMode,
+        actions: [{ tool: "update_tasks_bulk", ok: applied, label: `Menandai ${label} selesai` }],
+        undoActionId: recovered.undoActionId || null,
+        aiMeta: {
+          model: selectedAiModel,
+          contextMode: aiReadAllData ? "all" : "smart",
+          domains: ["tasks"],
+          operation: "update",
+          verifiedActions: applied ? 1 : 0,
+          deterministicRecovery: true,
+        },
+      });
+    }
+  }
   const messages: RawMsg[] = [
     { role: "system", content: buildSystemPrompt(resolvedProfile?.display_name ?? null, timezone, clientNowIso ?? undefined, intelligenceContext, selectedMode, selectedResponseStyle as any, { aiReadAllData, aiAutoLink, aiProactive, aiSuggestActions, aiConfirmDestructive, aiConfirmMassive, aiDeniedDomains: deniedDomains }) },
     { role: "system", content: `AI ROUTING: model=${selectedAiModel}; contextMode=${aiReadAllData ? "all" : "smart"}; domains=${domains.join(",") || "overview"}. Jangan mengakses domain yang tidak disediakan toolset.` },
@@ -1477,45 +1548,89 @@ async function handleChatPost(req: Request) {
   const awaitingUserConfirmation = Boolean(pendingBulkAction) || Boolean(nextPendingAction && nextPendingAction !== pendingAction);
 
   if (!awaitingUserConfirmation && conversationDecision.mutationExpected && !conversationDecision.destructiveIntent && !performedActions.some((action) => action.ok)) {
-    const recoveryTools = selectMutationToolDefs(toolDefs, domains).filter((def) => {
+    const recoveryReadTools = selectReadToolDefs(toolDefs).filter((def) => {
+      const name = String(def.function?.name || "");
+      return !["get_unified_life_snapshot", "get_daily_brain", "get_ai_watchers"].includes(name);
+    });
+    const recoveryMutationTools = selectMutationToolDefs(toolDefs, domains).filter((def) => {
       const name = String(def.function?.name || "");
       return !name.startsWith("delete_") && name !== "manage_life_os_data";
     });
+    const recoveryTools = [...recoveryReadTools, ...recoveryMutationTools]
+      .filter((def, index, all) => all.findIndex((candidate) => candidate.function?.name === def.function?.name) === index);
     if (recoveryTools.length) {
       try {
-        const recovery = await withOpenAIRetry<OpenAI.Chat.Completions.ChatCompletion>(() => chatCompletionWithFallback(getOpenAI(), {
-          model: selectedToolModel,
-          messages: [
-            { role: "system", content: [
-              "RECOVERY MUTATION LICIA.",
-              "Pesan pengguna secara eksplisit meminta perubahan data.",
-              "Gunakan SATU tool mutation yang paling tepat dari toolset yang tersedia.",
-              "Jangan menjawab dengan klaim berhasil tanpa tool call.",
-              "Jika data wajib belum cukup, panggil tool hanya bila schema memungkinkan dan biarkan tool mengembalikan kendala; jangan mengarang nilai.",
-              conversationDecision.contextInstruction,
-            ].join("\n") },
-            { role: "user", content: String(message || "") },
-          ],
-          tools: recoveryTools,
-          tool_choice: "required",
-          ...generationOptions(selectedToolModel, 0),
-          max_completion_tokens: 380,
-        }, { signal: req.signal }), 1, req.signal);
-        logCompletionFinish(recovery, "chat-recovery");
-        await recordAiUsage(supabase, user.id, { model: selectedToolModel, endpoint: "chat_recovery", usage: recovery.usage });
-        const recoveryCall = recovery.choices[0]?.message?.tool_calls?.[0];
-        if (recoveryCall) {
+        let recoveryMessages: RawMsg[] = [
+          { role: "system", content: [
+            "RECOVERY MUTATION LICIA.",
+            "Pesan pengguna secara eksplisit meminta perubahan data.",
+            "Bila target/UUID mutation belum jelas, lakukan read/search domain yang relevan terlebih dahulu.",
+            "Setelah target dan UUID nyata ditemukan, lakukan mutation yang sesuai.",
+            "Untuk dua atau lebih tugas yang mendapat perubahan sama, gunakan update_tasks_bulk dengan UUID yang ditemukan.",
+            "Jangan menebak UUID atau nomor urut.",
+            "Jangan menyatakan berhasil tanpa mutation yang benar-benar dieksekusi dan diverifikasi.",
+            conversationDecision.contextInstruction,
+          ].join("\n") },
+          { role: "user", content: String(message || "") },
+        ];
+
+        for (let recoveryIteration = 0; recoveryIteration < 3; recoveryIteration += 1) {
+          const recovery = await withOpenAIRetry<OpenAI.Chat.Completions.ChatCompletion>(() => chatCompletionWithFallback(getOpenAI(), {
+            model: selectedToolModel,
+            messages: recoveryMessages,
+            tools: recoveryTools,
+            tool_choice: "required",
+            ...generationOptions(selectedToolModel, 0),
+            max_completion_tokens: 420,
+          }, { signal: req.signal }), 1, req.signal);
+          logCompletionFinish(recovery, "chat-recovery");
+          await recordAiUsage(supabase, user.id, { model: selectedToolModel, endpoint: "chat_recovery", usage: recovery.usage });
+          const recoveryCall = recovery.choices[0]?.message?.tool_calls?.[0];
+          if (!recoveryCall) break;
+
           let recoveryArgs: any = {};
           try { recoveryArgs = JSON.parse(recoveryCall.function.arguments || "{}"); } catch {}
           recoveryArgs = await enrichFinanceAccountArgs(supabase, user.id, recoveryCall.function.name, recoveryArgs, message || "");
-          const recovered = await executeAndVerifyMutation({ supabase, userId: user.id, timezone, tool: recoveryCall.function.name, args: recoveryArgs });
-          performedActions.push({ tool: recoveryCall.function.name, ok: recovered.applied, label: actionLabel(recoveryCall.function.name, recovered.result) });
-          if (recovered.applied) {
-            latestActionEntityIds = uniqueStrings([...latestActionEntityIds, ...collectResultEntityIds(recovered.result)]).slice(-12);
-            if (recovered.undoActionId) undoActionIds.push(recovered.undoActionId);
-            finalText = `Sudah aku catat dan verifikasi. ${actionLabel(recoveryCall.function.name, recovered.result)}.`;
+
+          const isRecoveryMutation = isMutationToolName(recoveryCall.function.name);
+          let recoveryResult: any;
+          if (isRecoveryMutation) {
+            const recovered = await executeAndVerifyMutation({
+              supabase,
+              userId: user.id,
+              timezone,
+              tool: recoveryCall.function.name,
+              args: recoveryArgs,
+            });
+            recoveryResult = recovered.result;
+            performedActions.push({
+              tool: recoveryCall.function.name,
+              ok: recovered.applied,
+              label: actionLabel(recoveryCall.function.name, recovered.result),
+            });
+            if (recovered.applied) {
+              latestActionEntityIds = uniqueStrings([...latestActionEntityIds, ...collectResultEntityIds(recovered.result)]).slice(-12);
+              if (recovered.undoActionId) undoActionIds.push(recovered.undoActionId);
+              invalidateUserContext(user.id);
+              finalText = `Sudah aku catat dan verifikasi. ${actionLabel(recoveryCall.function.name, recovered.result)}.`;
+              break;
+            }
           } else {
-            finalText = `Aku belum bisa menyelesaikannya. ${recovered.result?.error || recovered.result?.message || "Perubahan tidak berhasil diverifikasi di database."}`;
+            recoveryResult = await executeTool(
+              { supabase, userId: user.id, timezone },
+              recoveryCall.function.name,
+              JSON.stringify(recoveryArgs),
+            );
+          }
+
+          recoveryMessages = [
+            ...recoveryMessages,
+            { role: "assistant", content: "", tool_calls: [recoveryCall] } as RawMsg,
+            { role: "tool", tool_call_id: recoveryCall.id, content: JSON.stringify(compactToolResult(recoveryResult)) },
+          ];
+
+          if (isRecoveryMutation && recoveryResult?.error) {
+            finalText = `Aku belum bisa menyelesaikannya. ${recoveryResult.error}`;
           }
         }
       } catch (error) {
@@ -1524,6 +1639,7 @@ async function handleChatPost(req: Request) {
       }
     }
   }
+
 
   // Final honesty guard. A mutation request without a verified action must never
   // be reported as completed, even when a model produced success-like prose.
