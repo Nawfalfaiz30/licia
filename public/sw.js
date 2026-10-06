@@ -235,5 +235,4 @@ self.addEventListener('fetch', (event) => {
             .catch(() => cached || caches.match(OFFLINE_URL))
         )
       )
-  );
-
+  });
