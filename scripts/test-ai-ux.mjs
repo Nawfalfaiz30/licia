@@ -21,12 +21,16 @@ assert(convo.includes("sanitizeEntityIds") && convo.includes("UUID_PATTERN"), "e
 assert(prompt.includes("JANGAN PERNAH mengirim nomor urut") && prompt.includes("EDIT PROPERTI"), "target resolution instructions missing");
 assert(context.includes("select(\"id,amount,category,note,occurred_at\")") && context.includes("[id: ${t.id}]"), "connected context must expose real IDs");
 assert(route.includes("recentAssistantText") && route.includes("ENTITY_UUID_RE"), "chat route continuity/entity validation missing");
+assert(convo.includes("assistantMutationProposalPattern") && convo.includes("confirmsRecentMutationProposal"), "confirmation-to-mutation continuity missing");
+assert(route.includes("confirmationRoutingHint") && route.includes("[konfirmasi aksi: ubah]"), "confirmed mutation routing hint missing");
+assert(tools.includes('name: "get_life_os_capabilities"') && tools.includes('case "get_life_os_capabilities"'), "Life OS capability discovery tool missing");
 assert(tools.includes("INVALID_ENTITY_ID") && tools.includes("expenseId"), "invalid UUID guard missing for expense update");
 assert(tools.includes("noteId") && tools.includes("ID catatan tidak valid"), "invalid UUID guard missing for note update");
 assert(settings.includes("Atur Licia sesuai caramu") && settings.includes("Pilih yang penting. Licia menyesuaikan sisanya."), "settings hero not simplified");
 assert(settings.includes("Bahasa antarmuka") && settings.includes("applyAiPreset"), "settings UX language/preset upgrade missing");
 assert(chat.includes("resetConversationContext") && chat.includes("Konfirmasi hapus"), "chat context/confirmation UX missing");
-assert(bottom.includes("mobilePrimaryOrder") && bottom.includes("/insights"), "mobile nav did not surface Insights");
+assert(bottom.includes("visiblePrimary") && bottom.includes('/finance') && bottom.includes('"Hari Ini"'), "mobile nav primary footer is missing expected Phase 1 items");
+assert(!bottom.includes('href: "/capture"'), "Capture must not occupy the mobile primary footer in Phase 1");
 assert(dashboard.includes("const smartMove =") && dashboard.includes("Prioritas sekarang"), "dashboard next-move card missing");
 
 console.log("Licia AI/UX regression tests OK");
