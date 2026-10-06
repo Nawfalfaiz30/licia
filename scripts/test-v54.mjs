@@ -6,7 +6,6 @@ const toolDefinitions = readFileSync("lib/ai/toolDefinitions.ts", "utf8");
 const chatRoute = readFileSync("app/api/chat/route.ts", "utf8");
 const chatOrchestrator = readFileSync("lib/ai/chatOrchestrator.ts", "utf8");
 const chat = chatRoute + "\n" + chatOrchestrator;
-const chatOrchestrator = readFileSync("lib/ai/chatOrchestrator.ts", "utf8");
 const aiSource = tools + "\n" + toolDefinitions;
 const prompt = readFileSync("lib/ai/systemPrompt.ts", "utf8");
 const router = readFileSync("lib/ai/modelRouter.ts", "utf8");
