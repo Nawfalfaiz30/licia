@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
-import { MoreHorizontal } from "lucide-react";
+import { CalendarDays, MoreHorizontal } from "lucide-react";
 import { primaryNavItems, moreNavGroups } from "./nav-items";
 import { MoreSheet } from "./MoreSheet";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -16,17 +16,19 @@ export function BottomNav() {
   const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const mobilePrimaryOrder = ["/dashboard", "/plan", "/chat"];
+  const todayNavItem = { href: "/today", label: "Hari Ini", i18nKey: "today", icon: CalendarDays };
   const visiblePrimary = [
-    ...mobilePrimaryOrder.map((href) => primaryNavItems.find((item) => item.href === href)),
-    moreNavGroups.flatMap((group) => group.items).find((item) => item.href === "/finance"),
+    primaryNavItems.find((item) => item.href === "/dashboard"),
+    todayNavItem,
+    primaryNavItems.find((item) => item.href === "/chat"),
+    primaryNavItems.find((item) => item.href === "/capture"),
   ].filter((item): item is NonNullable<typeof item> => Boolean(item));
   const isPrimary = visiblePrimary.some((i) => pathname?.startsWith(i.href));
   const isInMore = !isPrimary && moreNavGroups.some((g) => g.items.some((i) => pathname?.startsWith(i.href)));
 
   return (
     <>
-      <nav className="licia-bottom-nav md:hidden fixed bottom-0 inset-x-0 z-nav bg-surface/98 border-t border-border backdrop-blur-xl">
+      <nav className="licia-bottom-nav md:hidden fixed bottom-0 inset-x-0 z-nav bg-surface/98 border-t border-border backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
         <div className="grid grid-cols-5">
           {visiblePrimary.map((item) => {
             const active = pathname?.startsWith(item.href);
@@ -37,12 +39,12 @@ export function BottomNav() {
                 href={item.href}
                 onPointerDown={() => haptic("selection")}
                 className={clsx(
-                  "licia-v32-interactive licia-v32-ripple flex flex-col items-center gap-1 py-2.5 text-2xs font-medium transition",
-                  active ? "text-accent" : "text-textMuted"
+                  "licia-v32-interactive licia-v32-ripple mx-0.5 my-1 flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-2xs font-medium transition",
+                  active ? "bg-accent/10 text-accent" : "text-textMuted hover:bg-bg hover:text-text"
                 )}
               >
                 <Icon size={20} />
-                {t(item.i18nKey)}
+                {item.href === "/today" ? tr("Hari Ini") : t(item.i18nKey)}
               </Link>
             );
           })}
