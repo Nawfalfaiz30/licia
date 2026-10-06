@@ -2681,7 +2681,7 @@ async function updateTasksBulk(ctx: HandlerCtx, args: any) {
       status: "target_changed",
       requested_count: ids.length,
       found_count: found.size,
-      missing_ids: ids.filter((id: string) => !found.has(id)),
+      missing_ids: ids.filter((id) => !found.has(String(id))),
       error: "Sebagian target tugas sudah tidak tersedia. Tidak ada perubahan yang diterapkan.",
     };
   }
