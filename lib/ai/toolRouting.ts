@@ -113,13 +113,6 @@ export function selectToolDefs<T extends { function?: { name?: string } }>(defs:
   const names = new Set<string>();
   const wantsWrite = actionPattern.test(userText);
   if (capabilityPattern.test(userText)) names.add("get_life_os_capabilities");
-  const scheduleIntent = /\b(jadwal|kalender|kelas|kuliah|agenda|mata kuliah|meeting|rapat)\b/i.test(userText);
-  // Fallback CRUD jangan diekspos untuk mutation kalender/jadwal ketika tool domain
-  // khusus tersedia. Tanpa guard ini model dapat memilih manage_life_os_data dan
-  // mengirim field seperti block_date/start_time/title ke entity yang salah, lalu
-  // menghasilkan "Tidak ada field valid untuk dibuat".
-  const financeIntent = /\b(pengeluaran|pemasukan|keuangan|saldo|dompet|rekening|budget|anggaran|transaksi|biaya|harga|bayar|dibayar|belanja|beli|jajan|habis|spent|spend)\b/i.test(userText)
-    || /\b\d+(?:[.,]\d+)?\s*(?:k|rb|ribu|jt|juta)\b/i.test(userText);
   const fallbackAllowed = !(wantsWrite && (
     (scheduleIntent && domains.includes("calendar")) ||
     (financeIntent && domains.includes("finance"))
