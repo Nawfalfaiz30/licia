@@ -1324,7 +1324,7 @@ async function handleChatPost(req: Request) {
       // delete_all_notifications memiliki konfirmasi eksplisit di tool. Jangan bungkus
       // konfirmasi percakapan itu ke ai_pending_actions, karena batch replay akan
       // mengulang confirm=false dan sengaja ditolak oleh tool.
-      const isBulkMutation = mutations.length > 1 || mutations.some((call) => ["log_expenses_batch", "delete_tasks_bulk", "delete_schedule_blocks_bulk"].includes(call.function.name));
+      const isBulkMutation = mutations.length > 1 || mutations.some((call) => ["log_expenses_batch", "update_tasks_bulk", "delete_tasks_bulk", "delete_schedule_blocks_bulk"].includes(call.function.name));
       if (isBulkMutation) {
         const pending = {
           user_id: user.id,
