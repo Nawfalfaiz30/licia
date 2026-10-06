@@ -959,7 +959,30 @@ async function handleChatPost(req: Request) {
     let taskIds: string[] = [];
     const activeIds = conversationDecision.state.activeEntityIds.slice(0, 30);
 
-    if (taskScope.explicit && taskScope.fromIso && taskScope.toIso) {
+    const confirmationFromProposal = isExplicitConfirmation(String(message || "")) && taskStatusProposal;
+    const pluralReference = /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(taskStatusSource);
+    const titles = (confirmationFromProposal || pluralReference) ? extractTaskTitlesFromText(recentAssistantText) : [];
+
+    if (titles.length && confirmationFromProposal) {
+      const foundRows: any[] = [];
+      for (const title of titles) {
+        const { data } = await supabase.from("tasks").select("id,title,status,due_at").eq("user_id", user.id).ilike("title", title).limit(5);
+        for (const row of data ?? []) {
+          if (String(row.title || "").trim().toLocaleLowerCase("id-ID") === title.toLocaleLowerCase("id-ID")) foundRows.push(row);
+        }
+      }
+      const matchesScope = (row: any) => {
+        if (taskStatusTarget === "done" && String(row.status || "") === "done") return false;
+        if (taskStatusTarget === "todo" && String(row.status || "") !== "done") return false;
+        if (!taskScope.explicit || !taskScope.fromIso || !taskScope.toIso) return true;
+        const value = new Date(String(row.due_at || "")).getTime();
+        if (!Number.isFinite(value)) return false;
+        if (taskScope.kind === "after") return value > new Date(taskScope.toIso).getTime();
+        if (taskScope.kind === "before") return value <= new Date(taskScope.toIso).getTime();
+        return value >= new Date(taskScope.fromIso).getTime() && value <= new Date(taskScope.toIso).getTime();
+      };
+      taskIds = [...new Map(foundRows.filter(matchesScope).map((row: any) => [String(row.id), true])).keys()].slice(0, 30);
+    } else if (taskScope.explicit && taskScope.fromIso && taskScope.toIso) {
       let targetQuery = supabase.from("tasks").select("id,title,status,due_at").eq("user_id", user.id);
       targetQuery = taskStatusTarget === "done" ? targetQuery.neq("status", "done") : targetQuery.eq("status", "done");
       if (taskScope.kind === "after") targetQuery = targetQuery.gt("due_at", taskScope.toIso);
@@ -969,11 +992,10 @@ async function handleChatPost(req: Request) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       taskIds = (data ?? []).map((row: any) => String(row.id)).filter(Boolean);
     } else {
-      const pluralReference = /\b(keduanya|kedua|dua tugas|semua|semuanya|mereka|yang tadi|tadi)\b/i.test(taskStatusSource);
-      const titles = pluralReference ? extractTaskTitlesFromText(recentAssistantText) : [];
-      if (titles.length) {
+      const titlesForPlural = pluralReference ? extractTaskTitlesFromText(recentAssistantText) : [];
+      if (titlesForPlural.length) {
         const found = new Map<string, boolean>();
-        for (const title of titles) {
+        for (const title of titlesForPlural) {
           const { data } = await supabase.from("tasks").select("id,title,status").eq("user_id", user.id).ilike("title", title).limit(5);
           for (const row of data ?? []) {
             if (String(row.title || "").trim().toLocaleLowerCase("id-ID") === title.toLocaleLowerCase("id-ID")) found.set(String(row.id), true);
