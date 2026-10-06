@@ -621,8 +621,8 @@ pastikan `SUPABASE_SERVICE_ROLE_KEY` ada di environment server dan restart aplik
 Schema utama:
 
 ```text
-supabase/schema_all_v30.sql
-supabase/supabase/migrations/
+supabase/migrations/
+supabase/migrations/
 ```
 
 ---
@@ -716,7 +716,7 @@ Route: `/system`
 System Center memantau:
 
 - database health,
-- schema V30,
+- schema ,
 - reminder worker heartbeat,
 - overdue/stuck/orphan reminder,
 - notification events,
@@ -862,7 +862,7 @@ Undo jika snapshot tersedia
 [ ] VAPID subject/public/private tersedia
 [ ] LICIA_CRON_SECRET tersedia
 [ ] Reminder worker PM2 aktif
-[ ] Sync Core  sudah dimigrasikan
+[ ] Migration sync sudah diterapkan
 [ ] OpenAI API key tersedia
 [ ] Database schema siap
 [ ] RLS aktif
