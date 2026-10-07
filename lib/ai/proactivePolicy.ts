@@ -6,7 +6,7 @@ export type ProactivePreferences = {
 };
 
 function minutes(value: string | null | undefined) {
-  const match = String(value || "").match(/^(\\d{1,2}):(\\d{2})$/);
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return null;
   const hour = Number(match[1]);
   const minute = Number(match[2]);
