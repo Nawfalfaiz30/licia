@@ -37,6 +37,7 @@ import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { mutateEntity } from "@/lib/sync/client";
 import { Card, EmptyState, PrimaryButton, TextInput, notifyToast, Chip } from "@/components/ui";
+import { Overlay } from "@/components/ui/Overlay";
 import { dateStrInTimezone, localDateTimeToIso } from "@/lib/date";
 import { TaskKanban, TaskMatrix, TaskWeek } from "@/components/tasks/TaskViews";
 import { inversePatch, stepFocus, taskKeyAction, type TaskPatch, type ViewTask } from "@/lib/tasks/views";
