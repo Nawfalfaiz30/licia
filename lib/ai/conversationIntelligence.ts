@@ -72,6 +72,8 @@ const explicitConfirmationPattern =
   /^(?:iya|ya|y|oke|ok|siap|gas|setuju|setujui|konfirmasi|confirm|eksekusi|jalankan|terapkan)(?:[\s.!?,]|$)/i;
 const assistantMutationProposalPattern =
   /\b(?:mau|ingin|boleh|bisa)\s+(?:aku|saya|kita)\b[\s\S]{0,140}\b(?:buat|buatkan|catat|simpan|tambah|tambahkan|ubah|edit|ganti|update|atur|pindah|hapus|hapuskan|delete|jadwalkan|tandai|centang|selesaikan|jalankan|ingatkan|hubungkan)\b|\b(?:mau|ingin)\s+(?:aku|saya|kita)\b[\s\S]{0,140}\b(?:selesai|terapkan)\b/i;
+const assistantMutationConfirmationPattern =
+  /\b(?:konfirmasi|konfirmasikan|mohon\s+konfirmasi)\b[\s\S]{0,240}\b(?:buat|buatkan|catat|simpan|tambah|tambahkan|ubah|edit|ganti|update|atur|pindah|hapus|hapuskan|delete|jadwalkan|tandai|centang|selesaikan|jalankan|ingatkan|hubungkan)\b/i;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function sanitizeEntityIds(value: unknown) {
@@ -89,12 +91,14 @@ function inferDomainFromRecentAssistant(text: string) {
   if (/\b(agenda|jadwal|kalender|tanggal|waktu)\s*:/i.test(q) && /\b(?:jam|pukul)\b/i.test(q))
     return "calendar" as AiDomain;
   if (/\b(tugas|deadline|tenggat|prioritas)\s*:/i.test(q)) return "tasks" as AiDomain;
-  return null;
+  // Recover any unambiguous domain, including habits, from the assistant prompt.
+  const detected = detectAiDomains(text).filter((domain) => domain !== "overview" && domain !== "all");
+  return detected.length === 1 ? detected[0] : null;
 }
 
 function inferMutationProposalOperation(text: string): ConversationOperation | null {
   const q = String(text || "").toLowerCase();
-  if (!assistantMutationProposalPattern.test(q)) return null;
+  if (!assistantMutationProposalPattern.test(q) && !assistantMutationConfirmationPattern.test(q)) return null;
   if (/\b(?:hapus|hapuskan|delete|buang|hilangkan)\b/i.test(q)) return "delete";
   if (/\b(?:ubah|edit|ganti|update|atur|pindah|tandai|centang|selesaikan|aktifkan|nonaktifkan)\b/i.test(q))
     return "update";
@@ -189,6 +193,9 @@ export function buildConversationDecision(input: {
   const recentProposalOperation = inferMutationProposalOperation(recentAssistantText);
   const confirmsRecentMutationProposal = explicitConfirmationPattern.test(message) && Boolean(recentProposalOperation);
   const recentAssistantDomain = inferDomainFromRecentAssistant(recentAssistantText);
+  if (confirmsRecentMutationProposal && recentAssistantDomain && (!previousDomain || previousDomain === "overview")) {
+    previousDomain = recentAssistantDomain;
+  }
   // Recover a stale client context when an older turn clearly displayed a domain-specific
   // record. This is especially important for property edits like "ganti catatannya".
   if (propertyFollowUp && recentAssistantDomain && (!previousDomain || previousDomain === "notes"))
