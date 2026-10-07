@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { enforceSameOrigin } from "@/lib/security";
 import { googleAuthorizationUrl, makeOAuthState } from "@/lib/integrations/googleCalendar";
-import { sha256Hex } from "@/lib/integrations/secretBox";
+import { hmacSha256Hex } from "@/lib/integrations/secretBox";
 
 export async function GET(req: Request) {
   const origin = enforceSameOrigin(req);
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     const { error } = await supabase.from("integration_oauth_states").insert({
       user_id: user.id,
       provider: "google_calendar",
-      state_hash: sha256Hex(state),
+      state_hash: hmacSha256Hex(state),
       redirect_path: "/settings",
       expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
     });
