@@ -93,7 +93,7 @@ export function resolveNaturalDate(input: string, referenceDate: Date, timezone 
 
   const nonSundayWeekday = Object.keys(WEEKDAY_ALIASES)
     .filter((key) => key !== "minggu")
-    .find((key) => new RegExp(`\\b${key.replace("'", "['’]?\\s?")}\\b`, "i").test(text));
+    .find((key) => new RegExp(`\\b${key.replaceAll("'", "['’]?\\s?")}\\b`, "i").test(text));
   const weekOnly =
     /\bminggu\s+(ini|depan|berikutnya|lalu|kemarin)\b|\b(this|next|last)\s+week\b/i.test(text) && !nonSundayWeekday;
   const weekdayToken = nonSundayWeekday || (/(?:^|\s)minggu(?:$|\s)/i.test(text) && !weekOnly ? "minggu" : undefined);
