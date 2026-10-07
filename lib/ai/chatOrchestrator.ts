@@ -571,7 +571,12 @@ export async function chatGet(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk (unauthorized)." }, { status: 401 });
-  const messages = await readServerChatHistory(supabase, user.id);
+  const { data: privacy } = await supabase
+    .from("ai_privacy_preferences")
+    .select("private_mode")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const messages = privacy?.private_mode === true ? [] : await readServerChatHistory(supabase, user.id);
   return NextResponse.json({ messages });
 }
 
@@ -674,8 +679,13 @@ async function handleChatPost(req: Request) {
     conversationState?: ConversationState | null;
   };
   const historyFallback = Array.isArray(clientHistory) ? clientHistory : [];
-  const persistedHistory = await readServerChatHistory(supabase, user.id);
-  const history = persistedHistory.length ? persistedHistory : historyFallback;
+  const { data: earlyAiPrivacy } = await supabase
+    .from("ai_privacy_preferences")
+    .select("private_mode")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const persistedHistory = earlyAiPrivacy?.private_mode === true ? [] : await readServerChatHistory(supabase, user.id);
+  const history = persistedHistory.length ? persistedHistory : (earlyAiPrivacy?.private_mode === true ? [] : historyFallback);
   if ((!message || typeof message !== "string") && !imageDataUrl) return NextResponse.json({ error: "Pesan kosong." }, { status: 400 });
   if (imageDataUrl && !isSupportedImageDataUrl(imageDataUrl)) return NextResponse.json({ error: "Format gambar tidak didukung atau ukurannya terlalu besar. Gunakan PNG, JPG, atau WEBP sampai sekitar 8 MB." }, { status: 400 });
 
