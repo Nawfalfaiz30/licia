@@ -6,7 +6,7 @@ const APP_ROUTES = [
   "/goals", "/notes", "/reading", "/habits", "/subscriptions", "/inbox", "/projects", "/planner", "/brief",
   "/review", "/review-center", "/timeline", "/analytics", "/insights", "/decisions", "/learning", "/memory", "/vault",
   "/automations", "/life-map", "/privacy-center", "/life-graph", "/settings", "/reminders", "/relations", "/search", "/command",
-  "/capture", "/pulse", "/plan", "/copilot", "/sync", "/ai-history", "/guide", "/system",
+  "/capture", "/pulse", "/plan", "/copilot", "/sync", "/ai-history", "/guide", "/system", "/step-up",
 ];
 
 function isPath(pathname: string, prefix: string) {
