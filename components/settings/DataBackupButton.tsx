@@ -4,10 +4,117 @@ import { Download, FileUp, Loader2 } from "lucide-react";
 import { notifyToast } from "@/components/ui";
 
 import { useLanguage } from "@/components/LanguageProvider";
-export function DataBackupButton(){
+export function DataBackupButton() {
   const { t: tr } = useLanguage();
-  const inputRef=useRef<HTMLInputElement|null>(null);const[busy,setBusy]=useState(false);
-  async function download(){if(busy)return;setBusy(true);try{const res=await fetch("/api/backup",{cache:"no-store"});if(!res.ok)throw new Error(tr("Backup belum bisa dibuat."));const blob=await res.blob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`licia-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);notifyToast({title:"Backup siap",message:"Cadangan JSON Licia sudah diunduh.",tone:"success"})}catch(error){notifyToast({title:"Backup gagal",message:error instanceof Error?error.message:tr("Coba lagi."),tone:"error"})}finally{setBusy(false)}}
-  async function restore(file:File){if(!file)return;if(file.size>10*1024*1024){notifyToast({title:"File terlalu besar",message:"Batas backup adalah 10 MB.",tone:"error"});return}let payload:any;try{payload=JSON.parse(await file.text())}catch{notifyToast({title:"Format tidak valid",message:"Pilih file backup Licia JSON yang valid.",tone:"error"});return}if(!payload||payload.format!=="licia-backup"||![1,2].includes(Number(payload.version))){notifyToast({title:"Backup tidak dikenali",message:"File ini bukan backup Licia versi yang didukung.",tone:"error"});return}if(!window.confirm(tr("Pulihkan backup sebagai MERGE? Data yang sudah ada tidak akan dihapus. Lanjutkan?")))return;setBusy(true);try{const res=await fetch("/api/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await res.json().catch(()=>({}));if(!res.ok&&res.status!==207)throw new Error(data.error||tr("Restore gagal."));notifyToast({title:res.status===207?tr("Restore sebagian"):tr("Restore selesai"),message:res.status===207?tr("{keys_length} tabel dipulihkan; periksa error di hasil server.", { keys_length: Object.keys(data.restored||{}).length }):tr("Data backup sudah digabungkan ke akun."),tone:res.status===207?"error":"success"});}catch(error){notifyToast({title:"Restore gagal",message:error instanceof Error?error.message:tr("Coba lagi."),tone:"error"})}finally{setBusy(false);if(inputRef.current)inputRef.current.value=""}}
-  return <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={()=>void download()} disabled={busy} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent disabled:opacity-50">{busy?<Loader2 size={14} className="animate-spin"/>:<Download size={14}/>} {" "}{tr("Backup JSON")}</button><button type="button" onClick={()=>inputRef.current?.click()} disabled={busy} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent disabled:opacity-50"><FileUp size={14}/> {" "}{tr("Restore merge")}</button><input ref={inputRef} type="file" accept="application/json,.json" onChange={e=>{const file=e.target.files?.[0];if(file)void restore(file)}} className="hidden"/></div>;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function download() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/backup", { cache: "no-store" });
+      if (!res.ok) throw new Error(tr("Backup belum bisa dibuat."));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `licia-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      notifyToast({ title: "Backup siap", message: "Cadangan JSON Licia sudah diunduh.", tone: "success" });
+    } catch (error) {
+      notifyToast({
+        title: "Backup gagal",
+        message: error instanceof Error ? error.message : tr("Coba lagi."),
+        tone: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function restore(file: File) {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      notifyToast({ title: "File terlalu besar", message: "Batas backup adalah 10 MB.", tone: "error" });
+      return;
+    }
+    let payload: any;
+    try {
+      payload = JSON.parse(await file.text());
+    } catch {
+      notifyToast({ title: "Format tidak valid", message: "Pilih file backup Licia JSON yang valid.", tone: "error" });
+      return;
+    }
+    if (!payload || payload.format !== "licia-backup" || ![1, 2].includes(Number(payload.version))) {
+      notifyToast({
+        title: "Backup tidak dikenali",
+        message: "File ini bukan backup Licia versi yang didukung.",
+        tone: "error",
+      });
+      return;
+    }
+    if (!window.confirm(tr("Pulihkan backup sebagai MERGE? Data yang sudah ada tidak akan dihapus. Lanjutkan?")))
+      return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok && res.status !== 207) throw new Error(data.error || tr("Restore gagal."));
+      notifyToast({
+        title: res.status === 207 ? tr("Restore sebagian") : tr("Restore selesai"),
+        message:
+          res.status === 207
+            ? tr("{keys_length} tabel dipulihkan; periksa error di hasil server.", {
+                keys_length: Object.keys(data.restored || {}).length,
+              })
+            : tr("Data backup sudah digabungkan ke akun."),
+        tone: res.status === 207 ? "error" : "success",
+      });
+    } catch (error) {
+      notifyToast({
+        title: "Restore gagal",
+        message: error instanceof Error ? error.message : tr("Coba lagi."),
+        tone: "error",
+      });
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      <button
+        type="button"
+        onClick={() => void download()}
+        disabled={busy}
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} {tr("Backup JSON")}
+      </button>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={busy}
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent disabled:opacity-50"
+      >
+        <FileUp size={14} /> {tr("Restore merge")}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/json,.json"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void restore(file);
+        }}
+        className="hidden"
+      />
+    </div>
+  );
 }

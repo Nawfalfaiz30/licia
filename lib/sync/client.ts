@@ -21,14 +21,21 @@ export type SyncMutationResult = {
   conflict?: boolean;
   conflictId?: string | null;
   error?: string;
-  response?: { entityId?: string | null; record?: Record<string, unknown> | null; deleted?: boolean; [key: string]: unknown } | null;
+  response?: {
+    entityId?: string | null;
+    record?: Record<string, unknown> | null;
+    deleted?: boolean;
+    [key: string]: unknown;
+  } | null;
 };
 
 const DEFAULT_STRATEGY: SyncMutationResult["response"] = null;
 
 export async function mutateEntity(options: SyncOptions): Promise<SyncMutationResult> {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Belum masuk." };
 
   const payload = options.payload || {};

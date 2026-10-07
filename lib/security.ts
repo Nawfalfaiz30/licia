@@ -10,7 +10,9 @@ function pruneExpired(t: number) {
   for (const [k, v] of buckets) if (v.resetAt <= t) buckets.delete(k);
 }
 
-function now() { return Date.now(); }
+function now() {
+  return Date.now();
+}
 
 function firstForwardedValue(value: string | null): string {
   return value?.split(",")[0]?.trim() || "";
@@ -38,8 +40,15 @@ function requestOriginCandidates(req: Request): string[] {
   const forwarded = req.headers.get("forwarded") || "";
   const forwardedProto = parseForwardedPair(forwarded, "proto");
   const forwardedHost = parseForwardedPair(forwarded, "host");
-  const proto = firstForwardedValue(req.headers.get("x-forwarded-proto")) || forwardedProto || fallbackUrl.protocol.replace(":", "");
-  const host = firstForwardedValue(req.headers.get("x-forwarded-host")) || forwardedHost || req.headers.get("host") || fallbackUrl.host;
+  const proto =
+    firstForwardedValue(req.headers.get("x-forwarded-proto")) ||
+    forwardedProto ||
+    fallbackUrl.protocol.replace(":", "");
+  const host =
+    firstForwardedValue(req.headers.get("x-forwarded-host")) ||
+    forwardedHost ||
+    req.headers.get("host") ||
+    fallbackUrl.host;
   const candidates = new Set<string>();
   const normalizedRequest = normalizeOrigin(`${proto}://${host}`);
   const normalizedUrl = normalizeOrigin(fallbackUrl.origin);
@@ -65,11 +74,12 @@ function isDevelopmentTunnel(origin: string): boolean {
   try {
     const url = new URL(origin);
     const host = url.hostname.toLowerCase();
-    return url.protocol === "https:" && (
-      host.endsWith(".devtunnels.ms") ||
-      host.endsWith(".app.github.dev") ||
-      host.endsWith(".github.dev") ||
-      host.endsWith(".githubpreview.dev")
+    return (
+      url.protocol === "https:" &&
+      (host.endsWith(".devtunnels.ms") ||
+        host.endsWith(".app.github.dev") ||
+        host.endsWith(".github.dev") ||
+        host.endsWith(".githubpreview.dev"))
     );
   } catch {
     return false;
@@ -92,8 +102,12 @@ function isConfiguredDevTunnelPair(req: Request, origin: string): boolean {
   const configuredTunnel = normalizeOrigin(process.env.DEV_TUNNEL_ORIGIN);
   if (!configuredTunnel) return false;
 
-  const forwardedProto = firstForwardedValue(req.headers.get("x-forwarded-proto")) || parseForwardedPair(req.headers.get("forwarded") || "", "proto");
-  const forwardedHost = firstForwardedValue(req.headers.get("x-forwarded-host")) || parseForwardedPair(req.headers.get("forwarded") || "", "host");
+  const forwardedProto =
+    firstForwardedValue(req.headers.get("x-forwarded-proto")) ||
+    parseForwardedPair(req.headers.get("forwarded") || "", "proto");
+  const forwardedHost =
+    firstForwardedValue(req.headers.get("x-forwarded-host")) ||
+    parseForwardedPair(req.headers.get("forwarded") || "", "host");
   if (!forwardedHost) return false;
 
   const forwardedOrigin = normalizeOrigin(`${forwardedProto || "https"}://${forwardedHost}`);
@@ -146,7 +160,8 @@ export function enforceSameOrigin(req: Request): NextResponse | null {
   const unsafeMethod = /^(POST|PUT|PATCH|DELETE)$/i.test(req.method);
   if ((!rawOrigin || normalizedRawOrigin === "null") && unsafeMethod) {
     const fetchSite = (req.headers.get("sec-fetch-site") || "").trim().toLowerCase();
-    const allowMissingOrigin = process.env.NODE_ENV !== "production" || /^(1|true|yes|on)$/i.test(process.env.LICIA_ALLOW_MISSING_ORIGIN || "");
+    const allowMissingOrigin =
+      process.env.NODE_ENV !== "production" || /^(1|true|yes|on)$/i.test(process.env.LICIA_ALLOW_MISSING_ORIGIN || "");
     if (!allowMissingOrigin && ["cross-site", "same-site"].includes(fetchSite)) {
       return NextResponse.json({ error: "Permintaan lintas-site tidak diizinkan." }, { status: 403 });
     }
@@ -171,7 +186,13 @@ export function enforceSameOrigin(req: Request): NextResponse | null {
   }
   addDevelopmentLoopbackOrigins(req, allowed);
 
-  if (allowed.has(origin) || isDevelopmentTunnel(origin) || isDevelopmentLoopbackOrigin(origin) || isConfiguredDevTunnelPair(req, origin)) return null;
+  if (
+    allowed.has(origin) ||
+    isDevelopmentTunnel(origin) ||
+    isDevelopmentLoopbackOrigin(origin) ||
+    isConfiguredDevTunnelPair(req, origin)
+  )
+    return null;
 
   console.warn("[security] Rejected cross-origin API request", {
     origin,
@@ -200,7 +221,10 @@ export async function distributedRateLimit(
     });
     if (!error && data && typeof data === "object") {
       if ((data as { allowed?: unknown }).allowed === false) {
-        const retryAfter = Math.max(1, Number((data as { retry_after_seconds?: unknown }).retry_after_seconds) || Math.ceil(windowMs / 1000));
+        const retryAfter = Math.max(
+          1,
+          Number((data as { retry_after_seconds?: unknown }).retry_after_seconds) || Math.ceil(windowMs / 1000),
+        );
         return new NextResponse(JSON.stringify({ error: "Terlalu banyak permintaan. Coba lagi sebentar." }), {
           status: 429,
           headers: { "content-type": "application/json", "retry-after": String(retryAfter) },
@@ -237,7 +261,10 @@ export function rateLimit(key: string, limit: number, windowMs: number): NextRes
 export function assertJsonSize(req: Request, maxBytes: number): NextResponse | null {
   const raw = req.headers.get("content-length");
   if (raw && Number(raw) > maxBytes) {
-    return NextResponse.json({ error: `Payload terlalu besar. Batas sekitar ${Math.round(maxBytes / 1024 / 1024)} MB.` }, { status: 413 });
+    return NextResponse.json(
+      { error: `Payload terlalu besar. Batas sekitar ${Math.round(maxBytes / 1024 / 1024)} MB.` },
+      { status: 413 },
+    );
   }
   return null;
 }

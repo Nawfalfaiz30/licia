@@ -16,7 +16,10 @@ const problems = [];
 const entries = {};
 for (const key of keys) {
   const raw = en[key];
-  if (raw === undefined) { problems.push(`belum diterjemahkan: ${key.slice(0, 70)}`); continue; }
+  if (raw === undefined) {
+    problems.push(`belum diterjemahkan: ${key.slice(0, 70)}`);
+    continue;
+  }
   if (names(key) !== names(raw)) problems.push(`placeholder tidak cocok: ${key.slice(0, 50)} -> ${raw.slice(0, 50)}`);
   if (raw !== key) entries[key] = raw;
 }
@@ -24,8 +27,13 @@ for (const [k, v] of Object.entries({ ...en, ...manual })) if (!keys.includes(k)
 Object.assign(entries, manual);
 const sorted = Object.fromEntries(Object.entries(entries).sort(([a], [b]) => a.localeCompare(b)));
 if (!check) {
-  const body = Object.entries(sorted).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)},`).join("\n");
-  fs.writeFileSync("lib/i18n/en.ts", `/**\n * Kamus teks-sumber Indonesia → Inggris (${Object.keys(sorted).length} entri). DIHASILKAN oleh scripts/build-i18n.mjs\n * dari i18n-src/en.json. Jangan sunting manual; ubah sumbernya lalu jalankan \`npm run i18n:build\`.\n * Teks yang tidak ada di sini tampil apa adanya (Indonesia) — tidak pernah kosong.\n */\nexport const EN_SOURCE: Record<string, string> = {\n${body}\n};\n`);
+  const body = Object.entries(sorted)
+    .map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)},`)
+    .join("\n");
+  fs.writeFileSync(
+    "lib/i18n/en.ts",
+    `/**\n * Kamus teks-sumber Indonesia → Inggris (${Object.keys(sorted).length} entri). DIHASILKAN oleh scripts/build-i18n.mjs\n * dari i18n-src/en.json. Jangan sunting manual; ubah sumbernya lalu jalankan \`npm run i18n:build\`.\n * Teks yang tidak ada di sini tampil apa adanya (Indonesia) — tidak pernah kosong.\n */\nexport const EN_SOURCE: Record<string, string> = {\n${body}\n};\n`,
+  );
 }
 console.log(`kunci: ${keys.length}, entri kamus: ${Object.keys(sorted).length}, masalah: ${problems.length}`);
 if (problems.length) console.log(problems.slice(0, 40).join("\n"));

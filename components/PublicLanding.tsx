@@ -2,7 +2,10 @@ import Link from "next/link";
 
 const features = [
   ["Hari Ini", "Satu tempat untuk melihat langkah terbaik, agenda, prioritas, dan ritme harian."],
-  ["AI yang bisa bertindak", "Licia dapat membaca konteks Life OS, menjalankan aksi terverifikasi, dan menyediakan undo."],
+  [
+    "AI yang bisa bertindak",
+    "Licia dapat membaca konteks Life OS, menjalankan aksi terverifikasi, dan menyediakan undo.",
+  ],
   ["Offline-first", "Perubahan dapat diantre saat offline dan disinkronkan kembali dengan resolusi konflik."],
   ["Pribadi", "RLS, Vault client-side, privacy controls, audit trail, dan proteksi aksi berisiko."],
 ];
@@ -17,7 +20,8 @@ export function PublicLanding() {
             Satu ruang untuk berpikir, merencanakan, dan menjalani hidup.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-textMuted">
-            Tugas, kalender, catatan, keuangan, kebiasaan, fokus, dan AI bekerja sebagai satu sistem yang memahami konteksmu.
+            Tugas, kalender, catatan, keuangan, kebiasaan, fokus, dan AI bekerja sebagai satu sistem yang memahami
+            konteksmu.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/login" className="min-h-11 rounded-2xl bg-accent px-6 py-3 font-semibold text-white shadow-sm">
@@ -39,8 +43,12 @@ export function PublicLanding() {
         </div>
 
         <footer className="mt-14 flex flex-wrap gap-4 text-sm text-textMuted">
-          <Link href="/privacy" className="hover:text-text">Privasi</Link>
-          <Link href="/security" className="hover:text-text">Keamanan</Link>
+          <Link href="/privacy" className="hover:text-text">
+            Privasi
+          </Link>
+          <Link href="/security" className="hover:text-text">
+            Keamanan
+          </Link>
           <span>Licia 0.58.0</span>
         </footer>
       </section>

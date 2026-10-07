@@ -3,10 +3,10 @@
 Recommended production topology:
 
 Vercel: Next.js UI + light API
-  -> Supabase Auth/Postgres/Realtime
+-> Supabase Auth/Postgres/Realtime
 
 Single reminder dispatcher:
-  VPS/PM2 worker OR Vercel Cron/Supabase scheduled function
+VPS/PM2 worker OR Vercel Cron/Supabase scheduled function
 
 Preview must use a non-production Supabase project/branch and non-production service credentials.
 

@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 
-const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),summary,[contenteditable="true"],[tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),summary,[contenteditable="true"],[tabindex]:not([tabindex="-1"])';
 const DIALOG = '[role="dialog"][aria-modal="true"]';
 
 function isVisible(el: HTMLElement) {
@@ -40,7 +41,9 @@ export function OverlayGuard() {
         if (!focusInside) {
           const preferred = el.querySelector<HTMLElement>("[data-autofocus],[autofocus]");
           const target = preferred ?? focusables(el)[0] ?? el;
-          requestAnimationFrame(() => { if (el.isConnected && !el.contains(document.activeElement)) target.focus({ preventScroll: true }); });
+          requestAnimationFrame(() => {
+            if (el.isConnected && !el.contains(document.activeElement)) target.focus({ preventScroll: true });
+          });
         }
       }
       for (let i = stack.length - 1; i >= 0; i--) {
@@ -48,7 +51,12 @@ export function OverlayGuard() {
         const [removed] = stack.splice(i, 1);
         const wasTop = i === stack.length; // yang dibuang adalah yang paling atas
         const opener = removed.opener;
-        if (wasTop && opener && opener.isConnected && (document.activeElement === document.body || !document.activeElement || !document.activeElement.isConnected)) {
+        if (
+          wasTop &&
+          opener &&
+          opener.isConnected &&
+          (document.activeElement === document.body || !document.activeElement || !document.activeElement.isConnected)
+        ) {
           requestAnimationFrame(() => opener.focus({ preventScroll: true }));
         }
       }
@@ -59,13 +67,26 @@ export function OverlayGuard() {
       const top = stack[stack.length - 1].el;
       if (!top.isConnected) return;
       const items = focusables(top);
-      if (!items.length) { event.preventDefault(); top.focus(); return; }
+      if (!items.length) {
+        event.preventDefault();
+        top.focus();
+        return;
+      }
       const first = items[0];
       const last = items[items.length - 1];
       const active = document.activeElement as HTMLElement | null;
-      if (!active || !top.contains(active)) { event.preventDefault(); (event.shiftKey ? last : first).focus(); return; }
-      if (event.shiftKey && (active === first || active === top)) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && active === last) { event.preventDefault(); first.focus(); }
+      if (!active || !top.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
+      if (event.shiftKey && (active === first || active === top)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
     const observer = new MutationObserver(sync);
@@ -73,7 +94,11 @@ export function OverlayGuard() {
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("keydown", onKeyDown, true);
     sync();
-    return () => { observer.disconnect(); document.removeEventListener("focusin", onFocusIn); document.removeEventListener("keydown", onKeyDown, true); };
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
   }, []);
   return null;
 }

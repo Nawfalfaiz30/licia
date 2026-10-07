@@ -52,7 +52,10 @@ export function isPushConfigured() {
 
 function ensureConfigured() {
   const config = getPushConfig();
-  if (!config.vapid) throw new Error(`VAPID belum dikonfigurasi. Isi: ${config.missing.filter((x) => x.startsWith("VAPID_")).join(", ") || "VAPID_*"}.`);
+  if (!config.vapid)
+    throw new Error(
+      `VAPID belum dikonfigurasi. Isi: ${config.missing.filter((x) => x.startsWith("VAPID_")).join(", ") || "VAPID_*"}.`,
+    );
   if (!config.serviceRole) throw new Error("Supabase service-role belum dikonfigurasi di server.");
   // Manual push delivery does not require the worker/cron secret.
   // The cron secret is only required by the reminder dispatcher endpoint/worker.
@@ -90,14 +93,27 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
     try {
       await webpush.sendNotification(row.subscription, JSON.stringify(payload), { TTL: 24 * 60 * 60, urgency: "high" });
       results.push({ id: row.id, ok: true });
-      await supabase.from("push_subscriptions").update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", row.id).eq("user_id", userId);
+      await supabase
+        .from("push_subscriptions")
+        .update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("id", row.id)
+        .eq("user_id", userId);
     } catch (error: any) {
       const status = Number(error?.statusCode || 0) || undefined;
-      results.push({ id: row.id, ok: false, status, error: error instanceof Error ? error.message : "Push gagal dikirim." });
+      results.push({
+        id: row.id,
+        ok: false,
+        status,
+        error: error instanceof Error ? error.message : "Push gagal dikirim.",
+      });
       if ([404, 410].includes(status ?? 0)) {
         await supabase.from("push_subscriptions").delete().eq("id", row.id).eq("user_id", userId);
       } else {
-        await supabase.from("push_subscriptions").update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", row.id).eq("user_id", userId);
+        await supabase
+          .from("push_subscriptions")
+          .update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq("id", row.id)
+          .eq("user_id", userId);
       }
     }
   }

@@ -1,34 +1,98 @@
 import fs from "node:fs";
 import path from "node:path";
-const root=process.cwd();
-const failures=[];
-const required=["lib/notifications/push.ts","lib/notifications/events.ts","lib/ai/reminderContinuity.ts","app/api/reminders/dispatch/route.ts","app/api/reminders/sync-defaults/route.ts","app/api/push/subscribe/route.ts","app/api/chat/route.ts","app/(app)/reminders/page.tsx","app/(app)/system/page.tsx","app/(app)/life-graph/page.tsx","supabase/schema_v28_intelligence.sql","supabase/schema_v30_core_intelligence.sql","supabase/migrations/0001_bootstrap_v30.sql","supabase/migrations/0013_finance_ledger.sql","supabase/migrations/0014_sync_leases.sql","supabase/migrations/0015_rate_limit_and_finance_summary.sql","app/api/sync/mutation/route.ts","components/SyncManager.tsx","scripts/reminder-worker.mjs","scripts/setup-push.mjs","scripts/verify-migrations.mjs","proxy.ts","public/sw.js","config/licia-version.json"];
-for(const file of required)if(!fs.existsSync(path.join(root,file)))failures.push(`Missing: ${file}`);
-const pkg=JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8"));
-if(!pkg.dependencies?.["web-push"])failures.push("web-push dependency missing");
-if(!pkg.devDependencies?.["@types/web-push"])failures.push("@types/web-push devDependency missing");
-const schema=fs.readFileSync(path.join(root,"supabase/schema_v28_intelligence.sql"),"utf8");
-const schemaV30=fs.readFileSync(path.join(root,"supabase/schema_v30_core_intelligence.sql"),"utf8");
-const schemaV31=fs.readFileSync(path.join(root,"supabase/schema_v31_sync.sql"),"utf8");
-for(const token of ["life_os_events","system_health_heartbeats","delivery_attempts","last_delivery_error","uniq_reminders_one_active_bound_target_offset"])if(!schemaV30.includes(token))failures.push(`V30 schema missing ${token}`);
-for(const token of ["push_subscriptions","reminders","notification_events"])if(!schema.includes(`public.${token}`))failures.push(`Schema missing ${token}`);
-for(const token of ["life_os_sync_devices","life_os_sync_events","life_os_sync_mutations","licia_write_sync_event"])if(!schemaV31.includes(token))failures.push(`V31 schema missing ${token}`);
-const chatRoute=fs.readFileSync(path.join(root,"app/api/chat/route.ts"),"utf8");
-const chatOrchestrator=fs.readFileSync(path.join(root,"lib/ai/chatOrchestrator.ts"),"utf8");
-for(const token of ["chatGet","chatDelete","chatPost","chatOrchestrator"])if(!chatRoute.includes(token))failures.push(`AI route boundary missing ${token}`);
-for(const token of ["detectReminderContinuity","get_unified_life_snapshot","get_life_module_data","search_life_os"])if(!chatOrchestrator.includes(token))failures.push(`AI integration missing ${token}`);
-const sw=fs.readFileSync(path.join(root,"public/sw.js"),"utf8");
-if(!sw.includes("push"))failures.push("service worker push listener missing");
-const push=fs.readFileSync(path.join(root,"lib/notifications/push.ts"),"utf8"), worker=fs.readFileSync(path.join(root,"scripts/reminder-worker.mjs"),"utf8");
-for(const token of ["VAPID_SUBJECT","SUPABASE_SERVICE_ROLE_KEY","LICIA_CRON_SECRET"])if(!push.includes(token))failures.push(`Push configuration guard missing ${token}`);
-if(!worker.includes("/api/reminders/dispatch"))failures.push("Reminder worker dispatcher call missing");
-const textFiles=[];function walk(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(["node_modules",".next",".git"].includes(ent.name))continue;const p=path.join(dir,ent.name);if(ent.isDirectory())walk(p);else if(/\.(ts|tsx|mjs|js|css|json|sql)$/.test(ent.name)||ent.name.startsWith(".env"))textFiles.push(p)}}walk(root);
-for(const file of textFiles){
-  const s=fs.readFileSync(file,"utf8");
-  const relative=path.relative(root,file);
-  const secretPatterns=/\bsk-proj-[A-Za-z0-9_-]{20,}|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----|^VAPID_PRIVATE_KEY=(?!YOUR_)[A-Za-z0-9_-]{30,}|^SUPABASE_SERVICE_ROLE_KEY=(?!YOUR_).+|^OPENAI_API_KEY=(?!YOUR_|sk-your)[A-Za-z0-9_-]{20,}|^LICIA_CRON_SECRET=(?!YOUR_).{12,}/mi;
-  if(secretPatterns.test(s)) failures.push(`Possible secret in ${relative}`);
-  const isEnvExample = relative === ".env.example";
-  if(/localhost:3000|127\.0\.0\.1:3000/.test(s)&&!isEnvExample&&!file.endsWith("preflight.mjs")&&!file.endsWith("healthcheck.mjs")&&!file.endsWith("audit.mjs")&&!file.endsWith("reminder-cron.mjs")&&!file.endsWith("reminder-worker.mjs"))failures.push(`Runtime localhost reference in ${relative}`);
+const root = process.cwd();
+const failures = [];
+const required = [
+  "lib/notifications/push.ts",
+  "lib/notifications/events.ts",
+  "lib/ai/reminderContinuity.ts",
+  "app/api/reminders/dispatch/route.ts",
+  "app/api/reminders/sync-defaults/route.ts",
+  "app/api/push/subscribe/route.ts",
+  "app/api/chat/route.ts",
+  "app/(app)/reminders/page.tsx",
+  "app/(app)/system/page.tsx",
+  "app/(app)/life-graph/page.tsx",
+  "supabase/schema_v28_intelligence.sql",
+  "supabase/schema_v30_core_intelligence.sql",
+  "supabase/migrations/0001_bootstrap_v30.sql",
+  "supabase/migrations/0013_finance_ledger.sql",
+  "supabase/migrations/0014_sync_leases.sql",
+  "supabase/migrations/0015_rate_limit_and_finance_summary.sql",
+  "app/api/sync/mutation/route.ts",
+  "components/SyncManager.tsx",
+  "scripts/reminder-worker.mjs",
+  "scripts/setup-push.mjs",
+  "scripts/verify-migrations.mjs",
+  "proxy.ts",
+  "public/sw.js",
+  "config/licia-version.json",
+];
+for (const file of required) if (!fs.existsSync(path.join(root, file))) failures.push(`Missing: ${file}`);
+const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+if (!pkg.dependencies?.["web-push"]) failures.push("web-push dependency missing");
+if (!pkg.devDependencies?.["@types/web-push"]) failures.push("@types/web-push devDependency missing");
+const schema = fs.readFileSync(path.join(root, "supabase/schema_v28_intelligence.sql"), "utf8");
+const schemaV30 = fs.readFileSync(path.join(root, "supabase/schema_v30_core_intelligence.sql"), "utf8");
+const schemaV31 = fs.readFileSync(path.join(root, "supabase/schema_v31_sync.sql"), "utf8");
+for (const token of [
+  "life_os_events",
+  "system_health_heartbeats",
+  "delivery_attempts",
+  "last_delivery_error",
+  "uniq_reminders_one_active_bound_target_offset",
+])
+  if (!schemaV30.includes(token)) failures.push(`V30 schema missing ${token}`);
+for (const token of ["push_subscriptions", "reminders", "notification_events"])
+  if (!schema.includes(`public.${token}`)) failures.push(`Schema missing ${token}`);
+for (const token of ["life_os_sync_devices", "life_os_sync_events", "life_os_sync_mutations", "licia_write_sync_event"])
+  if (!schemaV31.includes(token)) failures.push(`V31 schema missing ${token}`);
+const chatRoute = fs.readFileSync(path.join(root, "app/api/chat/route.ts"), "utf8");
+const chatOrchestrator = fs.readFileSync(path.join(root, "lib/ai/chatOrchestrator.ts"), "utf8");
+for (const token of ["chatGet", "chatDelete", "chatPost", "chatOrchestrator"])
+  if (!chatRoute.includes(token)) failures.push(`AI route boundary missing ${token}`);
+for (const token of ["detectReminderContinuity", "get_unified_life_snapshot", "get_life_module_data", "search_life_os"])
+  if (!chatOrchestrator.includes(token)) failures.push(`AI integration missing ${token}`);
+const sw = fs.readFileSync(path.join(root, "public/sw.js"), "utf8");
+if (!sw.includes("push")) failures.push("service worker push listener missing");
+const push = fs.readFileSync(path.join(root, "lib/notifications/push.ts"), "utf8"),
+  worker = fs.readFileSync(path.join(root, "scripts/reminder-worker.mjs"), "utf8");
+for (const token of ["VAPID_SUBJECT", "SUPABASE_SERVICE_ROLE_KEY", "LICIA_CRON_SECRET"])
+  if (!push.includes(token)) failures.push(`Push configuration guard missing ${token}`);
+if (!worker.includes("/api/reminders/dispatch")) failures.push("Reminder worker dispatcher call missing");
+const textFiles = [];
+function walk(dir) {
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (["node_modules", ".next", ".git"].includes(ent.name)) continue;
+    const p = path.join(dir, ent.name);
+    if (ent.isDirectory()) walk(p);
+    else if (/\.(ts|tsx|mjs|js|css|json|sql)$/.test(ent.name) || ent.name.startsWith(".env")) textFiles.push(p);
+  }
 }
-if(failures.length){console.error(`Licia audit FAILED (${failures.length})`);for(const x of failures)console.error(`- ${x}`);process.exit(1)}console.log(`Licia audit OK — ${textFiles.length} text files scanned, ${required.length} core files present, no obvious runtime secrets/origin leaks.`);
+walk(root);
+for (const file of textFiles) {
+  const s = fs.readFileSync(file, "utf8");
+  const relative = path.relative(root, file);
+  const secretPatterns =
+    /\bsk-proj-[A-Za-z0-9_-]{20,}|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----|^VAPID_PRIVATE_KEY=(?!YOUR_)[A-Za-z0-9_-]{30,}|^SUPABASE_SERVICE_ROLE_KEY=(?!YOUR_).+|^OPENAI_API_KEY=(?!YOUR_|sk-your)[A-Za-z0-9_-]{20,}|^LICIA_CRON_SECRET=(?!YOUR_).{12,}/im;
+  if (secretPatterns.test(s)) failures.push(`Possible secret in ${relative}`);
+  const isEnvExample = relative === ".env.example";
+  if (
+    /localhost:3000|127\.0\.0\.1:3000/.test(s) &&
+    !isEnvExample &&
+    !file.endsWith("preflight.mjs") &&
+    !file.endsWith("healthcheck.mjs") &&
+    !file.endsWith("audit.mjs") &&
+    !file.endsWith("reminder-cron.mjs") &&
+    !file.endsWith("reminder-worker.mjs")
+  )
+    failures.push(`Runtime localhost reference in ${relative}`);
+}
+if (failures.length) {
+  console.error(`Licia audit FAILED (${failures.length})`);
+  for (const x of failures) console.error(`- ${x}`);
+  process.exit(1);
+}
+console.log(
+  `Licia audit OK — ${textFiles.length} text files scanned, ${required.length} core files present, no obvious runtime secrets/origin leaks.`,
+);

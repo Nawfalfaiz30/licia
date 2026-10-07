@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { ensureTimezoneOffset, ensureWibOffset, localDateTimeToIso, offsetForTimezone, dateStrInTimezone, wibDateStr } from "@/lib/date";
+import {
+  ensureTimezoneOffset,
+  ensureWibOffset,
+  localDateTimeToIso,
+  offsetForTimezone,
+  dateStrInTimezone,
+  wibDateStr,
+} from "@/lib/date";
 
 describe("ensureTimezoneOffset", () => {
   it("mengganti Z (UTC) dengan offset WIB, bukan menggeser jam", () => {

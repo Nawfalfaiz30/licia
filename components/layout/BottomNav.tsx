@@ -19,9 +19,7 @@ export function BottomNav() {
   const coreNav = ["/today", "/chat", "/tasks", "/calendar", "/finance"];
   const visiblePrimary = [
     { href: "/today", label: "Hari Ini", i18nKey: "today", icon: CalendarDays },
-    ...coreNav
-      .filter((href) => href !== "/today")
-      .map((href) => allNavItems.find((item) => item.href === href)),
+    ...coreNav.filter((href) => href !== "/today").map((href) => allNavItems.find((item) => item.href === href)),
   ].filter((item): item is NonNullable<typeof item> => Boolean(item));
   const isPrimary = visiblePrimary.some((i) => pathname?.startsWith(i.href));
   const isInMore = !isPrimary && moreNavGroups.some((g) => g.items.some((i) => pathname?.startsWith(i.href)));
@@ -40,7 +38,7 @@ export function BottomNav() {
                 onPointerDown={() => haptic("selection")}
                 className={clsx(
                   "licia-v32-interactive licia-v32-ripple mx-0.5 my-1 flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-2xs font-medium transition",
-                  active ? "bg-accent/10 text-accent" : "text-textMuted hover:bg-bg hover:text-text"
+                  active ? "bg-accent/10 text-accent" : "text-textMuted hover:bg-bg hover:text-text",
                 )}
               >
                 <Icon size={20} />
@@ -53,12 +51,13 @@ export function BottomNav() {
             onClick={() => setMoreOpen(true)}
             className={clsx(
               "licia-v32-interactive licia-v32-ripple flex flex-col items-center gap-1 py-2.5 text-2xs font-medium transition",
-              isInMore ? "text-accent" : "text-textMuted"
+              isInMore ? "text-accent" : "text-textMuted",
             )}
             aria-label={tr("Buka semua fitur di Lainnya")}
           >
             <MoreHorizontal size={20} />
-            {tr("Lainnya")}</button>
+            {tr("Lainnya")}
+          </button>
         </div>
       </nav>
       <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />

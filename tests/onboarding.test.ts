@@ -18,7 +18,15 @@ describe("onboarding checklist", () => {
     expect(buildOnboardingSteps(empty).find((s) => s.id === "note")?.done).toBe(false);
   });
   it("selesai penuh", () => {
-    const steps = buildOnboardingSteps({ displayName: true, goal: true, project: false, task: true, finance: true, habit: false, note: true });
+    const steps = buildOnboardingSteps({
+      displayName: true,
+      goal: true,
+      project: false,
+      task: true,
+      finance: true,
+      habit: false,
+      note: true,
+    });
     expect(onboardingProgress(steps).complete).toBe(true);
     expect(nextStep(steps)).toBeNull();
   });

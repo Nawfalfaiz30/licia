@@ -7,7 +7,13 @@ import { QUICK_CAPTURE_EVENT, type QuickCaptureRequest } from "@/lib/shortcuts";
  * Keadaan kosong yang mengajak bertindak (A7). `examples` tampil sebagai chip; mengkliknya membuka Simpan Cepat
  * dengan teks itu sudah terisi (mode lewat `exampleMode`), sehingga halaman kosong tidak menjadi jalan buntu.
  */
-export function EmptyState({ title, description, action, examples, exampleMode = "task" }: {
+export function EmptyState({
+  title,
+  description,
+  action,
+  examples,
+  exampleMode = "task",
+}: {
   title: string;
   description: string;
   action?: React.ReactNode;
@@ -25,7 +31,17 @@ export function EmptyState({ title, description, action, examples, exampleMode =
           <ul className="flex flex-wrap justify-center gap-2">
             {examples.map((example) => (
               <li key={example}>
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent(QUICK_CAPTURE_EVENT, { detail: { mode: exampleMode, text: t(example) } as QuickCaptureRequest }))} className="min-h-9 rounded-full border border-accent/25 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/15">
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent(QUICK_CAPTURE_EVENT, {
+                        detail: { mode: exampleMode, text: t(example) } as QuickCaptureRequest,
+                      }),
+                    )
+                  }
+                  className="min-h-9 rounded-full border border-accent/25 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/15"
+                >
                   “{t(example)}”
                 </button>
               </li>

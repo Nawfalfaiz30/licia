@@ -1,7 +1,17 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { AA_NORMAL, DARK_SURFACES, LIGHT_SURFACES, blend, contrastRatio, deriveAccentTokens, deriveRoleTokens, hexToRgb, rgbToHex } from "@/lib/contrast";
+import {
+  AA_NORMAL,
+  DARK_SURFACES,
+  LIGHT_SURFACES,
+  blend,
+  contrastRatio,
+  deriveAccentTokens,
+  deriveRoleTokens,
+  hexToRgb,
+  rgbToHex,
+} from "@/lib/contrast";
 import { accentPresets, bgPresetsDark, bgPresetsLight } from "@/lib/theme";
 
 const css = fs.readFileSync(path.join(process.cwd(), "app/globals.css"), "utf8");
@@ -60,22 +70,32 @@ describe("token aksen turunan (A10)", () => {
 
 describe("token bawaan di globals.css", () => {
   it("isian aksen/bahaya/sukses terbaca dengan teks putih di kedua mode", () => {
-    for (const [name, block] of [["--accent-rgb", "root"], ["--accent-rgb", "dark"], ["--danger-rgb", "root"], ["--success-rgb", "root"], ["--success-rgb", "dark"]] as const) {
+    for (const [name, block] of [
+      ["--accent-rgb", "root"],
+      ["--accent-rgb", "dark"],
+      ["--danger-rgb", "root"],
+      ["--success-rgb", "root"],
+      ["--success-rgb", "dark"],
+    ] as const) {
       expect(contrastRatio(triple(name, block), "#ffffff")).toBeGreaterThanOrEqual(AA_NORMAL);
     }
   });
   it("tinta aksen/bahaya/sukses terbaca di atas semua latar preset", () => {
     for (const name of ["--accent-ink-rgb", "--danger-ink-rgb", "--success-ink-rgb"]) {
       const ink = triple(name, "root");
-      for (const s of ["#ffffff", ...bgPresetsLight.map((b) => b.hex)]) expect(contrastRatio(ink, s)).toBeGreaterThanOrEqual(AA_NORMAL);
+      for (const s of ["#ffffff", ...bgPresetsLight.map((b) => b.hex)])
+        expect(contrastRatio(ink, s)).toBeGreaterThanOrEqual(AA_NORMAL);
     }
     for (const name of ["--accent-ink-rgb", "--danger-ink-rgb", "--success-ink-rgb"]) {
       const ink = triple(name, "dark");
-      for (const s of [...bgPresetsDark.map((b) => b.hex), "#171b2e", "#1d2238"]) expect(contrastRatio(ink, s)).toBeGreaterThanOrEqual(AA_NORMAL);
+      for (const s of [...bgPresetsDark.map((b) => b.hex), "#171b2e", "#1d2238"])
+        expect(contrastRatio(ink, s)).toBeGreaterThanOrEqual(AA_NORMAL);
     }
   });
   it("teks redup terbaca di semua latar preset", () => {
-    for (const s of ["#ffffff", ...bgPresetsLight.map((b) => b.hex)]) expect(contrastRatio(hexVar("--text-muted", "root"), s)).toBeGreaterThanOrEqual(AA_NORMAL);
-    for (const s of [...bgPresetsDark.map((b) => b.hex), "#171b2e"]) expect(contrastRatio(hexVar("--text-muted", "dark"), s)).toBeGreaterThanOrEqual(AA_NORMAL);
+    for (const s of ["#ffffff", ...bgPresetsLight.map((b) => b.hex)])
+      expect(contrastRatio(hexVar("--text-muted", "root"), s)).toBeGreaterThanOrEqual(AA_NORMAL);
+    for (const s of [...bgPresetsDark.map((b) => b.hex), "#171b2e"])
+      expect(contrastRatio(hexVar("--text-muted", "dark"), s)).toBeGreaterThanOrEqual(AA_NORMAL);
   });
 });

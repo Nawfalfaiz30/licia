@@ -5,6 +5,7 @@ Source: "Analisis Repo Licia dan Rekomendasi Pengembangan", dated 7 October 2026
 ## Security
 
 Implemented:
+
 - Gitleaks configuration and GitHub secret-scanning workflow.
 - CodeQL and npm audit workflow.
 - Local secret hygiene script.
@@ -15,6 +16,7 @@ Implemented:
 - Branch-ready CI quality gates.
 
 Owner actions still required:
+
 - Rotate credentials if old public history ever contained real secrets.
 - Enable GitHub push protection and branch protection in repository settings.
 - Use separate Supabase and Vercel environments.
@@ -22,6 +24,7 @@ Owner actions still required:
 ## AI
 
 Implemented:
+
 - Versioned single tool-schema registry with optional strict schemas.
 - Hybrid FTS plus pgvector retrieval RPC and AI search tool.
 - Indexing hooks for notes, memories, decisions, and reading.
@@ -33,6 +36,7 @@ Implemented:
 - Finance, Health, and private-mode context exclusions.
 
 Still credential/provider dependent:
+
 - LLM-as-judge execution and actual 150-case scoring.
 - Production trace backend such as Sentry, Langfuse, or OpenTelemetry collector.
 - Batch API for nightly analytics.
@@ -40,6 +44,7 @@ Still credential/provider dependent:
 ## UX and PWA
 
 Implemented:
+
 - Core navigation model and legacy redirects.
 - Today as default authenticated home.
 - SSR public landing page with metadata.
@@ -49,11 +54,13 @@ Implemented:
 - Playwright configuration and critical-flow suite.
 
 Still to tune with product analytics:
+
 - Gesture polish, adaptive onboarding, component catalog/Storybook, accessibility device pass, and exact dashboard widget streaming after measuring real bundle and page costs.
 
 ## Integrations
 
 Implemented infrastructure:
+
 - Google Calendar OAuth start/callback, encrypted server-side token storage, primary-calendar incremental sync cursor, and two-way schedule mapping.
 - Generic inbound capture token flow suitable for Telegram, WhatsApp, and email bridges.
 - Automation webhook management and durable event queue.
@@ -63,6 +70,7 @@ Implemented infrastructure:
 - Encrypted scheduled-backup worker.
 
 Provider and device setup still required:
+
 - Google Cloud OAuth client and redirect URI.
 - Telegram, WhatsApp, and email provider webhook bridge.
 - Object-storage bucket and backup encryption key.
@@ -72,6 +80,7 @@ Provider and device setup still required:
 ## DevOps
 
 Implemented:
+
 - Parallel CI static, unit, eval, and build stages.
 - Optional Playwright E2E stage.
 - Dependabot.

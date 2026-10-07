@@ -11,7 +11,10 @@ beforeEach(() => {
   delete process.env.LICIA_AI_FALLBACK_MODEL;
 });
 afterEach(() => {
-  for (const k of KEYS) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+  for (const k of KEYS) {
+    if (saved[k] === undefined) delete process.env[k];
+    else process.env[k] = saved[k];
+  }
 });
 
 describe("selectAiModel", () => {

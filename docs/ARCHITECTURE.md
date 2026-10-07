@@ -1,9 +1,9 @@
 # Licia Architecture
 
 User -> Next.js/PWA -> Route Handlers
-                         -> AI Runtime -> Context/Router/Tools -> Supabase
-                         -> Domain Services -> Event Bus -> Reminders/Push
-                         -> Sync API -> Version/Conflict/Replay
+-> AI Runtime -> Context/Router/Tools -> Supabase
+-> Domain Services -> Event Bus -> Reminders/Push
+-> Sync API -> Version/Conflict/Replay
 
 ## Reliability contract
 

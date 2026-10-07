@@ -6,7 +6,9 @@ const cache = new Map<string, CacheEntry<unknown>>();
 const DEFAULT_TTL_MS = Math.max(500, Math.min(15000, Number(process.env.LICIA_CONTEXT_CACHE_TTL_MS || 2500) || 2500));
 const MAX_ENTRIES = 96;
 
-function now() { return Date.now(); }
+function now() {
+  return Date.now();
+}
 
 export async function memoizeUserContext<T>(key: string, loader: () => Promise<T>, ttlMs = DEFAULT_TTL_MS): Promise<T> {
   const hit = cache.get(key);
@@ -27,4 +29,6 @@ export function invalidateUserContext(userId: string) {
   invalidateUserData("dashboard", userId);
 }
 
-export function clearUserContextCache() { cache.clear(); }
+export function clearUserContextCache() {
+  cache.clear();
+}

@@ -26,10 +26,30 @@ const files = [
   "app/(app)/copilot/page.tsx",
   "app/(app)/command/page.tsx",
 ];
-for (const file of files) { if (!fs.existsSync(path.join(root, file))) throw new Error(`Missing ${file}`); }
+for (const file of files) {
+  if (!fs.existsSync(path.join(root, file))) throw new Error(`Missing ${file}`);
+}
 const nav = fs.readFileSync(path.join(root, "components/layout/nav-items.ts"), "utf8");
-if (nav.includes('item("/subscriptions"') || nav.includes('item("/projects"') || nav.includes('item("/goals"')) throw new Error("Duplicate merged navigation detected");
-for (const [file,target] of [["subscriptions","/finance?tab=subscriptions"],["goals","/goals-projects"],["projects","/goals-projects"],["notes","/knowledge"],["memory","/knowledge"],["vault","/knowledge"],["reading","/knowledge"],["life-map","/insights"],["life-graph","/insights"],["timeline","/insights"],["analytics","/insights"],["review-center","/insights"],["brief","/insights"],["copilot","/chat"],["command","/chat"]]) {
- const source=fs.readFileSync(path.join(root, `app/(app)/${file}/page.tsx`), "utf8"); if (!source.includes(`redirect("${target}")`)) throw new Error(`${file} redirect mismatch`);
+if (nav.includes('item("/subscriptions"') || nav.includes('item("/projects"') || nav.includes('item("/goals"'))
+  throw new Error("Duplicate merged navigation detected");
+for (const [file, target] of [
+  ["subscriptions", "/finance?tab=subscriptions"],
+  ["goals", "/goals-projects"],
+  ["projects", "/goals-projects"],
+  ["notes", "/knowledge"],
+  ["memory", "/knowledge"],
+  ["vault", "/knowledge"],
+  ["reading", "/knowledge"],
+  ["life-map", "/insights"],
+  ["life-graph", "/insights"],
+  ["timeline", "/insights"],
+  ["analytics", "/insights"],
+  ["review-center", "/insights"],
+  ["brief", "/insights"],
+  ["copilot", "/chat"],
+  ["command", "/chat"],
+]) {
+  const source = fs.readFileSync(path.join(root, `app/(app)/${file}/page.tsx`), "utf8");
+  if (!source.includes(`redirect("${target}")`)) throw new Error(`${file} redirect mismatch`);
 }
 console.log("Licia V41 verify OK");

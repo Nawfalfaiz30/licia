@@ -12,9 +12,7 @@ function strictifySchema(schema: JsonSchema): JsonSchema {
     for (const [name, child] of Object.entries(out.properties)) {
       const transformed = strictifySchema(child as JsonSchema);
       const originalRequired = new Set(Array.isArray(out.required) ? out.required : []);
-      properties[name] = originalRequired.has(name)
-        ? transformed
-        : { anyOf: [transformed, { type: "null" }] };
+      properties[name] = originalRequired.has(name) ? transformed : { anyOf: [transformed, { type: "null" }] };
     }
     out.properties = properties;
     out.required = Object.keys(properties);
@@ -41,11 +39,13 @@ export function getStrictToolDefs(defs: ToolDef[] = toolDefsRegistry): ToolDef[]
 }
 
 export function getToolCatalog(defs: ToolDef[] = toolDefsRegistry) {
-  return defs.map((def) => ({
-    name: def.function?.name || "",
-    description: def.function?.description || "",
-    schemaVersion: AI_TOOL_SCHEMA_VERSION,
-  })).filter((item) => item.name);
+  return defs
+    .map((def) => ({
+      name: def.function?.name || "",
+      description: def.function?.description || "",
+      schemaVersion: AI_TOOL_SCHEMA_VERSION,
+    }))
+    .filter((item) => item.name);
 }
 
 export function assertToolRegistryHealthy(defs: ToolDef[] = toolDefsRegistry) {

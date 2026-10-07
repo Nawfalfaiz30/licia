@@ -11,14 +11,30 @@ const checks = [
   ["verbose Indonesian date is supported", vision.includes("tanggal\\s+(\\d{1,2})") && vision.includes("bulan")],
   ["vision result can derive weekday", /weekdayFromDate/.test(vision)],
   ["structured vision is injected into AI context", /HASIL EKSTRAKSI TERSTRUKTUR DARI GAMBAR/.test(route)],
-  ["concrete date can come from image", /visionScheduleBlocks\.some\(\(block\) => Boolean\(block\.block_date\)\)/.test(route)],
+  [
+    "concrete date can come from image",
+    /visionScheduleBlocks\.some\(\(block\) => Boolean\(block\.block_date\)\)/.test(route),
+  ],
   ["explicit image calendar action has fast path", /explicitVisionScheduleAction/.test(route)],
-  ["fast path calls real calendar tool", /executeTool\(\{ supabase, userId: user\.id, timezone \}, "create_daily_schedule"/.test(route)],
+  [
+    "fast path calls real calendar tool",
+    /executeTool\(\{ supabase, userId: user\.id, timezone \}, "create_daily_schedule"/.test(route),
+  ],
   ["fast path records undo history", /ai_action_history/.test(route)],
   ["fast path does not require a weekday in the source", /block\.weekday \|\| weekdayFromDate/.test(route)],
-  ["vision import avoids exact duplicate calendar blocks", /Avoid duplicate imports/.test(route) && /existingKeys/.test(route)],
-  ["client reference is available before vision parsing", route.indexOf("const continuityReference") < route.indexOf("const structured = await analyzeScheduleImageStructured")],
-  ["old generic image clarification remains only for missing date", /tanggal kalender yang terlihat belum cukup konkret/.test(route)],
+  [
+    "vision import avoids exact duplicate calendar blocks",
+    /Avoid duplicate imports/.test(route) && /existingKeys/.test(route),
+  ],
+  [
+    "client reference is available before vision parsing",
+    route.indexOf("const continuityReference") <
+      route.indexOf("const structured = await analyzeScheduleImageStructured"),
+  ],
+  [
+    "old generic image clarification remains only for missing date",
+    /tanggal kalender yang terlihat belum cukup konkret/.test(route),
+  ],
 ];
 
 let failed = 0;

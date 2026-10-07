@@ -12,13 +12,19 @@ import { isTypingTarget } from "@/lib/shortcuts";
 export function ListShortcuts() {
   useEffect(() => {
     let lastG = 0;
-    const items = () => Array.from(document.querySelectorAll<HTMLElement>(`[${LIST_ITEM_ATTR}]`)).filter((el) => el.offsetParent !== null);
+    const items = () =>
+      Array.from(document.querySelectorAll<HTMLElement>(`[${LIST_ITEM_ATTR}]`)).filter(
+        (el) => el.offsetParent !== null,
+      );
     const owner = (el: Element | null) => el?.closest<HTMLElement>(`[${LIST_ITEM_ATTR}]`) ?? null;
 
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
       if (isTypingTarget(event.target) || document.querySelector('[aria-modal="true"]')) return;
-      if (event.key === "g" || event.key === "G") { lastG = Date.now(); return; }
+      if (event.key === "g" || event.key === "G") {
+        lastG = Date.now();
+        return;
+      }
       const action = LIST_KEYS[event.key];
       if (!action) return;
       if (Date.now() - lastG < 1300) return;
@@ -28,14 +34,21 @@ export function ListShortcuts() {
 
       if (action === "next" || action === "prev" || action === "first" || action === "last") {
         // ↑/↓ hanya dibajak bila fokus memang sudah ada di dalam daftar; J/K selalu bekerja.
-        if ((event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") && !current) return;
+        if (
+          (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") &&
+          !current
+        )
+          return;
         event.preventDefault();
         const idx = nextIndex(current ? list.indexOf(current) : -1, list.length, action);
         const el = list[idx];
         if (!el) return;
         if (!el.hasAttribute("tabindex")) el.tabIndex = -1;
         el.focus({ preventScroll: true });
-        el.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+        el.scrollIntoView({
+          block: "nearest",
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        });
         return;
       }
       if (!current) return;

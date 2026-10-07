@@ -13,7 +13,10 @@ function fakeClient(plan: Record<string, Error | string>) {
           calls.push({ model: params.model });
           const outcome = plan[params.model];
           if (outcome instanceof Error) throw outcome;
-          return { model: params.model, choices: [{ message: { role: "assistant", content: outcome ?? "ok" }, finish_reason: "stop" }] };
+          return {
+            model: params.model,
+            choices: [{ message: { role: "assistant", content: outcome ?? "ok" }, finish_reason: "stop" }],
+          };
         },
       },
     },
@@ -50,7 +53,11 @@ describe("chatCompletionWithFallback", () => {
   it("tanpa model cadangan: perilaku sama dengan chatCompletion (error diteruskan)", async () => {
     const { client, calls } = fakeClient({ main: httpError(503) });
     let threw = false;
-    try { await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: null }); } catch { threw = true; }
+    try {
+      await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: null });
+    } catch {
+      threw = true;
+    }
     expect(threw).toBe(true);
     expect(calls.map((c) => c.model)).toEqual(["main"]);
   });
@@ -72,7 +79,11 @@ describe("chatCompletionWithFallback", () => {
   it("error 400 tidak memicu fallback", async () => {
     const { client, calls } = fakeClient({ main: httpError(400, "invalid schema"), backup: "x" });
     let threw = false;
-    try { await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: "backup" }); } catch { threw = true; }
+    try {
+      await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: "backup" });
+    } catch {
+      threw = true;
+    }
     expect(threw).toBe(true);
     expect(calls.map((c) => c.model)).toEqual(["main"]);
   });
@@ -80,14 +91,30 @@ describe("chatCompletionWithFallback", () => {
   it("cadangan ikut gagal → error cadangan diteruskan", async () => {
     const { client } = fakeClient({ main: httpError(503), backup: httpError(500, "backup juga down") });
     let message = "";
-    try { await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: "backup" }); } catch (e) { message = (e as Error).message; }
+    try {
+      await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: "backup" });
+    } catch (e) {
+      message = (e as Error).message;
+    }
     expect(message).toBe("backup juga down");
   });
 
   it("parameter permintaan (messages) identik saat dialihkan ke cadangan", async () => {
     const seen: any[] = [];
-    const client = { chat: { completions: { create: async (p: any) => { seen.push(p); if (p.model === "main") throw httpError(500); return { model: p.model, choices: [] }; } } } } as any;
-    await chatCompletionWithFallback(client, { ...PARAMS("main"), max_completion_tokens: 321 }, undefined, { fallbackModel: "backup" });
+    const client = {
+      chat: {
+        completions: {
+          create: async (p: any) => {
+            seen.push(p);
+            if (p.model === "main") throw httpError(500);
+            return { model: p.model, choices: [] };
+          },
+        },
+      },
+    } as any;
+    await chatCompletionWithFallback(client, { ...PARAMS("main"), max_completion_tokens: 321 }, undefined, {
+      fallbackModel: "backup",
+    });
     expect(seen[1].model).toBe("backup");
     expect(seen[1].max_completion_tokens).toBe(321);
     expect(seen[1].messages).toEqual(seen[0].messages);
@@ -99,7 +126,8 @@ describe("circuit breaker", () => {
     let t = 1_000_000;
     const now = () => t;
     const { client, calls } = fakeClient({ main: httpError(503), backup: "cadangan" });
-    for (let i = 0; i < 3; i += 1) await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: "backup", now });
+    for (let i = 0; i < 3; i += 1)
+      await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: "backup", now });
     expect(calls.filter((c) => c.model === "main")).toHaveLength(3);
 
     calls.length = 0;
@@ -113,7 +141,8 @@ describe("circuit breaker", () => {
     const now = () => t;
     const plan: Record<string, Error | string> = { main: httpError(503), backup: "cadangan" };
     const { client, calls } = fakeClient(plan);
-    for (let i = 0; i < 3; i += 1) await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: "backup", now });
+    for (let i = 0; i < 3; i += 1)
+      await chatCompletionWithFallback(client, PARAMS("main"), undefined, { fallbackModel: "backup", now });
 
     t += 61_000;
     plan.main = "pulih";

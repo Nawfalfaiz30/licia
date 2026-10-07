@@ -17,12 +17,45 @@ ATURAN AGEN LICIA:
 `;
 
 const HIGH_RISK_TOOLS = new Set([
-  "delete_expense", "delete_task", "delete_tasks_bulk", "delete_schedule_block", "delete_schedule_blocks_bulk", "delete_project", "delete_goal", "delete_note", "delete_memory", "delete_vault_item", "delete_automation", "delete_habit", "delete_subscription", "delete_notification", "delete_all_notifications", "delete_income", "delete_budget", "delete_account", "delete_reminder", "delete_all_reminders", "delete_decision", "delete_skill", "delete_reading", "delete_pomodoro_session",
+  "delete_expense",
+  "delete_task",
+  "delete_tasks_bulk",
+  "delete_schedule_block",
+  "delete_schedule_blocks_bulk",
+  "delete_project",
+  "delete_goal",
+  "delete_note",
+  "delete_memory",
+  "delete_vault_item",
+  "delete_automation",
+  "delete_habit",
+  "delete_subscription",
+  "delete_notification",
+  "delete_all_notifications",
+  "delete_income",
+  "delete_budget",
+  "delete_account",
+  "delete_reminder",
+  "delete_all_reminders",
+  "delete_decision",
+  "delete_skill",
+  "delete_reading",
+  "delete_pomodoro_session",
 ]);
 
 export function agentRiskForTool(tool: string) {
   if (HIGH_RISK_TOOLS.has(tool)) return "destructive" as const;
-  if (tool.startsWith("create_") || tool.startsWith("update_") || tool.startsWith("log_") || tool.startsWith("checkin_") || tool.startsWith("uncheckin_") || tool === "manage_life_os_data" || tool === "delete_task_dependency" || tool === "create_task_dependency") return "normal" as const;
+  if (
+    tool.startsWith("create_") ||
+    tool.startsWith("update_") ||
+    tool.startsWith("log_") ||
+    tool.startsWith("checkin_") ||
+    tool.startsWith("uncheckin_") ||
+    tool === "manage_life_os_data" ||
+    tool === "delete_task_dependency" ||
+    tool === "create_task_dependency"
+  )
+    return "normal" as const;
   return "low" as const;
 }
 
@@ -31,10 +64,24 @@ export function agentConfidenceFromResult(result: unknown) {
   const value = result as Record<string, unknown>;
   if (value.ok === false) return 0.2;
   if (value.verified === true) return 0.98;
-  if (value.record || value.task || value.note || value.reminder || value.schedule || value.project || value.goal || value.watcher) return 0.95;
+  if (
+    value.record ||
+    value.task ||
+    value.note ||
+    value.reminder ||
+    value.schedule ||
+    value.project ||
+    value.goal ||
+    value.watcher
+  )
+    return 0.95;
   return value.ok === true ? 0.88 : 0.6;
 }
 
 export function isMutationToolName(tool: string) {
-  return /^(create_|update_|delete_|log_|capture_|save_|checkin_|uncheckin_|mark_|manage_)/.test(tool) || tool === "create_task_dependency" || tool === "delete_task_dependency";
+  return (
+    /^(create_|update_|delete_|log_|capture_|save_|checkin_|uncheckin_|mark_|manage_)/.test(tool) ||
+    tool === "create_task_dependency" ||
+    tool === "delete_task_dependency"
+  );
 }

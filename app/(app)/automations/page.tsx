@@ -28,9 +28,17 @@ type Template = [string, string, string, string, number];
 const triggers = [
   { v: "overdue_task", l: "Tugas lewat deadline", help: "Licia mencari tugas terbuka yang tanggalnya sudah lewat." },
   { v: "review_due", l: "Keputusan perlu direview", help: "Licia melihat Decision Journal yang belum punya outcome." },
-  { v: "daily_open", l: "Saat Hari Ini dibuka", help: "Cocok untuk pengingat ringan yang selalu muncul saat memulai hari." },
+  {
+    v: "daily_open",
+    l: "Saat Hari Ini dibuka",
+    help: "Cocok untuk pengingat ringan yang selalu muncul saat memulai hari.",
+  },
   { v: "inactivity", l: "Proyek lama tidak disentuh", help: "Mendeteksi project aktif yang lama tidak diubah." },
-  { v: "schedule_soon", l: "Agenda segera dimulai", help: "Mengingatkan saat agenda tertentu masuk ke jendela menit yang kamu tentukan." },
+  {
+    v: "schedule_soon",
+    l: "Agenda segera dimulai",
+    help: "Mengingatkan saat agenda tertentu masuk ke jendela menit yang kamu tentukan.",
+  },
 ] as const;
 
 const actions = [
@@ -60,9 +68,16 @@ export default function AutomationsPage() {
 
   async function load() {
     const [{ data: r }, { data: t }, { data: d }, { data: p }] = await Promise.all([
-      supabase.from("automations").select("id,name,trigger_type,trigger_config,action_type,enabled,last_run_at,last_result,version,updated_at").order("created_at", { ascending: false }),
+      supabase
+        .from("automations")
+        .select("id,name,trigger_type,trigger_config,action_type,enabled,last_run_at,last_result,version,updated_at")
+        .order("created_at", { ascending: false }),
       supabase.from("tasks").select("id,title,status,due_at,updated_at").neq("status", "done").limit(300),
-      supabase.from("decisions").select("id,title,review_date,outcome").order("review_date", { ascending: true, nullsFirst: false }).limit(300),
+      supabase
+        .from("decisions")
+        .select("id,title,review_date,outcome")
+        .order("review_date", { ascending: true, nullsFirst: false })
+        .limit(300),
       supabase.from("projects").select("id,name,status,updated_at").in("status", ["active", "paused"]).limit(200),
     ]);
     setRows((r as Rule[]) ?? []);
@@ -71,24 +86,37 @@ export default function AutomationsPage() {
     setProjects((p as Project[]) ?? []);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   async function uid() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error(tr("Belum masuk"));
     return user.id;
   }
 
   async function add() {
     if (!form.name.trim()) return;
-    await mutateEntity({entityType:"automation",operation:"create",payload:{
-      name: form.name.trim(),
-      trigger_type: form.trigger_type,
-      trigger_config: { days: Math.max(1, Number(form.days) || 3), ...(form.trigger_type === "schedule_soon" ? { minutes: Math.min(240, Math.max(5, Number(form.days) || 30)) } : {}) },
-      action_type: form.action_type,
-      action_config: {},
-      enabled: true,
-    }});
+    await mutateEntity({
+      entityType: "automation",
+      operation: "create",
+      payload: {
+        name: form.name.trim(),
+        trigger_type: form.trigger_type,
+        trigger_config: {
+          days: Math.max(1, Number(form.days) || 3),
+          ...(form.trigger_type === "schedule_soon"
+            ? { minutes: Math.min(240, Math.max(5, Number(form.days) || 30)) }
+            : {}),
+        },
+        action_type: form.action_type,
+        action_config: {},
+        enabled: true,
+      },
+    });
     setForm({ name: "", trigger_type: "overdue_task", action_type: "notify", days: "3" });
     setOpen(false);
     await load();
@@ -96,38 +124,62 @@ export default function AutomationsPage() {
 
   async function addTemplate(template: Template) {
     const [name, _help, trigger, action, days] = template;
-    await mutateEntity({entityType:"automation",operation:"create",payload:{
-      name,
-      trigger_type: trigger,
-      trigger_config: { days: Number(days) },
-      action_type: action,
-      action_config: {},
-      enabled: true,
-    }});
+    await mutateEntity({
+      entityType: "automation",
+      operation: "create",
+      payload: {
+        name,
+        trigger_type: trigger,
+        trigger_config: { days: Number(days) },
+        action_type: action,
+        action_config: {},
+        enabled: true,
+      },
+    });
     setRunNote(`Template “${name}” ditambahkan.`);
     await load();
   }
 
   async function toggle(rule: Rule) {
-    await mutateEntity({entityType:"automation",operation:"update",entityId:rule.id,baseVersion:rule.version??null,clientUpdatedAt:rule.updated_at,payload:{enabled:!rule.enabled}});
+    await mutateEntity({
+      entityType: "automation",
+      operation: "update",
+      entityId: rule.id,
+      baseVersion: rule.version ?? null,
+      clientUpdatedAt: rule.updated_at,
+      payload: { enabled: !rule.enabled },
+    });
     await load();
   }
 
   async function remove(id: string) {
-    await mutateEntity({entityType:"automation",operation:"delete",entityId:id});
+    await mutateEntity({ entityType: "automation", operation: "delete", entityId: id });
     await load();
   }
 
   const overdue = useMemo(() => tasks.filter((t) => t.due_at && new Date(t.due_at).getTime() < Date.now()), [tasks]);
-  const dueReviews = useMemo(() => decisions.filter((d) => d.review_date && !d.outcome && new Date(`${d.review_date}T23:59:59`).getTime() <= Date.now()), [decisions]);
-  const staleProjects = useMemo(() => projects.filter((p) => Date.now() - new Date(p.updated_at).getTime() > 3 * 86400000), [projects]);
+  const dueReviews = useMemo(
+    () =>
+      decisions.filter(
+        (d) => d.review_date && !d.outcome && new Date(`${d.review_date}T23:59:59`).getTime() <= Date.now(),
+      ),
+    [decisions],
+  );
+  const staleProjects = useMemo(
+    () => projects.filter((p) => Date.now() - new Date(p.updated_at).getTime() > 3 * 86400000),
+    [projects],
+  );
 
   async function runAll() {
     setRunningAll(true);
     try {
       const res = await fetch("/api/automations/evaluate", { method: "GET", cache: "no-store" });
       const data = await res.json().catch(() => ({}));
-      setRunNote(res.ok ? tr("Evaluasi selesai. {v} aturan menemukan kondisi yang cocok.", { v: data.matched?.length ?? 0 }) : tr("Evaluasi otomatisasi gagal dijalankan."));
+      setRunNote(
+        res.ok
+          ? tr("Evaluasi selesai. {v} aturan menemukan kondisi yang cocok.", { v: data.matched?.length ?? 0 })
+          : tr("Evaluasi otomatisasi gagal dijalankan."),
+      );
       await load();
     } catch {
       setRunNote(tr("Evaluasi otomatisasi tidak dapat dijalankan sekarang."));
@@ -154,11 +206,26 @@ export default function AutomationsPage() {
       matched = 1;
     } else {
       matched = projects.filter((p) => Date.now() - new Date(p.updated_at).getTime() > days * 86400000).length;
-      detail = matched ? tr("{matched} proyek tidak disentuh > {days} hari", { matched, days }) : "semua project masih aktif disentuh";
+      detail = matched
+        ? tr("{matched} proyek tidak disentuh > {days} hari", { matched, days })
+        : "semua project masih aktif disentuh";
     }
     const resultText = matched > 0 ? `Terpenuhi · ${detail}` : tr("Belum terpenuhi · {detail}", { detail });
-    await mutateEntity({entityType:"automation",operation:"update",entityId:rule.id,baseVersion:rule.version??null,clientUpdatedAt:rule.updated_at,payload:{last_run_at:new Date().toISOString(),last_result:resultText}});
-    setRunNote(tr("{rule_name}: {detail}. Aksi “{v}” aman dan tidak mengubah data diam-diam.", { rule_name: rule.name, detail, v: tr(actions.find((a) => a.v === rule.action_type)?.l ?? "") || rule.action_type }));
+    await mutateEntity({
+      entityType: "automation",
+      operation: "update",
+      entityId: rule.id,
+      baseVersion: rule.version ?? null,
+      clientUpdatedAt: rule.updated_at,
+      payload: { last_run_at: new Date().toISOString(), last_result: resultText },
+    });
+    setRunNote(
+      tr("{rule_name}: {detail}. Aksi “{v}” aman dan tidak mengubah data diam-diam.", {
+        rule_name: rule.name,
+        detail,
+        v: tr(actions.find((a) => a.v === rule.action_type)?.l ?? "") || rule.action_type,
+      }),
+    );
     await load();
   }
 
@@ -166,66 +233,212 @@ export default function AutomationsPage() {
     <div className="space-y-7 animate-licia-in">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-accent"><Zap size={14} /> {" "}{tr("LAPISAN PROAKTIF")}</p>
+          <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+            <Zap size={14} /> {tr("LAPISAN PROAKTIF")}
+          </p>
           <h1 className="font-display text-3xl text-text">{tr("Pusat Otomatisasi")}</h1>
-          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-textMuted">{tr("Otomatisasi adalah aturan kecil untuk membuat Licia lebih proaktif: ketika kondisi tertentu muncul, aplikasi dapat menyiapkan pengingat atau menawarkan langkah berikutnya.")}</p>
+          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-textMuted">
+            {tr(
+              "Otomatisasi adalah aturan kecil untuk membuat Licia lebih proaktif: ketika kondisi tertentu muncul, aplikasi dapat menyiapkan pengingat atau menawarkan langkah berikutnya.",
+            )}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={runAll} disabled={runningAll} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent hover:text-accent disabled:opacity-60"><RefreshCw size={14} className={runningAll ? "animate-spin" : ""} /> {runningAll ? tr("Mengevaluasi…") : tr("Jalankan sekarang")}</button>
-          <PrimaryButton onClick={() => setOpen((v) => !v)}><Plus size={16} /> {" "}{tr("Aturan baru")}</PrimaryButton>
+          <button
+            onClick={runAll}
+            disabled={runningAll}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent hover:text-accent disabled:opacity-60"
+          >
+            <RefreshCw size={14} className={runningAll ? "animate-spin" : ""} />{" "}
+            {runningAll ? tr("Mengevaluasi…") : tr("Jalankan sekarang")}
+          </button>
+          <PrimaryButton onClick={() => setOpen((v) => !v)}>
+            <Plus size={16} /> {tr("Aturan baru")}
+          </PrimaryButton>
         </div>
       </header>
 
       <Card className="border-accent/20 bg-accent/5">
-        <div className="flex gap-3"><Lightbulb size={19} className="mt-0.5 shrink-0 text-accent" /><div><p className="text-sm font-semibold text-text">{tr("Jadi, ini sebenarnya untuk apa?")}</p><p className="mt-1 text-xs leading-relaxed text-textMuted">{tr("Contoh: “kalau tugas lewat deadline, beri tahu saya”; “kalau proyek tidak disentuh 5 hari, ingatkan”; atau “saat mulai hari, tawarkan Fokus”. Kamu tetap memegang keputusan.")}</p></div></div>
+        <div className="flex gap-3">
+          <Lightbulb size={19} className="mt-0.5 shrink-0 text-accent" />
+          <div>
+            <p className="text-sm font-semibold text-text">{tr("Jadi, ini sebenarnya untuk apa?")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-textMuted">
+              {tr(
+                "Contoh: “kalau tugas lewat deadline, beri tahu saya”; “kalau proyek tidak disentuh 5 hari, ingatkan”; atau “saat mulai hari, tawarkan Fokus”. Kamu tetap memegang keputusan.",
+              )}
+            </p>
+          </div>
+        </div>
       </Card>
 
-      {runNote && <Card className="border-accent/20"><div className="flex gap-2"><BellRing size={17} className="mt-0.5 shrink-0 text-accent" /><p className="text-xs leading-relaxed text-text">{runNote}</p></div></Card>}
+      {runNote && (
+        <Card className="border-accent/20">
+          <div className="flex gap-2">
+            <BellRing size={17} className="mt-0.5 shrink-0 text-accent" />
+            <p className="text-xs leading-relaxed text-text">{runNote}</p>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card className="p-4"><p className="text-xs text-textMuted">{tr("Aturan aktif")}</p><p className="mt-1 font-display text-2xl text-accent">{rows.filter((r) => r.enabled).length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-textMuted">{tr("Terlambat")}</p><p className="mt-1 font-display text-2xl text-danger">{overdue.length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-textMuted">{tr("Review jatuh tempo")}</p><p className="mt-1 font-display text-2xl text-text">{dueReviews.length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-textMuted">{tr("Proyek lama")}</p><p className="mt-1 font-display text-2xl text-accent">{staleProjects.length}</p></Card>
+        <Card className="p-4">
+          <p className="text-xs text-textMuted">{tr("Aturan aktif")}</p>
+          <p className="mt-1 font-display text-2xl text-accent">{rows.filter((r) => r.enabled).length}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-textMuted">{tr("Terlambat")}</p>
+          <p className="mt-1 font-display text-2xl text-danger">{overdue.length}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-textMuted">{tr("Review jatuh tempo")}</p>
+          <p className="mt-1 font-display text-2xl text-text">{dueReviews.length}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-textMuted">{tr("Proyek lama")}</p>
+          <p className="mt-1 font-display text-2xl text-accent">{staleProjects.length}</p>
+        </Card>
       </div>
 
-      {open && <Card>
-        <SectionTitle>{tr("Bangun aturanmu")}</SectionTitle>
-        <div className="grid gap-3 md:grid-cols-2">
-          <TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={tr("Nama aturan · mis. Follow-up project lama")} />
-          <select value={form.trigger_type} onChange={(e) => setForm({ ...form, trigger_type: e.target.value })} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-sm text-text">{triggers.map((t) => <option key={t.v} value={t.v}>{tr(t.l)}</option>)}</select>
-          <select value={form.action_type} onChange={(e) => setForm({ ...form, action_type: e.target.value })} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-sm text-text">{actions.map((a) => <option key={a.v} value={a.v}>{tr(a.l)}</option>)}</select>
-          <TextInput type="number" min="1" max="240" value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} placeholder={form.trigger_type === "schedule_soon" ? tr("Menit sebelum agenda · mis. 30") : tr("Ambang hari · untuk project inactivity")} />
-        </div>
-        <div className="mt-3 rounded-xl bg-bg p-3 text-xs leading-relaxed text-textMuted">{tr("Trigger:")}{" "}<strong className="text-text">{tr(triggers.find((t) => t.v === form.trigger_type)?.help ?? "")}</strong><br />{tr("Aksi:")}{" "}<strong className="text-text">{tr(actions.find((a) => a.v === form.action_type)?.help ?? "")}</strong></div>
-        <div className="mt-3 flex justify-end"><PrimaryButton onClick={add}><Check size={15} /> {" "}{tr("Simpan aturan")}</PrimaryButton></div>
-      </Card>}
+      {open && (
+        <Card>
+          <SectionTitle>{tr("Bangun aturanmu")}</SectionTitle>
+          <div className="grid gap-3 md:grid-cols-2">
+            <TextInput
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder={tr("Nama aturan · mis. Follow-up project lama")}
+            />
+            <select
+              value={form.trigger_type}
+              onChange={(e) => setForm({ ...form, trigger_type: e.target.value })}
+              className="min-h-11 rounded-xl border border-border bg-bg px-3 text-sm text-text"
+            >
+              {triggers.map((t) => (
+                <option key={t.v} value={t.v}>
+                  {tr(t.l)}
+                </option>
+              ))}
+            </select>
+            <select
+              value={form.action_type}
+              onChange={(e) => setForm({ ...form, action_type: e.target.value })}
+              className="min-h-11 rounded-xl border border-border bg-bg px-3 text-sm text-text"
+            >
+              {actions.map((a) => (
+                <option key={a.v} value={a.v}>
+                  {tr(a.l)}
+                </option>
+              ))}
+            </select>
+            <TextInput
+              type="number"
+              min="1"
+              max="240"
+              value={form.days}
+              onChange={(e) => setForm({ ...form, days: e.target.value })}
+              placeholder={
+                form.trigger_type === "schedule_soon"
+                  ? tr("Menit sebelum agenda · mis. 30")
+                  : tr("Ambang hari · untuk project inactivity")
+              }
+            />
+          </div>
+          <div className="mt-3 rounded-xl bg-bg p-3 text-xs leading-relaxed text-textMuted">
+            {tr("Trigger:")}{" "}
+            <strong className="text-text">{tr(triggers.find((t) => t.v === form.trigger_type)?.help ?? "")}</strong>
+            <br />
+            {tr("Aksi:")}{" "}
+            <strong className="text-text">{tr(actions.find((a) => a.v === form.action_type)?.help ?? "")}</strong>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <PrimaryButton onClick={add}>
+              <Check size={15} /> {tr("Simpan aturan")}
+            </PrimaryButton>
+          </div>
+        </Card>
+      )}
 
       <Card>
-        <SectionTitle><span className="flex items-center gap-2"><Sparkles size={16} className="text-accent" /> {" "}{tr("Template yang bisa langsung dipakai")}</span></SectionTitle>
+        <SectionTitle>
+          <span className="flex items-center gap-2">
+            <Sparkles size={16} className="text-accent" /> {tr("Template yang bisa langsung dipakai")}
+          </span>
+        </SectionTitle>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {templates.map(([name, help, trigger, action, days]) => (
-            <button key={name} onClick={() => void addTemplate([tr(name), tr(help), trigger, action, days])} className="rounded-xl border border-border bg-bg p-3 text-left transition hover:-translate-y-1 hover:border-accent/40 hover:shadow-sm"><p className="text-xs font-semibold text-text">{tr(name)}</p><p className="mt-1 text-2xs leading-relaxed text-textMuted">{tr(help)}</p></button>
+            <button
+              key={name}
+              onClick={() => void addTemplate([tr(name), tr(help), trigger, action, days])}
+              className="rounded-xl border border-border bg-bg p-3 text-left transition hover:-translate-y-1 hover:border-accent/40 hover:shadow-sm"
+            >
+              <p className="text-xs font-semibold text-text">{tr(name)}</p>
+              <p className="mt-1 text-2xs leading-relaxed text-textMuted">{tr(help)}</p>
+            </button>
           ))}
         </div>
       </Card>
 
-      {!rows.length ? <EmptyState title={tr("Belum ada automation")} description={tr("Mulai dari satu aturan sederhana; kamu tidak perlu membuat banyak aturan sekaligus.")} /> : (
+      {!rows.length ? (
+        <EmptyState
+          title={tr("Belum ada automation")}
+          description={tr("Mulai dari satu aturan sederhana; kamu tidak perlu membuat banyak aturan sekaligus.")}
+        />
+      ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {rows.map((rule) => (
             <Card key={rule.id} className={clsx("min-w-0", !rule.enabled && "opacity-60")}>
               <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-accent/10 p-2 text-accent"><CirclePlay size={17} /></div>
+                <div className="rounded-xl bg-accent/10 p-2 text-accent">
+                  <CirclePlay size={17} />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2"><p className="break-words text-sm font-semibold text-text">{rule.name}</p><span className="rounded-full bg-bg px-2 py-1 text-2xs text-textMuted">{rule.enabled ? tr("Aktif") : tr("Mati")}</span></div>
-                  <p className="mt-2 text-xs text-textMuted">{tr(triggers.find((x) => x.v === rule.trigger_type)?.l ?? "") || rule.trigger_type}</p>
-                  <p className="mt-1 text-xs text-text">→ {tr(actions.find((x) => x.v === rule.action_type)?.l ?? "") || rule.action_type}</p>
-                  {rule.last_run_at && <p className="mt-2 flex items-center gap-1 text-2xs text-textMuted"><Clock3 size={11} /> {" "}{tr("Dicek")}{" "}{new Date(rule.last_run_at).toLocaleString(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}{rule.last_result ? tr(" · {last_result}", { last_result: rule.last_result }) : ""}</p>}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="break-words text-sm font-semibold text-text">{rule.name}</p>
+                    <span className="rounded-full bg-bg px-2 py-1 text-2xs text-textMuted">
+                      {rule.enabled ? tr("Aktif") : tr("Mati")}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-textMuted">
+                    {tr(triggers.find((x) => x.v === rule.trigger_type)?.l ?? "") || rule.trigger_type}
+                  </p>
+                  <p className="mt-1 text-xs text-text">
+                    → {tr(actions.find((x) => x.v === rule.action_type)?.l ?? "") || rule.action_type}
+                  </p>
+                  {rule.last_run_at && (
+                    <p className="mt-2 flex items-center gap-1 text-2xs text-textMuted">
+                      <Clock3 size={11} /> {tr("Dicek")}{" "}
+                      {new Date(rule.last_run_at).toLocaleString(locale, {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {rule.last_result ? tr(" · {last_result}", { last_result: rule.last_result }) : ""}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <button onClick={() => void toggle(rule)} className="rounded-lg border border-border px-2 py-1.5 text-2xs text-textMuted hover:text-accent">{rule.enabled ? tr("Matikan") : tr("Aktifkan")}</button>
-                  <button onClick={() => void testRule(rule)} className="rounded-lg border border-border p-2 text-textMuted hover:text-accent" title={tr("Cek sekarang")}><BellRing size={14} /></button>
-                  <button onClick={() => void remove(rule.id)} className="rounded-lg p-2 text-textMuted hover:text-danger" title={tr("Hapus")}><Trash2 size={14} /></button>
+                  <button
+                    onClick={() => void toggle(rule)}
+                    className="rounded-lg border border-border px-2 py-1.5 text-2xs text-textMuted hover:text-accent"
+                  >
+                    {rule.enabled ? tr("Matikan") : tr("Aktifkan")}
+                  </button>
+                  <button
+                    onClick={() => void testRule(rule)}
+                    className="rounded-lg border border-border p-2 text-textMuted hover:text-accent"
+                    title={tr("Cek sekarang")}
+                  >
+                    <BellRing size={14} />
+                  </button>
+                  <button
+                    onClick={() => void remove(rule.id)}
+                    className="rounded-lg p-2 text-textMuted hover:text-danger"
+                    title={tr("Hapus")}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             </Card>

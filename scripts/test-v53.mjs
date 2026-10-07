@@ -18,7 +18,10 @@ assert.match(routing, /moneyTokens\.length >= 2/);
 assert.match(routing, /financeIntent/);
 assert.match(intelligence, /belanja.*beli.*jajan.*habis/);
 assert.match(toolDefinitions, /export const toolDefs/);
-assert.match(toolDefinitions, /entity_type: \{ type: "string", enum: \["area","expense","income","account","budget","subscription"/);
+assert.match(
+  toolDefinitions,
+  /entity_type: \{ type: "string", enum: \["area","expense","income","account","budget","subscription"/,
+);
 assert.match(tools, /function normalizeAiCrudEntityType/);
 assert.match(tools, /entity_id harus berupa UUID nyata/);
 assert.match(tools, /function normalizeMoneyAmount/);

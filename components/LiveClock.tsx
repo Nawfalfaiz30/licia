@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { Clock3 } from "lucide-react";
 import { formatClock, timezoneLabel } from "@/lib/time";
 
-
-
 export function LiveClock({ timezone }: { timezone: string }) {
   // Never render a Date-derived value during SSR. The server and browser can
   // cross a minute boundary between the two renders, which causes a hydration
@@ -31,7 +29,10 @@ export function LiveClock({ timezone }: { timezone: string }) {
     const tick = () => setNow(new Date());
     tick();
     const id = window.setInterval(tick, 1000);
-    return () => { window.clearInterval(id); window.removeEventListener("licia:preferences-change", onPrefs); };
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("licia:preferences-change", onPrefs);
+    };
   }, []);
 
   return (

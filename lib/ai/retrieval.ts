@@ -57,7 +57,15 @@ export async function hybridSearch(
 
 export async function upsertKnowledgeDocument(
   supabase: SupabaseClient,
-  input: { userId: string; sourceType: string; sourceId: string; title?: string; content?: string; sourceHash?: string; embed?: boolean },
+  input: {
+    userId: string;
+    sourceType: string;
+    sourceId: string;
+    title?: string;
+    content?: string;
+    sourceHash?: string;
+    embed?: boolean;
+  },
 ) {
   const title = String(input.title || "").slice(0, 500);
   const content = String(input.content || "").slice(0, 20000);
@@ -81,7 +89,8 @@ export async function removeKnowledgeDocument(
   supabase: SupabaseClient,
   input: { userId: string; sourceType: string; sourceId: string },
 ) {
-  return supabase.from("ai_knowledge_index")
+  return supabase
+    .from("ai_knowledge_index")
     .delete()
     .eq("user_id", input.userId)
     .eq("source_type", input.sourceType)

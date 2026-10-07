@@ -67,7 +67,8 @@ export function quadrantPatch(task: ViewTask, target: Quadrant, timezone: string
   const today = dateStrInTimezone(now, timezone);
   if (wantUrgent && !urgentNow) {
     patch.due_at = localDateTimeToIso(today, "17:00", timezone);
-    if (patch.due_at && new Date(patch.due_at).getTime() < now.getTime()) patch.due_at = localDateTimeToIso(addDaysYmd(today, 1), "09:00", timezone);
+    if (patch.due_at && new Date(patch.due_at).getTime() < now.getTime())
+      patch.due_at = localDateTimeToIso(addDaysYmd(today, 1), "09:00", timezone);
   }
   if (!wantUrgent && urgentNow) {
     const time = task.due_at ? clockInTimezone(task.due_at, timezone) : "09:00";
@@ -93,7 +94,12 @@ export function weekDays(startYmd: string): string[] {
 }
 
 export function clockInTimezone(iso: string, timezone: string): string {
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(iso));
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
   const hh = get("hour") === "24" ? "00" : get("hour");
   return `${hh}:${get("minute")}`;
@@ -105,9 +111,15 @@ export function dayPatch(task: Pick<ViewTask, "due_at">, ymd: string, timezone: 
   return { due_at: localDateTimeToIso(ymd, time, timezone) };
 }
 
-export function clearDuePatch(): TaskPatch { return { due_at: null }; }
+export function clearDuePatch(): TaskPatch {
+  return { due_at: null };
+}
 
-export type WeekBuckets = { days: Array<{ ymd: string; tasks: ViewTask[] }>; unscheduled: ViewTask[]; outside: ViewTask[] };
+export type WeekBuckets = {
+  days: Array<{ ymd: string; tasks: ViewTask[] }>;
+  unscheduled: ViewTask[];
+  outside: ViewTask[];
+};
 
 /** Bagi tugas ke 7 hari; yang tanpa tenggat → `unscheduled`; tenggat di luar pekan ini → `outside`. */
 export function bucketWeek(tasks: readonly ViewTask[], startYmd: string, timezone: string): WeekBuckets {
@@ -116,7 +128,10 @@ export function bucketWeek(tasks: readonly ViewTask[], startYmd: string, timezon
   const unscheduled: ViewTask[] = [];
   const outside: ViewTask[] = [];
   for (const task of tasks) {
-    if (!task.due_at) { if (task.status !== "done") unscheduled.push(task); continue; }
+    if (!task.due_at) {
+      if (task.status !== "done") unscheduled.push(task);
+      continue;
+    }
     const day = dateStrInTimezone(new Date(task.due_at), timezone);
     const i = index.get(day);
     if (i === undefined) outside.push(task);
@@ -148,19 +163,36 @@ export function isEmptyPatch(patch: TaskPatch | null | undefined): boolean {
 export type TaskKeyAction = "next" | "prev" | "toggle" | "edit" | "open" | "first" | "last" | "delete" | null;
 
 /** Pemetaan tombol → aksi untuk daftar tugas (j/k, x, e, Enter). Hanya tombol polos (tanpa Ctrl/⌘/Alt). */
-export function taskKeyAction(key: string, mods: { ctrl?: boolean; meta?: boolean; alt?: boolean } = {}): TaskKeyAction {
+export function taskKeyAction(
+  key: string,
+  mods: { ctrl?: boolean; meta?: boolean; alt?: boolean } = {},
+): TaskKeyAction {
   if (mods.ctrl || mods.meta || mods.alt) return null;
   switch (key) {
-    case "j": case "ArrowDown": return "next";
-    case "k": case "ArrowUp": return "prev";
-    case "x": return "toggle";
-    case "e": return "edit";
-    case "Enter": case "o": return "open";
-    case "g": return null;
-    case "Home": return "first";
-    case "End": return "last";
-    case "#": case "Delete": return "delete";
-    default: return null;
+    case "j":
+    case "ArrowDown":
+      return "next";
+    case "k":
+    case "ArrowUp":
+      return "prev";
+    case "x":
+      return "toggle";
+    case "e":
+      return "edit";
+    case "Enter":
+    case "o":
+      return "open";
+    case "g":
+      return null;
+    case "Home":
+      return "first";
+    case "End":
+      return "last";
+    case "#":
+    case "Delete":
+      return "delete";
+    default:
+      return null;
   }
 }
 

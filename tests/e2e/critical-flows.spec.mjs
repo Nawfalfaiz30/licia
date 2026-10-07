@@ -13,7 +13,10 @@ async function login(page, t) {
   const password = page.locator('input[type="password"]').first();
   await email.fill(process.env.E2E_TEST_EMAIL);
   await password.fill(process.env.E2E_TEST_PASSWORD);
-  await page.getByRole("button", { name: /masuk|login/i }).first().click();
+  await page
+    .getByRole("button", { name: /masuk|login/i })
+    .first()
+    .click();
   await expect(page).not.toHaveURL(/\/login/);
 }
 

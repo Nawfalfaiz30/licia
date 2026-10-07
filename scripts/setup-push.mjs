@@ -17,7 +17,11 @@ function parse(text) {
 }
 
 async function main() {
-  let source = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : (fs.existsSync(examplePath) ? fs.readFileSync(examplePath, "utf8") : "");
+  let source = fs.existsSync(envPath)
+    ? fs.readFileSync(envPath, "utf8")
+    : fs.existsSync(examplePath)
+      ? fs.readFileSync(examplePath, "utf8")
+      : "";
   const values = parse(source);
   let webpush;
   try {
@@ -32,7 +36,8 @@ async function main() {
     source = `${source.trimEnd()}\nVAPID_PUBLIC_KEY=${keys.publicKey}\nVAPID_PRIVATE_KEY=${keys.privateKey}\n`;
   }
   if (!values.get("VAPID_SUBJECT")) source = `${source.trimEnd()}\nVAPID_SUBJECT=mailto:admin@example.com\n`;
-  if (!values.get("LICIA_CRON_SECRET")) source = `${source.trimEnd()}\nLICIA_CRON_SECRET=${crypto.randomBytes(32).toString("base64url")}\n`;
+  if (!values.get("LICIA_CRON_SECRET"))
+    source = `${source.trimEnd()}\nLICIA_CRON_SECRET=${crypto.randomBytes(32).toString("base64url")}\n`;
   fs.writeFileSync(envPath, source.replace(/\n{3,}/g, "\n\n"));
   console.log("Licia push setup selesai. VAPID + LICIA_CRON_SECRET sudah dibuat/ditambahkan ke .env.local.");
   console.log("Pastikan SUPABASE_SERVICE_ROLE_KEY juga sudah diisi dari Supabase Dashboard > API / service_role.");

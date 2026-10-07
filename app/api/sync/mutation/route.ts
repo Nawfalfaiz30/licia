@@ -74,33 +74,43 @@ async function writeMutationStatus(
   await query;
 }
 
-async function createConflict(admin: ReturnType<typeof createAdminClient>, input: {
-  userId: string;
-  deviceId: string;
-  mutationId: string;
-  entityType: string;
-  entityId: string;
-  strategy: ConflictStrategy;
-  clientVersion: number | null;
-  serverVersion: number;
-  clientPayload: Record<string, unknown>;
-  serverPayload: Record<string, unknown>;
-  conflictingFields: string[];
-}) {
-  const { data } = await admin.from("life_os_sync_conflicts").upsert({
-    user_id: input.userId,
-    device_id: input.deviceId,
-    mutation_id: input.mutationId,
-    entity_type: input.entityType,
-    entity_id: input.entityId,
-    strategy: input.strategy,
-    client_version: input.clientVersion,
-    server_version: input.serverVersion,
-    client_payload: input.clientPayload,
-    server_payload: input.serverPayload,
-    conflicting_fields: input.conflictingFields,
-    status: "open",
-  }, { onConflict: "user_id,mutation_id" }).select("id").single();
+async function createConflict(
+  admin: ReturnType<typeof createAdminClient>,
+  input: {
+    userId: string;
+    deviceId: string;
+    mutationId: string;
+    entityType: string;
+    entityId: string;
+    strategy: ConflictStrategy;
+    clientVersion: number | null;
+    serverVersion: number;
+    clientPayload: Record<string, unknown>;
+    serverPayload: Record<string, unknown>;
+    conflictingFields: string[];
+  },
+) {
+  const { data } = await admin
+    .from("life_os_sync_conflicts")
+    .upsert(
+      {
+        user_id: input.userId,
+        device_id: input.deviceId,
+        mutation_id: input.mutationId,
+        entity_type: input.entityType,
+        entity_id: input.entityId,
+        strategy: input.strategy,
+        client_version: input.clientVersion,
+        server_version: input.serverVersion,
+        client_payload: input.clientPayload,
+        server_payload: input.serverPayload,
+        conflicting_fields: input.conflictingFields,
+        status: "open",
+      },
+      { onConflict: "user_id,mutation_id" },
+    )
+    .select("id")
+    .single();
   return data?.id ? String(data.id) : null;
 }
 
@@ -123,18 +133,24 @@ async function getServerChangedFields(
 
   if (error || !data?.length) return { fields: [], historyComplete: false };
 
-  const postBase = data.filter((event) => Number((event.payload as Record<string, unknown> | null)?.version ?? 0) > baseVersion);
+  const postBase = data.filter(
+    (event) => Number((event.payload as Record<string, unknown> | null)?.version ?? 0) > baseVersion,
+  );
   if (!postBase.length) return { fields: [], historyComplete: false };
 
-  const versions = data.map((event) => Number((event.payload as Record<string, unknown> | null)?.version ?? 0)).filter((version) => Number.isFinite(version) && version > 0);
+  const versions = data
+    .map((event) => Number((event.payload as Record<string, unknown> | null)?.version ?? 0))
+    .filter((version) => Number.isFinite(version) && version > 0);
   const latestKnownVersion = versions.length ? Math.max(...versions) : 0;
   const hasBaseVersion = baseVersion === 0 || versions.includes(baseVersion);
   const historyComplete = hasBaseVersion && latestKnownVersion >= serverVersion;
-  const fields = [...new Set(postBase.flatMap((event) => Array.isArray(event.changed_fields) ? event.changed_fields.map(String) : []))];
+  const fields = [
+    ...new Set(
+      postBase.flatMap((event) => (Array.isArray(event.changed_fields) ? event.changed_fields.map(String) : [])),
+    ),
+  ];
   return { fields, historyComplete };
 }
-
-
 
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req);
@@ -143,16 +159,22 @@ export async function POST(req: Request) {
   if (sizeError) return sizeError;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const admin = createAdminClient();
 
   const body = await req.json().catch(() => ({}));
-  const mutationId = String(body?.mutationId || randomUUID()).trim().slice(0, 180);
+  const mutationId = String(body?.mutationId || randomUUID())
+    .trim()
+    .slice(0, 180);
   const claimToken = randomUUID();
   const claimedAt = new Date().toISOString();
   const leaseExpiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
-  const deviceId = String(body?.deviceId || "unknown").trim().slice(0, 160);
+  const deviceId = String(body?.deviceId || "unknown")
+    .trim()
+    .slice(0, 160);
   const entityType = String(body?.entityType || "").trim();
   const operation = String(body?.operation || "create").trim();
   const payload = sanitizePayload(body?.payload);
@@ -161,22 +183,33 @@ export async function POST(req: Request) {
   const clientUpdatedAt = body?.clientUpdatedAt ? String(body.clientUpdatedAt) : null;
   const conflictStrategy = safeStrategy(body?.conflictStrategy);
   const definition = ALLOWED[entityType];
-  const supported = definition && ((operation === "create" && definition.create) || (operation === "update" && definition.update && entityId) || (operation === "delete" && definition.remove && entityId));
+  const supported =
+    definition &&
+    ((operation === "create" && definition.create) ||
+      (operation === "update" && definition.update && entityId) ||
+      (operation === "delete" && definition.remove && entityId));
   if (!supported) return NextResponse.json({ error: "Mutation belum didukung untuk operasi ini." }, { status: 400 });
 
-  const { data: existing } = await admin.from("life_os_sync_mutations")
+  const { data: existing } = await admin
+    .from("life_os_sync_mutations")
     .select("mutation_id,status,response,error_message,created_at,updated_at,claim_token,lease_expires_at")
     .eq("mutation_id", mutationId)
     .eq("user_id", user.id)
     .maybeSingle();
-  if (existing?.status === "done") return NextResponse.json({ ok: true, replayed: true, response: existing.response ?? null });
+  if (existing?.status === "done")
+    return NextResponse.json({ ok: true, replayed: true, response: existing.response ?? null });
 
   let reclaimed = false;
   if (existing?.status === "processing") {
     const nowIso = new Date().toISOString();
     const { data: claimed } = await admin
       .from("life_os_sync_mutations")
-      .update({ claim_token: claimToken, claimed_at: claimedAt, lease_expires_at: leaseExpiresAt, updated_at: claimedAt })
+      .update({
+        claim_token: claimToken,
+        claimed_at: claimedAt,
+        lease_expires_at: leaseExpiresAt,
+        updated_at: claimedAt,
+      })
       .eq("mutation_id", mutationId)
       .eq("user_id", user.id)
       .eq("status", "processing")
@@ -185,32 +218,42 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (claimed?.mutation_id === mutationId && claimed.claim_token === claimToken) reclaimed = true;
     else {
-      const { data: current } = await admin.from("life_os_sync_mutations")
+      const { data: current } = await admin
+        .from("life_os_sync_mutations")
         .select("status,response")
         .eq("mutation_id", mutationId)
         .eq("user_id", user.id)
         .maybeSingle();
-      if (current?.status === "done") return NextResponse.json({ ok: true, replayed: true, response: current.response ?? null });
+      if (current?.status === "done")
+        return NextResponse.json({ ok: true, replayed: true, response: current.response ?? null });
       return NextResponse.json({ ok: false, pending: true }, { status: 409 });
     }
   }
 
-  const { error: claimError } = reclaimed ? { error: null } : await admin.from("life_os_sync_mutations").insert({
-    mutation_id: mutationId,
-    user_id: user.id,
-    device_id: deviceId,
-    entity_type: entityType,
-    entity_id: entityId || null,
-    operation,
-    payload,
-    status: "processing",
-    claim_token: claimToken,
-    claimed_at: claimedAt,
-    lease_expires_at: leaseExpiresAt,
-  });
+  const { error: claimError } = reclaimed
+    ? { error: null }
+    : await admin.from("life_os_sync_mutations").insert({
+        mutation_id: mutationId,
+        user_id: user.id,
+        device_id: deviceId,
+        entity_type: entityType,
+        entity_id: entityId || null,
+        operation,
+        payload,
+        status: "processing",
+        claim_token: claimToken,
+        claimed_at: claimedAt,
+        lease_expires_at: leaseExpiresAt,
+      });
   if (claimError) {
-    const retry = await admin.from("life_os_sync_mutations").select("status,response,error_message").eq("mutation_id", mutationId).eq("user_id", user.id).maybeSingle();
-    if (retry.data?.status === "done") return NextResponse.json({ ok: true, replayed: true, response: retry.data.response ?? null });
+    const retry = await admin
+      .from("life_os_sync_mutations")
+      .select("status,response,error_message")
+      .eq("mutation_id", mutationId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (retry.data?.status === "done")
+      return NextResponse.json({ ok: true, replayed: true, response: retry.data.response ?? null });
     if (retry.data?.status === "processing") return NextResponse.json({ ok: false, pending: true }, { status: 409 });
     return NextResponse.json({ error: claimError.message }, { status: 500 });
   }
@@ -233,7 +276,8 @@ export async function POST(req: Request) {
           .eq("user_id", user.id)
           .in("id", [fromId, toId]);
         if (accountError) throw new Error(accountError.message);
-        if ((ownedAccounts ?? []).length !== 2) throw new Error("Sumber dan tujuan transfer harus merupakan dompet milik pengguna.");
+        if ((ownedAccounts ?? []).length !== 2)
+          throw new Error("Sumber dan tujuan transfer harus merupakan dompet milik pengguna.");
 
         const { data: transferResult, error: transferError } = await supabase.rpc("licia_transfer_money", {
           p_from_account_id: fromId,
@@ -253,11 +297,27 @@ export async function POST(req: Request) {
         response = { entityType, entityId: data?.id ?? null, record: data };
       }
     } else {
-      const currentResult = await supabase.from(definition.table).select("*").eq("id", entityId).eq("user_id", user.id).maybeSingle();
+      const currentResult = await supabase
+        .from(definition.table)
+        .select("*")
+        .eq("id", entityId)
+        .eq("user_id", user.id)
+        .maybeSingle();
       if (currentResult.error) throw new Error(currentResult.error.message);
       if (!currentResult.data) {
         const responseBody = { error: "Data target tidak ditemukan.", mutationId };
-        await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: "TARGET_NOT_FOUND", response: responseBody, completed_at: new Date().toISOString() }, claimToken);
+        await writeMutationStatus(
+          admin,
+          mutationId,
+          user.id,
+          {
+            status: "failed",
+            error_message: "TARGET_NOT_FOUND",
+            response: responseBody,
+            completed_at: new Date().toISOString(),
+          },
+          claimToken,
+        );
         return NextResponse.json(responseBody, { status: 404 });
       }
       const current = currentResult.data as Record<string, unknown>;
@@ -265,10 +325,14 @@ export async function POST(req: Request) {
 
       if (baseVersion != null && Number.isFinite(baseVersion) && serverVersion !== baseVersion) {
         const currentUpdatedAt = current.updated_at ? String(current.updated_at) : null;
-        const history = conflictStrategy === "smart"
-          ? await getServerChangedFields(admin, user.id, entityType, entityId, Number(baseVersion), serverVersion)
-          : { fields: [], historyComplete: false };
-        const merged = mergeIfSafe({ current, incoming: payload, clientVersion: baseVersion, serverVersion, clientUpdatedAt }, history.historyComplete ? history.fields : null);
+        const history =
+          conflictStrategy === "smart"
+            ? await getServerChangedFields(admin, user.id, entityType, entityId, Number(baseVersion), serverVersion)
+            : { fields: [], historyComplete: false };
+        const merged = mergeIfSafe(
+          { current, incoming: payload, clientVersion: baseVersion, serverVersion, clientUpdatedAt },
+          history.historyComplete ? history.fields : null,
+        );
         let allow = false;
         let resolvedPayload = payload;
 
@@ -293,38 +357,88 @@ export async function POST(req: Request) {
             serverPayload: current,
             conflictingFields: merged.fields,
           });
-          const responseBody = { conflict: true, conflictId, current, serverVersion, clientVersion: baseVersion, conflictingFields: merged.fields, strategy: conflictStrategy, smartMerge: history.historyComplete ? "available" : "unavailable" };
-          await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: "SYNC_CONFLICT", response: responseBody, completed_at: new Date().toISOString() }, claimToken);
+          const responseBody = {
+            conflict: true,
+            conflictId,
+            current,
+            serverVersion,
+            clientVersion: baseVersion,
+            conflictingFields: merged.fields,
+            strategy: conflictStrategy,
+            smartMerge: history.historyComplete ? "available" : "unavailable",
+          };
+          await writeMutationStatus(
+            admin,
+            mutationId,
+            user.id,
+            {
+              status: "failed",
+              error_message: "SYNC_CONFLICT",
+              response: responseBody,
+              completed_at: new Date().toISOString(),
+            },
+            claimToken,
+          );
           return NextResponse.json({ ok: false, ...responseBody }, { status: 409 });
         }
 
         const patch = resolvedPayload;
         if (operation === "update") {
-          const result = await supabase.from(definition.table).update(patch).eq("id", entityId).eq("user_id", user.id).select("*").single();
+          const result = await supabase
+            .from(definition.table)
+            .update(patch)
+            .eq("id", entityId)
+            .eq("user_id", user.id)
+            .select("*")
+            .single();
           if (result.error) throw new Error(result.error.message);
           data = result.data;
           response = { entityType, entityId, record: data, conflictResolved: true, strategy: conflictStrategy };
         }
       } else if (operation === "update") {
-        const result = await supabase.from(definition.table).update(payload).eq("id", entityId).eq("user_id", user.id).select("*").single();
+        const result = await supabase
+          .from(definition.table)
+          .update(payload)
+          .eq("id", entityId)
+          .eq("user_id", user.id)
+          .select("*")
+          .single();
         if (result.error) throw new Error(result.error.message);
         data = result.data;
         response = { entityType, entityId, record: data };
       }
 
       if (operation === "delete") {
-        const result = await supabase.from(definition.table).delete().eq("id", entityId).eq("user_id", user.id).select("id").maybeSingle();
+        const result = await supabase
+          .from(definition.table)
+          .delete()
+          .eq("id", entityId)
+          .eq("user_id", user.id)
+          .select("id")
+          .maybeSingle();
         if (result.error) throw new Error(result.error.message);
         response = { entityType, entityId, deleted: true, record: result.data ?? null };
       }
     }
 
     invalidateUserContext(user.id);
-    await writeMutationStatus(admin, mutationId, user.id, { status: "done", response, completed_at: new Date().toISOString(), error_message: null }, claimToken);
+    await writeMutationStatus(
+      admin,
+      mutationId,
+      user.id,
+      { status: "done", response, completed_at: new Date().toISOString(), error_message: null },
+      claimToken,
+    );
     return NextResponse.json({ ok: true, replayed: false, response });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Mutation gagal.";
-    await writeMutationStatus(admin, mutationId, user.id, { status: "failed", error_message: message, completed_at: new Date().toISOString() }, claimToken);
+    await writeMutationStatus(
+      admin,
+      mutationId,
+      user.id,
+      { status: "failed", error_message: message, completed_at: new Date().toISOString() },
+      claimToken,
+    );
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

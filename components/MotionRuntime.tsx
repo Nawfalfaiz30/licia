@@ -8,7 +8,9 @@ export function MotionRuntime() {
     const apply = () => {
       const root = document.documentElement;
       let reduced = false;
-      try { reduced = localStorage.getItem("licia-reduced-motion") === "true"; } catch {}
+      try {
+        reduced = localStorage.getItem("licia-reduced-motion") === "true";
+      } catch {}
       const media = window.matchMedia("(prefers-reduced-motion: reduce)");
       root.dataset.reducedMotion = String(reduced || media.matches);
       try {
@@ -21,7 +23,9 @@ export function MotionRuntime() {
     const onMotion = (event: PointerEvent) => {
       const target = (event.target as HTMLElement | null)?.closest?.(".licia-v33-ripple") as HTMLElement | null;
       if (!target) return;
-      const interactive = (event.target as HTMLElement | null)?.closest?.(".licia-v35-interactive") as HTMLElement | null;
+      const interactive = (event.target as HTMLElement | null)?.closest?.(
+        ".licia-v35-interactive",
+      ) as HTMLElement | null;
       interactive?.classList.add("licia-v35-active");
       window.setTimeout(() => interactive?.classList.remove("licia-v35-active"), 160);
       target.classList.remove("licia-v33-ripple-live");

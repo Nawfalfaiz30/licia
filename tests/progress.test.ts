@@ -3,11 +3,14 @@ import { emitProgress, runWithProgress, streamChatResponse, toolLabel } from "@/
 
 async function readAll(res: Response) {
   const text = await res.text();
-  return text.split("\n\n").filter((b) => b && !b.startsWith(":")).map((b) => {
-    const ev = /event: (.*)/.exec(b)?.[1];
-    const data = JSON.parse(/data: (.*)/.exec(b)![1]);
-    return { ev, data };
-  });
+  return text
+    .split("\n\n")
+    .filter((b) => b && !b.startsWith(":"))
+    .map((b) => {
+      const ev = /event: (.*)/.exec(b)?.[1];
+      const data = JSON.parse(/data: (.*)/.exec(b)![1]);
+      return { ev, data };
+    });
 }
 
 describe("emitProgress", () => {
@@ -17,7 +20,12 @@ describe("emitProgress", () => {
   });
   it("mengirim event ke emitter aktif", async () => {
     const got: string[] = [];
-    await runWithProgress((e) => got.push(e.type), async () => { emitProgress({ type: "tool_start", name: "get_tasks", label: "x" }); });
+    await runWithProgress(
+      (e) => got.push(e.type),
+      async () => {
+        emitProgress({ type: "tool_start", name: "get_tasks", label: "x" });
+      },
+    );
     expect(got).toEqual(["tool_start"]);
   });
 });
@@ -42,12 +50,18 @@ describe("streamChatResponse", () => {
     expect(events[2].data).toEqual({ reply: "halo" });
   });
   it("status HTTP error dikirim sebagai event error", async () => {
-    const events = await readAll(streamChatResponse(async () => new Response(JSON.stringify({ error: "x" }), { status: 503 })));
+    const events = await readAll(
+      streamChatResponse(async () => new Response(JSON.stringify({ error: "x" }), { status: 503 })),
+    );
     expect(events[1].ev).toBe("error");
     expect(events[1].data).toEqual({ status: 503, error: "x" });
   });
   it("exception dikirim sebagai event error 500", async () => {
-    const events = await readAll(streamChatResponse(async () => { throw new Error("boom"); }));
+    const events = await readAll(
+      streamChatResponse(async () => {
+        throw new Error("boom");
+      }),
+    );
     expect(events[1].data).toEqual({ status: 500, error: "boom" });
   });
 });

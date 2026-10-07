@@ -3,7 +3,10 @@ import path from "node:path";
 
 const root = process.cwd();
 const dir = path.join(root, "supabase", "migrations");
-const entries = fs.readdirSync(dir).filter((name) => name.endsWith(".sql")).sort();
+const entries = fs
+  .readdirSync(dir)
+  .filter((name) => name.endsWith(".sql"))
+  .sort();
 const legacy = entries.filter((name) => /^\d{4}_.+\.sql$/.test(name));
 const timestamped = entries.filter((name) => /^\d{14}_.+\.sql$/.test(name));
 const failures = [];
@@ -11,7 +14,9 @@ const expected = Array.from({ length: 15 }, (_, i) => String(i + 1).padStart(4, 
 const actual = legacy.map((name) => name.slice(0, 4));
 
 if (actual.length !== expected.length || actual.some((value, i) => value !== expected[i])) {
-  failures.push(`Legacy migration chain harus tetap memiliki 0001-0015 secara berurutan; ditemukan: ${legacy.join(", ")}`);
+  failures.push(
+    `Legacy migration chain harus tetap memiliki 0001-0015 secara berurutan; ditemukan: ${legacy.join(", ")}`,
+  );
 }
 
 const timestamps = timestamped.map((name) => Number(name.slice(0, 14)));
@@ -59,4 +64,6 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Canonical DB/Version check OK — legacy ${legacy.length}, timestamped ${timestamped.length}, schema v${version.schemaVersion}, PWA DB v${version.pwaDbVersion}.`);
+console.log(
+  `Canonical DB/Version check OK — legacy ${legacy.length}, timestamped ${timestamped.length}, schema v${version.schemaVersion}, PWA DB v${version.pwaDbVersion}.`,
+);

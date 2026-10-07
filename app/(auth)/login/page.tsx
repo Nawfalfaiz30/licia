@@ -81,7 +81,8 @@ export default function LoginPage() {
         <p className="text-sm text-textMuted mt-6 text-center">
           {tr("Belum punya akun?")}{" "}
           <Link href="/signup" className="text-accent font-medium">
-            {tr("Daftar")}</Link>
+            {tr("Daftar")}
+          </Link>
         </p>
       </div>
     </div>

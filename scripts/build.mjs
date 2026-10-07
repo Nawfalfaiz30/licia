@@ -15,11 +15,7 @@ const nextEntry = fileURLToPath(new URL("../node_modules/next/dist/bin/next", im
 // with the low-level "The destination stream closed early" error before
 // the actual application compilation starts. Webpack avoids that stream
 // failure while keeping the application source unchanged.
-const result = spawnSync(
-  process.execPath,
-  [nextEntry, "build", "--webpack"],
-  { stdio: "inherit", env }
-);
+const result = spawnSync(process.execPath, [nextEntry, "build", "--webpack"], { stdio: "inherit", env });
 
 if (result.error) {
   console.error(result.error);

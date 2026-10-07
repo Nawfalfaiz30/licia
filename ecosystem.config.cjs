@@ -30,7 +30,10 @@ module.exports = {
       max_memory_restart: "150M",
       restart_delay: 5000,
       kill_timeout: 5000,
-      env: { NODE_ENV: "production", LICIA_REMINDER_WORKER_INTERVAL_MS: process.env.LICIA_REMINDER_WORKER_INTERVAL_MS || "60000" },
+      env: {
+        NODE_ENV: "production",
+        LICIA_REMINDER_WORKER_INTERVAL_MS: process.env.LICIA_REMINDER_WORKER_INTERVAL_MS || "60000",
+      },
       time: true,
     },
   ],

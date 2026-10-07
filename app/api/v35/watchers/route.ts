@@ -8,9 +8,16 @@ export async function GET(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const { data, error } = await supabase.from("ai_watchers").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100);
+  const { data, error } = await supabase
+    .from("ai_watchers")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(100);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, watchers: data ?? [] }, { headers: { "Cache-Control": "private, no-store" } });
 }
@@ -19,9 +26,15 @@ export async function POST(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
   const body = await req.json().catch(() => ({}));
-  try { assertJsonSize(body, 20_000); } catch { return NextResponse.json({ error: "Input terlalu besar." }, { status: 413 }); }
+  try {
+    assertJsonSize(body, 20_000);
+  } catch {
+    return NextResponse.json({ error: "Input terlalu besar." }, { status: 413 });
+  }
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const row = {
     user_id: user.id,
@@ -43,13 +56,22 @@ export async function PATCH(req: Request) {
   if (originError) return originError;
   const body = await req.json().catch(() => ({}));
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const id = String(body?.id || "");
   if (!id) return NextResponse.json({ error: "ID watcher wajib diisi." }, { status: 400 });
   const patch: Record<string, unknown> = {};
-  for (const key of ["name", "description", "entity_type", "condition", "action", "enabled", "cooldown_minutes"]) if (body[key] !== undefined) patch[key] = body[key];
-  const { data, error } = await supabase.from("ai_watchers").update(patch).eq("id", id).eq("user_id", user.id).select("*").single();
+  for (const key of ["name", "description", "entity_type", "condition", "action", "enabled", "cooldown_minutes"])
+    if (body[key] !== undefined) patch[key] = body[key];
+  const { data, error } = await supabase
+    .from("ai_watchers")
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("*")
+    .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, watcher: data });
 }
@@ -59,7 +81,9 @@ export async function DELETE(req: Request) {
   if (originError) return originError;
   const body = await req.json().catch(() => ({}));
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const id = String(body?.id || "");
   if (!id) return NextResponse.json({ error: "ID watcher wajib diisi." }, { status: 400 });

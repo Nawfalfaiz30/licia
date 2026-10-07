@@ -1,19 +1,6 @@
-export type CoreModule =
-  | "today"
-  | "chat"
-  | "tasks"
-  | "calendar"
-  | "notes"
-  | "finance";
+export type CoreModule = "today" | "chat" | "tasks" | "calendar" | "notes" | "finance";
 
-export const CORE_MODULES: readonly CoreModule[] = [
-  "today",
-  "chat",
-  "tasks",
-  "calendar",
-  "notes",
-  "finance",
-] as const;
+export const CORE_MODULES: readonly CoreModule[] = ["today", "chat", "tasks", "calendar", "notes", "finance"] as const;
 
 export type NavigationGroup = {
   key: string;

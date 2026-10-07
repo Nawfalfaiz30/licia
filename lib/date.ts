@@ -48,7 +48,6 @@ export function wibDateStr(d: Date = new Date()): string {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-
 export function dateStrInTimezone(d: Date = new Date(), timezone: string = "Asia/Jakarta"): string {
   const parts = new Intl.DateTimeFormat("en", {
     timeZone: timezone,
@@ -139,7 +138,10 @@ export function wibStartOfWeekIso(d: Date = new Date()): string {
 // is left untouched, since that's unambiguous and was set on purpose.
 // Every write path that takes a date/time string from the AI MUST pass it
 // through this first.
-export function ensureTimezoneOffset(isoLike: string | null | undefined, timezone: string = "Asia/Jakarta"): string | null {
+export function ensureTimezoneOffset(
+  isoLike: string | null | undefined,
+  timezone: string = "Asia/Jakarta",
+): string | null {
   if (!isoLike) return null;
   let s = isoLike.trim();
   const explicitNumericOffset = /[+-]\d{2}:\d{2}$/.test(s);
@@ -169,7 +171,10 @@ export function labelForTimezone(tz: string | null | undefined): string {
   return TIMEZONE_OPTIONS.find((t) => t.value === tz)?.label ?? "WIB (UTC+7)";
 }
 
-export function formatTimeInTimezone(value: string | Date | null | undefined, timezone: string = "Asia/Jakarta"): string {
+export function formatTimeInTimezone(
+  value: string | Date | null | undefined,
+  timezone: string = "Asia/Jakarta",
+): string {
   if (!value) return "-";
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) return "-";
@@ -181,7 +186,10 @@ export function formatTimeInTimezone(value: string | Date | null | undefined, ti
   }).format(date);
 }
 
-export function formatDateTimeInTimezone(value: string | Date | null | undefined, timezone: string = "Asia/Jakarta"): string {
+export function formatDateTimeInTimezone(
+  value: string | Date | null | undefined,
+  timezone: string = "Asia/Jakarta",
+): string {
   if (!value) return "-";
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) return "-";
@@ -196,7 +204,6 @@ export function formatDateTimeInTimezone(value: string | Date | null | undefined
     hour12: false,
   }).format(date);
 }
-
 
 /** Convert an HTML date/time-local pair interpreted in one of Licia's timezones into UTC ISO. */
 export function localDateTimeToIso(date: string, time: string, timezone: string = "Asia/Jakarta"): string | null {

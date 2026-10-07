@@ -36,11 +36,9 @@ describe("vaultCrypto", () => {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const key = await deriveVaultKey("pw", salt, LEGACY_PBKDF2_ITERATIONS);
-    const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv: iv as BufferSource },
-      key,
-      new TextEncoder().encode("legacy")
-    ));
+    const ciphertext = new Uint8Array(
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, new TextEncoder().encode("legacy")),
+    );
     const envelope = LEGACY_ENC_PREFIX + b64(salt) + ":" + b64(iv) + ":" + b64(ciphertext);
     expect(vaultEnvelopeVersion(envelope)).toBe(1);
     expect(await decryptText(envelope, "pw")).toBe("legacy");

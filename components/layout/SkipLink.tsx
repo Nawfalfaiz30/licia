@@ -6,6 +6,7 @@ export function SkipLink() {
   const { t: tr } = useLanguage();
   return (
     <a href="#main-content" className="licia-skip-link">
-      {tr("Lewati ke konten utama")}</a>
+      {tr("Lewati ke konten utama")}
+    </a>
   );
 }

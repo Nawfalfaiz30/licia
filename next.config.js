@@ -33,7 +33,8 @@ const securityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "img-src 'self' data: blob:" + (imageRemotePatterns.length ? " " + imageRemotePatterns.map((p) => p.protocol + "://" + p.hostname).join(" ") : ""),
+  "img-src 'self' data: blob:" +
+    (imageRemotePatterns.length ? " " + imageRemotePatterns.map((p) => p.protocol + "://" + p.hostname).join(" ") : ""),
   "font-src 'self' data: https://fonts.gstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}`,

@@ -1,14 +1,329 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CircleDot, FolderKanban, GitBranch, Link2, ListChecks, RefreshCw, Target, Timer, BrainCircuit, Search } from "lucide-react";
+import {
+  ArrowRight,
+  CircleDot,
+  FolderKanban,
+  GitBranch,
+  Link2,
+  ListChecks,
+  RefreshCw,
+  Target,
+  Timer,
+  BrainCircuit,
+  Search,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, SoftButton, notifyToast } from "@/components/ui";
 import { useLanguage } from "@/components/LanguageProvider";
-type Goal={id:string;title:string;progress:number;target_date:string|null}; type Project={id:string;name:string;goal_id:string|null;status:string;target_date:string|null}; type Task={id:string;title:string;project_id:string|null;due_at:string|null;status:string}; type EntityLink={id:string;source_type:string;source_id:string;target_type:string;target_id:string;relation:string;confidence:number|null;metadata:Record<string,unknown>|null};
-export default function LifeGraphPage(){
-  const { t: tr, locale } = useLanguage();const supabase=createClient();const[goals,setGoals]=useState<Goal[]>([]);const[projects,setProjects]=useState<Project[]>([]);const[tasks,setTasks]=useState<Task[]>([]);const[links,setLinks]=useState<EntityLink[]>([]);const[loading,setLoading]=useState(true);async function load(){setLoading(true);try{const[{data:g},{data:p},{data:t},{data:l}]=await Promise.all([supabase.from("goals").select("id,title,progress,target_date").eq("status","active").order("updated_at",{ascending:false}),supabase.from("projects").select("id,name,goal_id,status,target_date").neq("status","archived").order("updated_at",{ascending:false}),supabase.from("tasks").select("id,title,project_id,due_at,status").neq("status","done").order("due_at",{ascending:true,nullsFirst:false}).limit(500),supabase.from("life_os_entity_links").select("id,source_type,source_id,target_type,target_id,relation,confidence,metadata").order("created_at",{ascending:false}).limit(300)]);setGoals(g||[]);setProjects(p||[]);setTasks(t||[]);setLinks((l||[]) as EntityLink[])}catch(e){notifyToast({title:"Life Graph gagal dimuat",message:e instanceof Error?e.message:tr("Coba lagi."),tone:"error"})}finally{setLoading(false)}}useEffect(()=>{void load()},[]);const linked=useMemo(()=>{return goals.map(goal=>{const ps=projects.filter(p=>p.goal_id===goal.id);const projectIds=new Set(ps.map(p=>p.id));const ts=tasks.filter(t=>t.project_id&&projectIds.has(t.project_id));return{...goal,projects:ps,tasks:ts}})},[goals,projects,tasks]);const unlinkedProjects=projects.filter(p=>!p.goal_id);const unlinkedTasks=tasks.filter(t=>!t.project_id);return <div className="space-y-5 animate-licia-page-in"><header className="rounded-[2rem] border border-accent/15 bg-surface p-5 shadow-sm sm:p-7"><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="flex items-center gap-2 text-2xs font-bold uppercase tracking-[.16em] text-accent"><GitBranch size={14}/> {" "}{tr("GRAFIK KEHIDUPAN")}</p><h1 className="mt-1 font-display text-3xl text-text">{tr("Keterhubungan hidupmu")}</h1><p className="mt-2 max-w-2xl text-xs leading-relaxed text-textMuted">{tr("Visualisasi relasi Goal → Project → Task. Ini menjadi fondasi agar AI bisa melihat konteks, bukan data yang berdiri sendiri.")}</p></div><SoftButton onClick={()=>void load()} disabled={loading}><RefreshCw size={13} className={loading?"animate-spin":""}/> {" "}{tr("Segarkan")}</SoftButton></div></header>
-<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><div className="rounded-2xl border border-border bg-surface p-4"><Target size={16} className="text-accent"/><p className="mt-3 text-2xs text-textMuted">{tr("Goal aktif")}</p><p className="mt-1 text-2xl font-semibold text-text">{goals.length}</p></div><div className="rounded-2xl border border-border bg-surface p-4"><FolderKanban size={16} className="text-accent"/><p className="mt-3 text-2xs text-textMuted">{tr("Project aktif")}</p><p className="mt-1 text-2xl font-semibold text-text">{projects.length}</p></div><div className="rounded-2xl border border-border bg-surface p-4"><ListChecks size={16} className="text-accent"/><p className="mt-3 text-2xs text-textMuted">{tr("Task terbuka")}</p><p className="mt-1 text-2xl font-semibold text-text">{tasks.length}</p></div><div className="rounded-2xl border border-border bg-surface p-4"><Link2 size={16} className="text-accent"/><p className="mt-3 text-2xs text-textMuted">{tr("Relasi tambahan")}</p><p className="mt-1 text-2xl font-semibold text-text">{links.length}</p></div><div className="rounded-2xl border border-accent/15 bg-accent/5 p-4"><BrainCircuit size={16} className="text-accent"/><p className="mt-3 text-2xs text-textMuted">{tr("Context ready")}</p><p className="mt-1 text-sm font-semibold text-text">{tr("AI terhubung")}</p></div></div>
-{loading?<Card className="p-8"><div className="h-32 animate-licia-shimmer rounded-2xl bg-bg"/></Card>:<div className="space-y-3">{linked.length?linked.map(g=><Card key={g.id} className="overflow-hidden p-0"><div className="border-b border-border bg-bg/55 p-4"><div className="flex items-center gap-3"><span className="rounded-xl bg-accent/10 p-2.5 text-accent"><Target size={16}/></span><div className="min-w-0 flex-1"><Link href="/goals" className="text-sm font-semibold text-text hover:text-accent">{g.title}</Link><p className="mt-0.5 text-2xs text-textMuted">{tr("{progress}% selesai", { progress: g.progress })}{g.target_date?tr(" · target {target_date}", { target_date: g.target_date }):""}</p></div><ArrowRight size={15} className="text-textMuted"/></div></div><div className="grid gap-3 p-4 lg:grid-cols-2"><div><p className="mb-2 text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Projects")}</p>{g.projects.length?<div className="space-y-2">{g.projects.map(p=><div key={p.id} className="rounded-xl border border-border bg-bg/50 p-3"><div className="flex items-center gap-2"><FolderKanban size={14} className="text-accent"/><span className="min-w-0 truncate text-xs font-semibold text-text">{p.name}</span><span className="ml-auto text-2xs text-textMuted">{p.status}</span></div><p className="mt-2 text-2xs text-textMuted">{g.tasks.filter(t=>t.project_id===p.id).length} {" "}{tr("task terbuka")}</p></div>)}</div>:<p className="rounded-xl border border-dashed border-border p-3 text-2xs text-textMuted">{tr("Belum ada project terhubung.")}</p>}</div><div><p className="mb-2 text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Tasks / next actions")}</p>{g.tasks.length?<div className="space-y-2">{g.tasks.slice(0,7).map(t=><div key={t.id} className="flex items-start gap-2 rounded-xl border border-border bg-bg/50 p-3"><CircleDot size={13} className="mt-0.5 shrink-0 text-accent"/><div className="min-w-0"><p className="text-2xs font-semibold text-text">{t.title}</p>{t.due_at&&<p className="mt-1 flex items-center gap-1 text-2xs text-textMuted"><Timer size={10}/>{new Date(t.due_at).toLocaleString(locale,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</p>}</div></div>)}</div>:<p className="rounded-xl border border-dashed border-border p-3 text-2xs text-textMuted">{tr("Belum ada task terbuka yang terhubung.")}</p>}</div></div></Card>):<Card className="p-8 text-center"><GitBranch size={22} className="mx-auto text-textMuted"/><p className="mt-3 text-sm font-semibold text-text">{tr("Belum ada relasi goal.")}</p><p className="mt-1 text-xs text-textMuted">{tr("Buat goal lalu hubungkan project dan task untuk mulai membangun Life Graph.")}</p></Card>}
-<Card className="p-4 sm:p-5"><div className="flex items-center justify-between gap-2"><div><p className="text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Relasi lintas modul")}</p><p className="mt-1 text-2xs text-textMuted">{tr("Hubungan tambahan yang dibuat AI atau pengguna dan tidak bergantung pada goal/project bawaan.")}</p></div><Link2 size={16} className="text-accent"/></div><div className="mt-3 space-y-2">{links.slice(0,10).map(link=><div key={link.id} className="flex min-w-0 items-center gap-2 rounded-xl border border-border bg-bg/55 p-3"><span className="rounded-lg bg-accent/10 p-2 text-accent"><Link2 size={13}/></span><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-text">{link.source_type}:{link.source_id.slice(0,8)} → {link.target_type}:{link.target_id.slice(0,8)}</p><p className="mt-1 text-2xs text-textMuted">{link.relation}{link.confidence!=null?tr(" · keyakinan {round}%", { round: Math.round(link.confidence*100) }):""}</p></div></div>)}{!links.length&&<p className="rounded-xl border border-dashed border-border p-3 text-2xs text-textMuted">{tr("Belum ada relasi tambahan. Hubungkan entitas ketika konteksnya jelas.")}</p>}</div></Card><Card className="border-accent/15 bg-accent/5 p-4 sm:p-5"><div className="flex items-start gap-3"><BrainCircuit size={17} className="mt-0.5 text-accent"/><div><p className="text-sm font-semibold text-text">{tr("Graph Context")}</p><p className="mt-1 text-2xs leading-relaxed text-textMuted">{tr("Gunakan graph sebagai konteks bersama untuk mencari hubungan, bukan sekadar visual. Licia dapat menelusuri Goal → Project → Task → Agenda dari chat.")}</p><div className="mt-3 flex flex-wrap gap-2"><Link href="/chat?prompt=Jelaskan%20hubungan%20goal%2C%20project%2C%20task%2C%20dan%20agenda%20saya%20dengan%20evidence" className="inline-flex items-center gap-1 rounded-xl bg-accent px-3 py-2 text-2xs font-semibold text-white"><BrainCircuit size={11}/> {" "}{tr("Tanya Licia")}</Link><Link href="/search" className="inline-flex items-center gap-1 rounded-xl bg-bg px-3 py-2 text-2xs font-semibold text-textMuted"><Search size={11}/> {" "}{tr("Cari context")}</Link></div></div></div></Card>
-<Card className="p-4 sm:p-5"><p className="text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Orphan signals")}</p><div className="mt-3 grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-border bg-bg/55 p-4"><p className="text-xs font-semibold text-text">{tr("Project tanpa goal")}</p><p className="mt-1 text-2xl font-semibold text-text">{unlinkedProjects.length}</p><p className="mt-1 text-2xs text-textMuted">{tr("AI dapat membantu menghubungkan project jika relasinya jelas.")}</p></div><div className="rounded-2xl border border-border bg-bg/55 p-4"><p className="text-xs font-semibold text-text">{tr("Task tanpa project")}</p><p className="mt-1 text-2xl font-semibold text-text">{unlinkedTasks.length}</p><p className="mt-1 text-2xs text-textMuted">{tr("Jangan memaksa relasi; hubungkan hanya ketika konteksnya nyata.")}</p></div></div></Card></div>}</div>}
+type Goal = { id: string; title: string; progress: number; target_date: string | null };
+type Project = { id: string; name: string; goal_id: string | null; status: string; target_date: string | null };
+type Task = { id: string; title: string; project_id: string | null; due_at: string | null; status: string };
+type EntityLink = {
+  id: string;
+  source_type: string;
+  source_id: string;
+  target_type: string;
+  target_id: string;
+  relation: string;
+  confidence: number | null;
+  metadata: Record<string, unknown> | null;
+};
+export default function LifeGraphPage() {
+  const { t: tr, locale } = useLanguage();
+  const supabase = createClient();
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [links, setLinks] = useState<EntityLink[]>([]);
+  const [loading, setLoading] = useState(true);
+  async function load() {
+    setLoading(true);
+    try {
+      const [{ data: g }, { data: p }, { data: t }, { data: l }] = await Promise.all([
+        supabase
+          .from("goals")
+          .select("id,title,progress,target_date")
+          .eq("status", "active")
+          .order("updated_at", { ascending: false }),
+        supabase
+          .from("projects")
+          .select("id,name,goal_id,status,target_date")
+          .neq("status", "archived")
+          .order("updated_at", { ascending: false }),
+        supabase
+          .from("tasks")
+          .select("id,title,project_id,due_at,status")
+          .neq("status", "done")
+          .order("due_at", { ascending: true, nullsFirst: false })
+          .limit(500),
+        supabase
+          .from("life_os_entity_links")
+          .select("id,source_type,source_id,target_type,target_id,relation,confidence,metadata")
+          .order("created_at", { ascending: false })
+          .limit(300),
+      ]);
+      setGoals(g || []);
+      setProjects(p || []);
+      setTasks(t || []);
+      setLinks((l || []) as EntityLink[]);
+    } catch (e) {
+      notifyToast({
+        title: "Life Graph gagal dimuat",
+        message: e instanceof Error ? e.message : tr("Coba lagi."),
+        tone: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => {
+    void load();
+  }, []);
+  const linked = useMemo(() => {
+    return goals.map((goal) => {
+      const ps = projects.filter((p) => p.goal_id === goal.id);
+      const projectIds = new Set(ps.map((p) => p.id));
+      const ts = tasks.filter((t) => t.project_id && projectIds.has(t.project_id));
+      return { ...goal, projects: ps, tasks: ts };
+    });
+  }, [goals, projects, tasks]);
+  const unlinkedProjects = projects.filter((p) => !p.goal_id);
+  const unlinkedTasks = tasks.filter((t) => !t.project_id);
+  return (
+    <div className="space-y-5 animate-licia-page-in">
+      <header className="rounded-[2rem] border border-accent/15 bg-surface p-5 shadow-sm sm:p-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-2xs font-bold uppercase tracking-[.16em] text-accent">
+              <GitBranch size={14} /> {tr("GRAFIK KEHIDUPAN")}
+            </p>
+            <h1 className="mt-1 font-display text-3xl text-text">{tr("Keterhubungan hidupmu")}</h1>
+            <p className="mt-2 max-w-2xl text-xs leading-relaxed text-textMuted">
+              {tr(
+                "Visualisasi relasi Goal → Project → Task. Ini menjadi fondasi agar AI bisa melihat konteks, bukan data yang berdiri sendiri.",
+              )}
+            </p>
+          </div>
+          <SoftButton onClick={() => void load()} disabled={loading}>
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> {tr("Segarkan")}
+          </SoftButton>
+        </div>
+      </header>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <Target size={16} className="text-accent" />
+          <p className="mt-3 text-2xs text-textMuted">{tr("Goal aktif")}</p>
+          <p className="mt-1 text-2xl font-semibold text-text">{goals.length}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <FolderKanban size={16} className="text-accent" />
+          <p className="mt-3 text-2xs text-textMuted">{tr("Project aktif")}</p>
+          <p className="mt-1 text-2xl font-semibold text-text">{projects.length}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <ListChecks size={16} className="text-accent" />
+          <p className="mt-3 text-2xs text-textMuted">{tr("Task terbuka")}</p>
+          <p className="mt-1 text-2xl font-semibold text-text">{tasks.length}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <Link2 size={16} className="text-accent" />
+          <p className="mt-3 text-2xs text-textMuted">{tr("Relasi tambahan")}</p>
+          <p className="mt-1 text-2xl font-semibold text-text">{links.length}</p>
+        </div>
+        <div className="rounded-2xl border border-accent/15 bg-accent/5 p-4">
+          <BrainCircuit size={16} className="text-accent" />
+          <p className="mt-3 text-2xs text-textMuted">{tr("Context ready")}</p>
+          <p className="mt-1 text-sm font-semibold text-text">{tr("AI terhubung")}</p>
+        </div>
+      </div>
+      {loading ? (
+        <Card className="p-8">
+          <div className="h-32 animate-licia-shimmer rounded-2xl bg-bg" />
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {linked.length ? (
+            linked.map((g) => (
+              <Card key={g.id} className="overflow-hidden p-0">
+                <div className="border-b border-border bg-bg/55 p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-xl bg-accent/10 p-2.5 text-accent">
+                      <Target size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <Link href="/goals" className="text-sm font-semibold text-text hover:text-accent">
+                        {g.title}
+                      </Link>
+                      <p className="mt-0.5 text-2xs text-textMuted">
+                        {tr("{progress}% selesai", { progress: g.progress })}
+                        {g.target_date ? tr(" · target {target_date}", { target_date: g.target_date }) : ""}
+                      </p>
+                    </div>
+                    <ArrowRight size={15} className="text-textMuted" />
+                  </div>
+                </div>
+                <div className="grid gap-3 p-4 lg:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Projects")}</p>
+                    {g.projects.length ? (
+                      <div className="space-y-2">
+                        {g.projects.map((p) => (
+                          <div key={p.id} className="rounded-xl border border-border bg-bg/50 p-3">
+                            <div className="flex items-center gap-2">
+                              <FolderKanban size={14} className="text-accent" />
+                              <span className="min-w-0 truncate text-xs font-semibold text-text">{p.name}</span>
+                              <span className="ml-auto text-2xs text-textMuted">{p.status}</span>
+                            </div>
+                            <p className="mt-2 text-2xs text-textMuted">
+                              {g.tasks.filter((t) => t.project_id === p.id).length} {tr("task terbuka")}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-border p-3 text-2xs text-textMuted">
+                        {tr("Belum ada project terhubung.")}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="mb-2 text-2xs font-bold uppercase tracking-wider text-textMuted">
+                      {tr("Tasks / next actions")}
+                    </p>
+                    {g.tasks.length ? (
+                      <div className="space-y-2">
+                        {g.tasks.slice(0, 7).map((t) => (
+                          <div
+                            key={t.id}
+                            className="flex items-start gap-2 rounded-xl border border-border bg-bg/50 p-3"
+                          >
+                            <CircleDot size={13} className="mt-0.5 shrink-0 text-accent" />
+                            <div className="min-w-0">
+                              <p className="text-2xs font-semibold text-text">{t.title}</p>
+                              {t.due_at && (
+                                <p className="mt-1 flex items-center gap-1 text-2xs text-textMuted">
+                                  <Timer size={10} />
+                                  {new Date(t.due_at).toLocaleString(locale, {
+                                    day: "numeric",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-border p-3 text-2xs text-textMuted">
+                        {tr("Belum ada task terbuka yang terhubung.")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <Card className="p-8 text-center">
+              <GitBranch size={22} className="mx-auto text-textMuted" />
+              <p className="mt-3 text-sm font-semibold text-text">{tr("Belum ada relasi goal.")}</p>
+              <p className="mt-1 text-xs text-textMuted">
+                {tr("Buat goal lalu hubungkan project dan task untuk mulai membangun Life Graph.")}
+              </p>
+            </Card>
+          )}
+          <Card className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-2xs font-bold uppercase tracking-wider text-textMuted">
+                  {tr("Relasi lintas modul")}
+                </p>
+                <p className="mt-1 text-2xs text-textMuted">
+                  {tr("Hubungan tambahan yang dibuat AI atau pengguna dan tidak bergantung pada goal/project bawaan.")}
+                </p>
+              </div>
+              <Link2 size={16} className="text-accent" />
+            </div>
+            <div className="mt-3 space-y-2">
+              {links.slice(0, 10).map((link) => (
+                <div
+                  key={link.id}
+                  className="flex min-w-0 items-center gap-2 rounded-xl border border-border bg-bg/55 p-3"
+                >
+                  <span className="rounded-lg bg-accent/10 p-2 text-accent">
+                    <Link2 size={13} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-text">
+                      {link.source_type}:{link.source_id.slice(0, 8)} → {link.target_type}:{link.target_id.slice(0, 8)}
+                    </p>
+                    <p className="mt-1 text-2xs text-textMuted">
+                      {link.relation}
+                      {link.confidence != null
+                        ? tr(" · keyakinan {round}%", { round: Math.round(link.confidence * 100) })
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {!links.length && (
+                <p className="rounded-xl border border-dashed border-border p-3 text-2xs text-textMuted">
+                  {tr("Belum ada relasi tambahan. Hubungkan entitas ketika konteksnya jelas.")}
+                </p>
+              )}
+            </div>
+          </Card>
+          <Card className="border-accent/15 bg-accent/5 p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <BrainCircuit size={17} className="mt-0.5 text-accent" />
+              <div>
+                <p className="text-sm font-semibold text-text">{tr("Graph Context")}</p>
+                <p className="mt-1 text-2xs leading-relaxed text-textMuted">
+                  {tr(
+                    "Gunakan graph sebagai konteks bersama untuk mencari hubungan, bukan sekadar visual. Licia dapat menelusuri Goal → Project → Task → Agenda dari chat.",
+                  )}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    href="/chat?prompt=Jelaskan%20hubungan%20goal%2C%20project%2C%20task%2C%20dan%20agenda%20saya%20dengan%20evidence"
+                    className="inline-flex items-center gap-1 rounded-xl bg-accent px-3 py-2 text-2xs font-semibold text-white"
+                  >
+                    <BrainCircuit size={11} /> {tr("Tanya Licia")}
+                  </Link>
+                  <Link
+                    href="/search"
+                    className="inline-flex items-center gap-1 rounded-xl bg-bg px-3 py-2 text-2xs font-semibold text-textMuted"
+                  >
+                    <Search size={11} /> {tr("Cari context")}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4 sm:p-5">
+            <p className="text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Orphan signals")}</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-bg/55 p-4">
+                <p className="text-xs font-semibold text-text">{tr("Project tanpa goal")}</p>
+                <p className="mt-1 text-2xl font-semibold text-text">{unlinkedProjects.length}</p>
+                <p className="mt-1 text-2xs text-textMuted">
+                  {tr("AI dapat membantu menghubungkan project jika relasinya jelas.")}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-bg/55 p-4">
+                <p className="text-xs font-semibold text-text">{tr("Task tanpa project")}</p>
+                <p className="mt-1 text-2xl font-semibold text-text">{unlinkedTasks.length}</p>
+                <p className="mt-1 text-2xs text-textMuted">
+                  {tr("Jangan memaksa relasi; hubungkan hanya ketika konteksnya nyata.")}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}

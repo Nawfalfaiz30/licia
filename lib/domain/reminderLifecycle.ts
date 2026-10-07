@@ -23,15 +23,31 @@ export async function cancelBoundReminders(
     .select("id,target_id,title");
   if (error) throw new Error(error.message);
   for (const row of data ?? []) {
-    await emitLifeEvent(supabase, { userId, eventType: "reminder.cancelled", entityType: "reminder", entityId: row.id, payload: { targetType, targetId: row.target_id, reason } });
+    await emitLifeEvent(supabase, {
+      userId,
+      eventType: "reminder.cancelled",
+      entityType: "reminder",
+      entityId: row.id,
+      payload: { targetType, targetId: row.target_id, reason },
+    });
   }
   return { cancelled: data?.length ?? 0 };
 }
 
-export async function cancelTaskReminders(supabase: SupabaseClient, userId: string, taskIds: string | string[], reason = "task_changed") {
+export async function cancelTaskReminders(
+  supabase: SupabaseClient,
+  userId: string,
+  taskIds: string | string[],
+  reason = "task_changed",
+) {
   return cancelBoundReminders(supabase, userId, "task", taskIds, reason);
 }
 
-export async function cancelScheduleReminders(supabase: SupabaseClient, userId: string, blockIds: string | string[], reason = "schedule_changed") {
+export async function cancelScheduleReminders(
+  supabase: SupabaseClient,
+  userId: string,
+  blockIds: string | string[],
+  reason = "schedule_changed",
+) {
   return cancelBoundReminders(supabase, userId, "schedule", blockIds, reason);
 }

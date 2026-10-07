@@ -33,7 +33,11 @@ export function resolveGoTo(key: string): GoTarget | null {
 
 /** True bila fokus ada di kolom ketik — pintasan satu huruf tidak boleh aktif di sana. */
 export function isTypingTarget(target: EventTarget | null): boolean {
-  const el = target as { tagName?: string; isContentEditable?: boolean; getAttribute?: (n: string) => string | null } | null;
+  const el = target as {
+    tagName?: string;
+    isContentEditable?: boolean;
+    getAttribute?: (n: string) => string | null;
+  } | null;
   if (!el || typeof el !== "object") return false;
   const tag = String(el.tagName || "").toUpperCase();
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
@@ -77,7 +81,10 @@ export const SHORTCUT_HELP: ShortcutGroup[] = [
   },
   {
     title: "Pindah halaman (tekan G, lalu huruf)",
-    items: Object.entries(GO_TO).map(([key, target]) => ({ keys: ["G", key === "/" ? "/" : key.toUpperCase()], label: target.label })),
+    items: Object.entries(GO_TO).map(([key, target]) => ({
+      keys: ["G", key === "/" ? "/" : key.toUpperCase()],
+      label: target.label,
+    })),
   },
 ];
 

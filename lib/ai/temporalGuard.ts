@@ -2,8 +2,11 @@ import { resolveNaturalDate, validateWeekdayDate, buildTemporalContext, type Res
 import { dateStrInTimezone } from "@/lib/date";
 
 export function hasTemporalIntent(text: string) {
-  return /\b(hari ini|besok|lusa|kemarin|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu|tanggal|\d{4}-\d{2}-\d{2}|\d{1,2}[\/-]\d{1,2})\b/i.test(text)
-    || /\b(jadwal|kalender|agenda|meeting|rapat|kelas|kuliah|pengingat|reminder)\b/i.test(text);
+  return (
+    /\b(hari ini|besok|lusa|kemarin|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu|tanggal|\d{4}-\d{2}-\d{2}|\d{1,2}[\/-]\d{1,2})\b/i.test(
+      text,
+    ) || /\b(jadwal|kalender|agenda|meeting|rapat|kelas|kuliah|pengingat|reminder)\b/i.test(text)
+  );
 }
 
 export type TemporalGuard = {
@@ -34,9 +37,8 @@ export function buildTemporalGuard(input: string, referenceDate: Date, timezone:
   const resolved = resolveNaturalDate(text, referenceDate, timezone);
   const weekdayMatch = text.match(/\b(senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)\b/i)?.[1] || null;
   const explicitDate = resolved[0]?.date || null;
-  const weekdayValidation = weekdayMatch && explicitDate
-    ? validateWeekdayDate(explicitDate, weekdayMatch, timezone)
-    : undefined;
+  const weekdayValidation =
+    weekdayMatch && explicitDate ? validateWeekdayDate(explicitDate, weekdayMatch, timezone) : undefined;
 
   const chosen = resolved[0];
   const detail = chosen

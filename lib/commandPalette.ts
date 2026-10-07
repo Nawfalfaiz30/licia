@@ -61,7 +61,10 @@ export function parsePaletteQuery(raw: string): { scope: PaletteScope; text: str
 }
 
 function match<T extends PaletteItem>(items: readonly T[], text: string): T[] {
-  return filterPalette(items.map((item) => ({ ...item, href: `${item.keywords ?? ""} ${item.href ?? ""}`.trim() })), text)
+  return filterPalette(
+    items.map((item) => ({ ...item, href: `${item.keywords ?? ""} ${item.href ?? ""}`.trim() })),
+    text,
+  )
     .map((hit) => items.find((item) => item.id === hit.id)!)
     .filter(Boolean);
 }

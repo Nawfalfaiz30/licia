@@ -31,14 +31,24 @@ function unb64(text: string): Uint8Array {
 }
 
 function envelopeParts(envelope: string) {
-  const prefix = envelope.startsWith(ENC_PREFIX) ? ENC_PREFIX : envelope.startsWith(LEGACY_ENC_PREFIX) ? LEGACY_ENC_PREFIX : null;
+  const prefix = envelope.startsWith(ENC_PREFIX)
+    ? ENC_PREFIX
+    : envelope.startsWith(LEGACY_ENC_PREFIX)
+      ? LEGACY_ENC_PREFIX
+      : null;
   if (!prefix) return null;
   const parts = envelope.slice(prefix.length).split(":");
   return parts.length === 3 ? { prefix, parts } : null;
 }
 
-export async function deriveVaultKey(passphrase: string, salt: Uint8Array, iterations = PBKDF2_ITERATIONS): Promise<CryptoKey> {
-  const material = await crypto.subtle.importKey("raw", te.encode(passphrase.normalize("NFKC")), "PBKDF2", false, ["deriveKey"]);
+export async function deriveVaultKey(
+  passphrase: string,
+  salt: Uint8Array,
+  iterations = PBKDF2_ITERATIONS,
+): Promise<CryptoKey> {
+  const material = await crypto.subtle.importKey("raw", te.encode(passphrase.normalize("NFKC")), "PBKDF2", false, [
+    "deriveKey",
+  ]);
   return crypto.subtle.deriveKey(
     { name: "PBKDF2", salt: salt as BufferSource, iterations, hash: "SHA-256" },
     material,
@@ -52,19 +62,30 @@ export type VaultSession = { salt: Uint8Array; key: CryptoKey; kdfVersion?: numb
 
 export async function createVaultSession(passphrase: string, salt?: Uint8Array): Promise<VaultSession> {
   const s = salt ?? crypto.getRandomValues(new Uint8Array(16));
-  return { salt: s, key: await deriveVaultKey(passphrase, s, PBKDF2_ITERATIONS), kdfVersion: KDF_VERSION, iterations: PBKDF2_ITERATIONS };
+  return {
+    salt: s,
+    key: await deriveVaultKey(passphrase, s, PBKDF2_ITERATIONS),
+    kdfVersion: KDF_VERSION,
+    iterations: PBKDF2_ITERATIONS,
+  };
 }
 
 export async function encryptText(plain: string, session: VaultSession): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, session.key, te.encode(plain)));
+  const ct = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, session.key, te.encode(plain)),
+  );
   return ENC_PREFIX + b64(session.salt) + ":" + b64(iv) + ":" + b64(ct);
 }
 
 export function saltOf(envelope: string): Uint8Array | null {
   const parsed = envelopeParts(envelope);
   if (!parsed) return null;
-  try { return unb64(parsed.parts[0]); } catch { return null; }
+  try {
+    return unb64(parsed.parts[0]);
+  } catch {
+    return null;
+  }
 }
 
 export function vaultEnvelopeVersion(envelope: string): 1 | 2 | null {
@@ -73,7 +94,11 @@ export function vaultEnvelopeVersion(envelope: string): 1 | 2 | null {
   return null;
 }
 
-export async function decryptText(envelope: string, passphrase: string, cache?: Map<string, CryptoKey>): Promise<string | null> {
+export async function decryptText(
+  envelope: string,
+  passphrase: string,
+  cache?: Map<string, CryptoKey>,
+): Promise<string | null> {
   if (!isEncrypted(envelope)) return envelope;
   const parsed = envelopeParts(envelope);
   if (!parsed) return null;
@@ -89,7 +114,7 @@ export async function decryptText(envelope: string, passphrase: string, cache?: 
     const pt = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv: unb64(parsed.parts[1]) as BufferSource },
       key,
-      unb64(parsed.parts[2]) as BufferSource
+      unb64(parsed.parts[2]) as BufferSource,
     );
     return td.decode(pt);
   } catch {
@@ -99,7 +124,11 @@ export async function decryptText(envelope: string, passphrase: string, cache?: 
 
 // A deterministic migration path for UI flows: decrypt the old envelope and re-encrypt
 // with v2 in one user-controlled operation.
-export async function upgradeVaultEnvelope(envelope: string, passphrase: string, cache?: Map<string, CryptoKey>): Promise<string | null> {
+export async function upgradeVaultEnvelope(
+  envelope: string,
+  passphrase: string,
+  cache?: Map<string, CryptoKey>,
+): Promise<string | null> {
   if (vaultEnvelopeVersion(envelope) !== 1) return envelope;
   const plain = await decryptText(envelope, passphrase, cache);
   if (plain == null) return null;

@@ -6,7 +6,9 @@ type Vital = "LCP" | "INP" | "CLS";
 
 function report(metric: Vital, value: number) {
   if (!Number.isFinite(value) || value < 0) return;
-  try { if ((navigator as any).connection?.saveData) return; } catch {}
+  try {
+    if ((navigator as any).connection?.saveData) return;
+  } catch {}
   void fetch("/api/telemetry", {
     method: "POST",
     credentials: "include",

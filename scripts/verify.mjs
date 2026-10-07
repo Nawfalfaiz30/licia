@@ -45,7 +45,10 @@ const tsFiles = files.filter((f) => /\.(tsx?|ts)$/.test(f));
 for (const file of tsFiles) {
   const source = fs.readFileSync(file, "utf8");
   // Command Center / Ctrl+K is an intentional Licia feature. Only flag a stale import to a removed component.
-  if (path.relative(root, file) !== "scripts/verify.mjs" && /from\s+["']@\/components\/layout\/CommandPalette["']/.test(source)) {
+  if (
+    path.relative(root, file) !== "scripts/verify.mjs" &&
+    /from\s+["']@\/components\/layout\/CommandPalette["']/.test(source)
+  ) {
     console.error(`STALE COMMAND PALETTE IMPORT: ${path.relative(root, file)}`);
     failed = true;
   }
@@ -94,7 +97,7 @@ for (const required of [
   "addDevelopmentLoopbackOrigins",
   "localhost:${port}",
   "127.0.0.1:${port}",
-  "process.env.NODE_ENV === \"production\"",
+  'process.env.NODE_ENV === "production"',
   "x-forwarded-host",
   "x-forwarded-proto",
 ]) {
@@ -121,7 +124,11 @@ if (/blocks:\s*\[\]\s*\}\)\);/.test(weeklyPlanner)) {
   failed = true;
 }
 const backupRoute = fs.readFileSync(path.join(root, "app/api/backup/route.ts"), "utf8");
-if (!backupRoute.includes("enforceSameOrigin") || !backupRoute.includes("assertJsonSize") || !backupRoute.includes('mode:"merge"')) {
+if (
+  !backupRoute.includes("enforceSameOrigin") ||
+  !backupRoute.includes("assertJsonSize") ||
+  !backupRoute.includes('mode:"merge"')
+) {
   console.error("BACKUP ROUTE SECURITY/MERGE GUARD MISSING");
   failed = true;
 }
@@ -170,10 +177,12 @@ if (/Strict-Transport-Security/.test(nextConfig) && !/usesHttpsOrigin/.test(next
 
 const localImportExts = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css"];
 function resolveLocalImport(spec, importer) {
-  const base = spec.startsWith("@/")
-    ? path.join(root, spec.slice(2))
-    : path.resolve(path.dirname(importer), spec);
-  const candidates = [base, ...localImportExts.map((ext) => `${base}${ext}`), ...localImportExts.map((ext) => path.join(base, `index${ext}`))];
+  const base = spec.startsWith("@/") ? path.join(root, spec.slice(2)) : path.resolve(path.dirname(importer), spec);
+  const candidates = [
+    base,
+    ...localImportExts.map((ext) => `${base}${ext}`),
+    ...localImportExts.map((ext) => path.join(base, `index${ext}`)),
+  ];
   return candidates.find((candidate) => fs.existsSync(candidate));
 }
 for (const file of files.filter((f) => /\.(tsx?|jsx?|mjs|cjs)$/.test(f))) {
@@ -212,7 +221,13 @@ try {
   let parseErrors = 0;
   for (const file of tsFiles) {
     const source = fs.readFileSync(file, "utf8");
-    const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+    const sf = ts.createSourceFile(
+      file,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
     if (sf.parseDiagnostics?.length) {
       console.error(`PARSE ERROR: ${path.relative(root, file)}`);
       parseErrors += sf.parseDiagnostics.length;

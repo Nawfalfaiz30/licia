@@ -4,7 +4,15 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { clsx } from "clsx";
 import { TABBABLE_SELECTOR, resolveTabTarget } from "@/lib/focusTrap";
-import { isTopOverlay, lockBackground, lockScroll, pushOverlay, removeOverlay, unlockBackground, unlockScroll } from "@/lib/overlayStack";
+import {
+  isTopOverlay,
+  lockBackground,
+  lockScroll,
+  pushOverlay,
+  removeOverlay,
+  unlockBackground,
+  unlockScroll,
+} from "@/lib/overlayStack";
 
 export type OverlayTier = "sheet" | "modal" | "palette";
 export type OverlayAlign = "center" | "bottom" | "end" | "top";
@@ -49,8 +57,19 @@ type OverlayProps = {
  * - Lapisan z-index memakai token (`z-sheet`, `z-modal`, `z-palette`).
  */
 export function Overlay({
-  open, onClose, children, label, labelledBy, tier = "modal", align = "bottom", panelClassName, backdropClassName,
-  dismissible = true, initialFocus, visibilityClassName, flush = false,
+  open,
+  onClose,
+  children,
+  label,
+  labelledBy,
+  tier = "modal",
+  align = "bottom",
+  panelClassName,
+  backdropClassName,
+  dismissible = true,
+  initialFocus,
+  visibilityClassName,
+  flush = false,
 }: OverlayProps) {
   const id = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -80,7 +99,10 @@ export function Overlay({
 
     const panel = panelRef.current;
     if (panel && !panel.contains(document.activeElement)) {
-      const preferred = initialFocus?.() ?? panel.querySelector<HTMLElement>("[data-autofocus]") ?? panel.querySelector<HTMLElement>(TABBABLE_SELECTOR);
+      const preferred =
+        initialFocus?.() ??
+        panel.querySelector<HTMLElement>("[data-autofocus]") ??
+        panel.querySelector<HTMLElement>(TABBABLE_SELECTOR);
       (preferred ?? panel).focus({ preventScroll: true });
     }
 
@@ -94,7 +116,9 @@ export function Overlay({
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
-      const nodes = Array.from(panelRef.current.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter((node) => node.offsetParent !== null || node === document.activeElement);
+      const nodes = Array.from(panelRef.current.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
+        (node) => node.offsetParent !== null || node === document.activeElement,
+      );
       const index = nodes.indexOf(document.activeElement as HTMLElement);
       const target = resolveTabTarget(index, nodes.length, event.shiftKey);
       if (target === null) return;
@@ -123,8 +147,17 @@ export function Overlay({
 
   return createPortal(
     <div
-      className={clsx("fixed inset-0 flex justify-center bg-black/45 backdrop-blur-[3px]", !flush && "p-3", TIER_CLASS[tier], ALIGN_CLASS[align], visibilityClassName, backdropClassName)}
-      onMouseDown={(event) => { pointerDownOnBackdrop.current = event.target === event.currentTarget; }}
+      className={clsx(
+        "fixed inset-0 flex justify-center bg-black/45 backdrop-blur-[3px]",
+        !flush && "p-3",
+        TIER_CLASS[tier],
+        ALIGN_CLASS[align],
+        visibilityClassName,
+        backdropClassName,
+      )}
+      onMouseDown={(event) => {
+        pointerDownOnBackdrop.current = event.target === event.currentTarget;
+      }}
       onClick={(event) => {
         // Klik hanya menutup bila tekan DAN lepas terjadi di backdrop (cegah tutup tak sengaja saat seleksi teks).
         if (dismissible && pointerDownOnBackdrop.current && event.target === event.currentTarget) onClose();

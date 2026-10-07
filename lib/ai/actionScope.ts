@@ -28,21 +28,34 @@ function isoBounds(fromDate: string, toDate: string, timezone: string) {
 }
 
 export function resolveActionScope(message: string, now = new Date(), timezone = "Asia/Jakarta"): ActionScope {
-  const text = String(message || "").trim().toLocaleLowerCase("id-ID");
+  const text = String(message || "")
+    .trim()
+    .toLocaleLowerCase("id-ID");
   if (!text) return { kind: "none", label: "tanpa scope waktu", explicit: false };
   const today = dateStrInTimezone(now, timezone);
 
   // More specific relative scopes must be checked before the generic "hari ini"
   // token, otherwise "setelah hari ini" / "sebelum hari ini" would be misread as
   // a one-day scope.
-  if (/\b(?:setelah|sesudah)\s+hari\s+ini\b|\bbesok\s+dan\s+seterusnya\b|\bsetelah\s+hari\s+ini\s+dan\s+seterusnya\b/i.test(text)) {
+  if (
+    /\b(?:setelah|sesudah)\s+hari\s+ini\b|\bbesok\s+dan\s+seterusnya\b|\bsetelah\s+hari\s+ini\s+dan\s+seterusnya\b/i.test(
+      text,
+    )
+  ) {
     const bounds = isoBounds(today, today, timezone);
     return { kind: "after", label: "setelah hari ini", fromDate: today, toDate: today, explicit: true, ...bounds };
   }
   if (/\b(?:sebelum|hingga)\s+hari\s+ini\b|\bsampai\s+kemarin\b/i.test(text)) {
     const yesterday = shiftDate(today, -1);
     const bounds = isoBounds(yesterday, yesterday, timezone);
-    return { kind: "before", label: "sebelum hari ini", fromDate: yesterday, toDate: yesterday, explicit: true, ...bounds };
+    return {
+      kind: "before",
+      label: "sebelum hari ini",
+      fromDate: yesterday,
+      toDate: yesterday,
+      explicit: true,
+      ...bounds,
+    };
   }
   if (/\b(hari ini|today)\b/i.test(text)) {
     const bounds = isoBounds(today, today, timezone);
@@ -69,7 +82,14 @@ export function resolveActionScope(message: string, now = new Date(), timezone =
     const nextMonday = shiftDate(today, 8 - weekday);
     const nextSunday = shiftDate(nextMonday, 6);
     const bounds = isoBounds(nextMonday, nextSunday, timezone);
-    return { kind: "range", label: "minggu depan", fromDate: nextMonday, toDate: nextSunday, explicit: true, ...bounds };
+    return {
+      kind: "range",
+      label: "minggu depan",
+      fromDate: nextMonday,
+      toDate: nextSunday,
+      explicit: true,
+      ...bounds,
+    };
   }
   if (/\b(minggu ini)\b/i.test(text)) {
     const weekday = new Date(`${today}T12:00:00Z`).getUTCDay() || 7;
@@ -82,12 +102,10 @@ export function resolveActionScope(message: string, now = new Date(), timezone =
   return { kind: "none", label: "tanpa scope waktu", explicit: false };
 }
 
-export function isConversationalUndoIntent(
-  message: string,
-  now = new Date(),
-  timezone = "Asia/Jakarta",
-): boolean {
-  const text = String(message || "").trim().toLocaleLowerCase("id-ID");
+export function isConversationalUndoIntent(message: string, now = new Date(), timezone = "Asia/Jakarta"): boolean {
+  const text = String(message || "")
+    .trim()
+    .toLocaleLowerCase("id-ID");
   if (!text) return false;
 
   // A date/range scope means "kembalikan/pulihkan" is an explicit status command,
@@ -97,7 +115,11 @@ export function isConversationalUndoIntent(
   // Keep direct status-restoration commands out of generic undo.
   if (/\b(?:ke|jadi|menjadi)\s+(?:belum\s+selesai|todo|pending)\b/i.test(text)) return false;
 
-  if (/\b(?:undo|urungkan(?:\s+perubahan)?|batalkan\s+perubahan(?:\s+(?:tadi|terakhir))?|batalkan\s+aksi(?:\s+(?:tadi|terakhir))?)\b/i.test(text)) {
+  if (
+    /\b(?:undo|urungkan(?:\s+perubahan)?|batalkan\s+perubahan(?:\s+(?:tadi|terakhir))?|batalkan\s+aksi(?:\s+(?:tadi|terakhir))?)\b/i.test(
+      text,
+    )
+  ) {
     return true;
   }
   if (/\b(?:kembalikan|pulihkan|balikkan)\b[\s\S]{0,60}\b(?:tadi|terakhir|seperti\s+semula|sebelumnya)\b/i.test(text)) {

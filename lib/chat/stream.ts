@@ -39,7 +39,11 @@ export async function postChatStream(
     }
     if (!dataLines.length) return;
     let payload: any = {};
-    try { payload = JSON.parse(dataLines.join("\n")); } catch { return; }
+    try {
+      payload = JSON.parse(dataLines.join("\n"));
+    } catch {
+      return;
+    }
     if (event === "final") result = { ok: true, status: 200, data: payload };
     else if (event === "error") result = { ok: false, status: Number(payload?.status) || 500, data: payload };
     else opts.onEvent?.(payload as ChatStreamEvent);

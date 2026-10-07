@@ -11,9 +11,7 @@ if (!url || !key) {
 const defaultKeepDays = Math.max(7, Math.min(Number(process.env.LICIA_LOG_RETENTION_DAYS || 90), 3650));
 const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
-const { data: preferences, error } = await supabase
-  .from("ai_privacy_preferences")
-  .select("user_id,log_retention_days");
+const { data: preferences, error } = await supabase.from("ai_privacy_preferences").select("user_id,log_retention_days");
 if (error) {
   console.error("Preferensi retensi gagal dibaca:", error.message);
   process.exit(1);
@@ -36,11 +34,17 @@ for (const row of preferences || []) {
   }
 }
 
-console.log(JSON.stringify({
-  ok: failures.length === 0,
-  processedUsers,
-  deletedRows,
-  defaultKeepDays,
-  failures,
-}, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      ok: failures.length === 0,
+      processedUsers,
+      deletedRows,
+      defaultKeepDays,
+      failures,
+    },
+    null,
+    2,
+  ),
+);
 if (failures.length) process.exit(1);

@@ -28,7 +28,9 @@ export async function POST(req: Request) {
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return new NextResponse(null, { status: 204 });
 
   const distributed = await distributedRateLimit(supabase, "web-vitals", 30, 60_000, "web-vitals:" + user.id);

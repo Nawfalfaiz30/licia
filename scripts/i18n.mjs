@@ -18,12 +18,42 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 let ts;
-try { ts = require("typescript"); } catch { console.error("Butuh paket 'typescript' (npm install)."); process.exit(2); }
+try {
+  ts = require("typescript");
+} catch {
+  console.error("Butuh paket 'typescript' (npm install).");
+  process.exit(2);
+}
 
 const ROOT = process.cwd();
 const T_NAMES = new Set(["t", "tr", "trn"]);
 const TOAST_CALLS = new Set(["notifyToast", "toastWithUndo"]);
-const UI_KEYS = new Set(["title", "label", "detail", "description", "hint", "subtitle", "name", "text", "cta", "desc", "summary", "heading", "tooltip", "body", "caption", "badge", "eyebrow", "helper", "example", "category", "message", "empty", "l", "help"]);
+const UI_KEYS = new Set([
+  "title",
+  "label",
+  "detail",
+  "description",
+  "hint",
+  "subtitle",
+  "name",
+  "text",
+  "cta",
+  "desc",
+  "summary",
+  "heading",
+  "tooltip",
+  "body",
+  "caption",
+  "badge",
+  "eyebrow",
+  "helper",
+  "example",
+  "category",
+  "message",
+  "empty",
+  "l",
+  "help",
+]);
 const ARRAY_KEYS = new Set(["steps", "examples", "tips", "items", "points"]);
 /** berkas → nama konstanta modul yang nilainya tampil di UI */
 const CONSTANT_SOURCES = {
@@ -58,8 +88,9 @@ function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) { if (!["node_modules", ".next", "native", "tests"].includes(e.name)) walk(p, out); }
-    else if (/\.tsx?$/.test(p) && !/\.d\.ts$/.test(p)) out.push(p);
+    if (e.isDirectory()) {
+      if (!["node_modules", ".next", "native", "tests"].includes(e.name)) walk(p, out);
+    } else if (/\.tsx?$/.test(p) && !/\.d\.ts$/.test(p)) out.push(p);
   }
   return out;
 }
@@ -72,12 +103,27 @@ function literalText(node) {
 
 export function collectPhrases() {
   const phrases = new Map(); // frasa → Set(berkas)
-  const add = (text, file) => { if (text && hasLetters(text)) { if (!phrases.has(text)) phrases.set(text, new Set()); phrases.get(text).add(file); } };
-  const files = [...walk(path.join(ROOT, "app")), ...walk(path.join(ROOT, "components")), ...walk(path.join(ROOT, "lib"))];
+  const add = (text, file) => {
+    if (text && hasLetters(text)) {
+      if (!phrases.has(text)) phrases.set(text, new Set());
+      phrases.get(text).add(file);
+    }
+  };
+  const files = [
+    ...walk(path.join(ROOT, "app")),
+    ...walk(path.join(ROOT, "components")),
+    ...walk(path.join(ROOT, "lib")),
+  ];
   for (const file of files) {
     const r = rel(file);
     const src = fs.readFileSync(file, "utf8");
-    const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+    const sf = ts.createSourceFile(
+      file,
+      src,
+      ts.ScriptTarget.Latest,
+      true,
+      file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
     const isApi = API_DIRS.some((d) => r.startsWith(d + "/"));
     const constNames = CONSTANT_SOURCES[r];
 
@@ -87,27 +133,48 @@ export function collectPhrases() {
           const key = n.name.text;
           const text = literalText(n.initializer);
           if (text !== null && UI_KEYS.has(key) && !looksLikeCode(text)) add(text, r);
-          if (ARRAY_KEYS.has(key) && ts.isArrayLiteralExpression(n.initializer)) for (const el of n.initializer.elements) { const t = literalText(el); if (t !== null && !looksLikeCode(t)) add(t, r); }
+          if (ARRAY_KEYS.has(key) && ts.isArrayLiteralExpression(n.initializer))
+            for (const el of n.initializer.elements) {
+              const t = literalText(el);
+              if (t !== null && !looksLikeCode(t)) add(t, r);
+            }
         }
         ts.forEachChild(n, v);
       })(node);
     };
 
     (function visit(n) {
-      if (ts.isJsxAttribute(n) && n.name.getText() === "title" && n.initializer && ts.isStringLiteral(n.initializer) && /(^|\/)loading\.tsx$/.test(r)) add(n.initializer.text, r);
+      if (
+        ts.isJsxAttribute(n) &&
+        n.name.getText() === "title" &&
+        n.initializer &&
+        ts.isStringLiteral(n.initializer) &&
+        /(^|\/)loading\.tsx$/.test(r)
+      )
+        add(n.initializer.text, r);
       if (ts.isCallExpression(n)) {
         const callee = n.expression;
         if (ts.isIdentifier(callee) && T_NAMES.has(callee.text) && n.arguments[0]) {
           const text = literalText(n.arguments[0]);
           if (text !== null) add(text, r);
         }
-        if (ts.isIdentifier(callee) && TOAST_CALLS.has(callee.text) && n.arguments[0] && ts.isObjectLiteralExpression(n.arguments[0])) {
+        if (
+          ts.isIdentifier(callee) &&
+          TOAST_CALLS.has(callee.text) &&
+          n.arguments[0] &&
+          ts.isObjectLiteralExpression(n.arguments[0])
+        ) {
           for (const prop of n.arguments[0].properties) {
             if (!ts.isPropertyAssignment(prop)) continue;
             const key = prop.name.getText();
             if (key === "title" || key === "message" || key === "undoLabel") {
-              const text = literalText(prop.initializer); if (text !== null) add(text, r);
-              if (ts.isConditionalExpression(prop.initializer)) for (const b of [prop.initializer.whenTrue, prop.initializer.whenFalse]) { const t = literalText(b); if (t !== null) add(t, r); }
+              const text = literalText(prop.initializer);
+              if (text !== null) add(text, r);
+              if (ts.isConditionalExpression(prop.initializer))
+                for (const b of [prop.initializer.whenTrue, prop.initializer.whenFalse]) {
+                  const t = literalText(b);
+                  if (t !== null) add(t, r);
+                }
             }
           }
         }
@@ -126,8 +193,13 @@ export function collectPhrases() {
           if (!ts.isIdentifier(d.name) || !d.initializer) continue;
           if (constNames.includes("*") || constNames.includes(d.name.text)) {
             // array string biasa (mis. quickPrompts) ikut dikumpulkan
-            let init = d.initializer; if (ts.isAsExpression(init)) init = init.expression;
-            if (ts.isArrayLiteralExpression(init)) for (const el of init.elements) { const t = literalText(el); if (t !== null && /\s/.test(t)) add(t, r); }
+            let init = d.initializer;
+            if (ts.isAsExpression(init)) init = init.expression;
+            if (ts.isArrayLiteralExpression(init))
+              for (const el of init.elements) {
+                const t = literalText(el);
+                if (t !== null && /\s/.test(t)) add(t, r);
+              }
             collectStrings(d.initializer);
           }
         }
@@ -145,7 +217,10 @@ function loadLegacyKeys() {
     if (!ts.isVariableStatement(st)) continue;
     for (const d of st.declarationList.declarations) {
       if (d.name.getText() === "translations" && d.initializer) {
-        (function v(n) { if (ts.isPropertyAssignment(n) && n.name) keys.add(n.name.getText().replace(/^["']|["']$/g, "")); ts.forEachChild(n, v); })(d.initializer);
+        (function v(n) {
+          if (ts.isPropertyAssignment(n) && n.name) keys.add(n.name.getText().replace(/^["']|["']$/g, ""));
+          ts.forEachChild(n, v);
+        })(d.initializer);
       }
     }
   }
@@ -157,23 +232,38 @@ function loadEnglish() {
   const sf = ts.createSourceFile("en.ts", src, ts.ScriptTarget.Latest, true);
   const map = new Map();
   (function v(n) {
-    if (ts.isPropertyAssignment(n) && n.name && (ts.isStringLiteral(n.name) || ts.isNoSubstitutionTemplateLiteral(n.name)) && n.initializer && (ts.isStringLiteral(n.initializer) || ts.isNoSubstitutionTemplateLiteral(n.initializer))) map.set(n.name.text, n.initializer.text);
+    if (
+      ts.isPropertyAssignment(n) &&
+      n.name &&
+      (ts.isStringLiteral(n.name) || ts.isNoSubstitutionTemplateLiteral(n.name)) &&
+      n.initializer &&
+      (ts.isStringLiteral(n.initializer) || ts.isNoSubstitutionTemplateLiteral(n.initializer))
+    )
+      map.set(n.name.text, n.initializer.text);
     ts.forEachChild(n, v);
   })(sf);
   return map;
 }
 
 /** Frasa yang sama di kedua bahasa (nama merek, singkatan, simbol) tidak perlu padanan. */
-const INVARIANT = /^(Licia|WIB|WITA|WIT|AI|PWA|OK|Email|Google|Supabase|PDF|CSV|JSON|URL|API|Ctrl|Cmd|Esc|Enter|Tab|Shift|Alt|N\/A|—|–|-)$/i;
+const INVARIANT =
+  /^(Licia|WIB|WITA|WIT|AI|PWA|OK|Email|Google|Supabase|PDF|CSV|JSON|URL|API|Ctrl|Cmd|Esc|Enter|Tab|Shift|Alt|N\/A|—|–|-)$/i;
 
 const [, , cmd = "check"] = process.argv;
 if (process.argv[1] && process.argv[1].endsWith("i18n.mjs")) {
   const phrases = collectPhrases();
   const legacy = loadLegacyKeys();
   const en = loadEnglish();
-  const missing = [...phrases.keys()].filter((p) => !legacy.has(p) && !en.has(p) && !INVARIANT.test(p.trim()) && !/^[\d\s.,:;%/+\-–—·•→←×()[\]{}#@!?"'`~|&*=<>_\\]+$/.test(p));
-  if (cmd === "missing") { console.log(JSON.stringify(missing, null, 1)); }
-  else if (cmd === "unused") {
+  const missing = [...phrases.keys()].filter(
+    (p) =>
+      !legacy.has(p) &&
+      !en.has(p) &&
+      !INVARIANT.test(p.trim()) &&
+      !/^[\d\s.,:;%/+\-–—·•→←×()[\]{}#@!?"'`~|&*=<>_\\]+$/.test(p),
+  );
+  if (cmd === "missing") {
+    console.log(JSON.stringify(missing, null, 1));
+  } else if (cmd === "unused") {
     const unused = [...en.keys()].filter((k) => !phrases.has(k));
     console.log(`${unused.length} entri kamus tidak terdeteksi di kode (bisa dinamis atau sisa):`);
     for (const k of unused.slice(0, 80)) console.log("  -", k);

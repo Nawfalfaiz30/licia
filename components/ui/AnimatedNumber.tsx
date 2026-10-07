@@ -31,12 +31,7 @@ function formatValue(value: number, format: NumberFormat): string {
   }).format(format === "integer" ? Math.round(value) : value);
 }
 
-export function AnimatedNumber({
-  value,
-  format = "integer",
-  duration = 420,
-  className = "",
-}: Props) {
+export function AnimatedNumber({ value, format = "integer", duration = 420, className = "" }: Props) {
   const [display, setDisplay] = useState(value);
   const previous = useRef(value);
 
@@ -68,9 +63,5 @@ export function AnimatedNumber({
 
   const text = useMemo(() => formatValue(display, format), [display, format]);
 
-  return (
-    <span className={`licia-v32-number-in inline-block tabular-nums ${className}`}>
-      {text}
-    </span>
-  );
+  return <span className={`licia-v32-number-in inline-block tabular-nums ${className}`}>{text}</span>;
 }

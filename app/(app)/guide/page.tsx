@@ -37,32 +37,223 @@ type GuideItem = {
 };
 
 const guide: GuideItem[] = [
-  { id:"home", title:"Beranda", summary:"Ringkasan pribadi untuk agenda, keuangan, target & proyek, dan sinyal penting.", steps:["Mulai dari kondisi hari ini sebelum membuka modul lain.","Kartu informasi membawa kamu langsung ke sumber data tanpa membuat dashboard penuh.","Gunakan Chat Licia ketika perlu bertanya atau meminta tindakan yang tidak punya tombol khusus."], href:"/dashboard", icon:Sparkles, category:"Mulai" },
-  { id:"plan", title:"Rencana", summary:"Pusat aktivitas berbasis waktu: tugas, kalender, fokus, perencana, Inbox, dan pengingat.", steps:["Tugas, Kalender, Fokus, dan Pengingat mengikuti satu alur Rencana.","Prioritas dengan Licia langsung menyusun dan memperbarui prioritas dari halaman Tugas tanpa membuka Chat.","Agenda → Tugas membuat task dan menghubungkannya ke agenda; Tugas → Agenda langsung mencari slot waktu dan membuat agenda.","Perencana dan Inbox menjadi alat pendukung di dalam alur yang sama."], example:"Jadwalkan dua jam belajar besok lalu buat pengingat 30 menit sebelumnya.", href:"/plan", icon:CalendarDays, category:"Rencana" },
-  { id:"goals", title:"Target & Proyek", summary:"Satu ruang untuk tujuan, proyek, progres, dan pekerjaan yang mengarah kepadanya.", steps:["Gunakan tab gabungan untuk melihat target dan proyek dalam satu konteks.","Hubungkan proyek ke target agar progres tidak terputus.","Tugas dan fokus dapat dijalankan tanpa berpindah ke workspace target yang lain."], example:"Buat target lulus kuliah lalu hubungkan proyek tugas akhir ke target itu.", href:"/goals-projects", icon:Target, category:"Rencana" },
-  { id:"knowledge", title:"Knowledge & Belajar", summary:"Semua pengetahuan pribadi berada di satu tempat, termasuk catatan, memory, dokumen, bacaan, dan pembelajaran.", steps:["Catatan, memory, dokumen, bacaan, dan materi belajar dikelola dari workspace yang sama.","Gunakan pencarian workspace untuk menemukan informasi tanpa membuka halaman teknis.","Chat Licia dapat membantu mencari, merangkum, atau mengubah pengetahuan menjadi tindakan."], href:"/knowledge", icon:BookOpen, category:"Personal" },
-  { id:"wellbeing", title:"Kesehatan & Rutinitas", summary:"Hub gabungan untuk kesehatan, aktivitas, tidur, nutrisi, dan rutinitas harian.", steps:["Masukkan data kesehatan di bagian yang sesuai.","Checklist rutinitas tetap mengikuti hari yang benar.","Gunakan ringkasan untuk melihat pola, bukan hanya daftar entri."], href:"/wellbeing", icon:HeartPulse, category:"Personal" },
-  { id:"finance", title:"Keuangan", summary:"Transaksi, anggaran, dompet, dan langganan berada dalam satu pusat keuangan.", steps:["Catat pemasukan, pengeluaran, dan transfer saldo tanpa berpindah workspace.","Tambahkan langganan langsung dari Keuangan dan tentukan siklus serta tanggal tagihannya.","Catat pembayaran langganan sebagai pengeluaran dari workspace yang sama.","Gunakan ringkasan untuk melihat saldo, arus kas, komitmen rutin, dan kategori pengeluaran."], example:"Tambahkan langganan internet bulanan, lalu catat pembayarannya saat tagihan masuk.", href:"/finance", icon:Wallet, category:"Personal" },
-  { id:"capture", title:"Tangkap", summary:"Masukkan teks atau gambar lalu biarkan Licia membantu menempatkannya di ruang kerja yang tepat.", steps:["Gunakan Tangkap untuk ide atau informasi yang ingin disimpan dengan cepat.","Gambar dapat dibaca untuk jadwal, dokumen, struk, atau informasi visual lain.","Periksa hasil sebelum menerapkan perubahan dalam jumlah besar."], example:"Ambil jadwal dari foto lalu masukkan agenda yang benar ke Kalender.", href:"/capture", icon:Camera, category:"Mulai" },
-  { id:"chat", title:"Chat Licia", summary:"Tempat bercakap dan meminta bantuan yang membutuhkan konteks. Aksi yang sudah punya tombol khusus tetap dijalankan langsung di workspace masing-masing.", steps:["Gunakan Chat untuk pertanyaan, penjelasan, ide, pencarian lintas Life OS, atau permintaan yang belum punya alur khusus.","Tombol seperti Prioritas dengan Licia, Agenda → Tugas, dan Tugas → Agenda tidak membuka Chat; hasilnya langsung dikerjakan di workspace.","Perubahan massal yang berisiko akan muncul sebagai ringkasan persetujuan di dalam percakapan, bukan panel yang menumpuk.","Gunakan tombol Batalkan ketika aksi terakhir masih dapat dipulihkan."], example:"Tanya kondisi minggu ini, lalu minta Licia menjelaskan faktor yang paling memengaruhinya.", href:"/chat", icon:Sparkles, category:"AI & Privasi" },
-  { id:"insights", title:"Insights", summary:"Pusat wawasan untuk review, pola, peta, aktivitas, dan otomasi.", steps:["Gunakan ringkasan untuk memahami sinyal penting terlebih dahulu.","Peta Hidup + Peta Koneksi tersedia dari satu konteks Peta & Relasi.","Linimasa + Analitik + Review dijelajahi melalui konteks Review & Pola.","Otomasi tetap tersedia dari Insights, bukan sebagai menu utama baru."], href:"/insights", icon:Lightbulb, category:"Personal" },
-  { id:"system", title:"Sistem, Privasi & Perangkat", summary:"Kontrol teknis disederhanakan agar pengguna tidak perlu memilih antara banyak pusat sistem.", steps:["Pengaturan menjadi pintu utama untuk privasi AI, sinkronisasi, notifikasi, data, dan pemeriksaan sistem.","Riwayat aksi AI digunakan untuk transparansi dan undo dari operasi yang mendukung pemulihan.","Fitur yang sudah digabung tidak muncul kembali sebagai menu terpisah di ponsel maupun desktop."], href:"/settings", icon:Settings2, category:"Sistem" },
-  { id:"mobile-more", title:"Lainnya di ponsel", summary:"Lainnya adalah katalog tujuan aktif di ponsel. Workspace yang sudah digabung tidak kembali muncul sebagai menu lama.", steps:["Ketuk Lainnya pada footer untuk membuka seluruh tujuan aktif.","Pilih workspace seperti Rencana, Target & Proyek, Knowledge & Belajar, Keuangan, Kesehatan & Rutinitas, atau Insights.","Pintasan gabungan seperti Kalender & Pengingat, Perencana & Inbox, Peta & Relasi, dan Review & Pola tetap menuju workspace induknya.","Menu lama seperti Target, Proyek, Langganan, Catatan, Memory, Vault, Analitik, Timeline, atau Pengingat tidak ditampilkan lagi sebagai tujuan terpisah."], href:"/dashboard", icon:Smartphone, category:"Mulai" },
-  { id:"privacy", title:"Privasi AI", summary:"Tentukan bagian data mana yang boleh dibaca Licia.", steps:["Izin mengikuti workspace yang terlihat oleh pengguna.","Keuangan dan Kesehatan tetap dapat dibatasi secara terpisah.","Mode konteks luas tidak mengabaikan izin domain sensitif."], href:"/settings#ai", icon:ShieldCheck, category:"AI & Privasi" },
-  { id:"settings", title:"Pengaturan", summary:"Satu tempat untuk tampilan, workspace, AI, interaksi, perangkat, notifikasi, data, dan kompatibilitas fitur gabungan.", steps:["Tampilan mengatur font, tema, ukuran, bahasa, dan halaman awal.","Workspace menjelaskan struktur canonical yang sama di desktop dan ponsel.","AI & Privasi mengatur perilaku dan izin data tanpa mengembalikan menu teknis lama.","Perangkat & Notifikasi dan Data & Akun menampung kontrol teknis yang jarang dipakai."], href:"/settings", icon:Settings2, category:"Sistem" },
-  { id:"search", title:"Pencarian", summary:"Cari lintas workspace tanpa perlu mengetahui asal fitur sebelumnya.", steps:["Gunakan kata yang spesifik atau nama entitas.","Buka workspace sumber untuk melanjutkan tindakan.","Gunakan Chat hanya ketika pencarian perlu ditafsirkan atau ditindaklanjuti."], href:"/search", icon:Search, category:"Mulai" },
-  { id:"backup", title:"Ekspor & Backup", summary:"Simpan salinan data pribadi untuk arsip atau pemulihan.", steps:["Buka Pengaturan → Data & Akun.","Gunakan Ekspor untuk membuat salinan.","Gunakan Backup & Restore untuk pemulihan atau pemindahan data."], href:"/settings#data", icon:Database, category:"Sistem" },
+  {
+    id: "home",
+    title: "Beranda",
+    summary: "Ringkasan pribadi untuk agenda, keuangan, target & proyek, dan sinyal penting.",
+    steps: [
+      "Mulai dari kondisi hari ini sebelum membuka modul lain.",
+      "Kartu informasi membawa kamu langsung ke sumber data tanpa membuat dashboard penuh.",
+      "Gunakan Chat Licia ketika perlu bertanya atau meminta tindakan yang tidak punya tombol khusus.",
+    ],
+    href: "/dashboard",
+    icon: Sparkles,
+    category: "Mulai",
+  },
+  {
+    id: "plan",
+    title: "Rencana",
+    summary: "Pusat aktivitas berbasis waktu: tugas, kalender, fokus, perencana, Inbox, dan pengingat.",
+    steps: [
+      "Tugas, Kalender, Fokus, dan Pengingat mengikuti satu alur Rencana.",
+      "Prioritas dengan Licia langsung menyusun dan memperbarui prioritas dari halaman Tugas tanpa membuka Chat.",
+      "Agenda → Tugas membuat task dan menghubungkannya ke agenda; Tugas → Agenda langsung mencari slot waktu dan membuat agenda.",
+      "Perencana dan Inbox menjadi alat pendukung di dalam alur yang sama.",
+    ],
+    example: "Jadwalkan dua jam belajar besok lalu buat pengingat 30 menit sebelumnya.",
+    href: "/plan",
+    icon: CalendarDays,
+    category: "Rencana",
+  },
+  {
+    id: "goals",
+    title: "Target & Proyek",
+    summary: "Satu ruang untuk tujuan, proyek, progres, dan pekerjaan yang mengarah kepadanya.",
+    steps: [
+      "Gunakan tab gabungan untuk melihat target dan proyek dalam satu konteks.",
+      "Hubungkan proyek ke target agar progres tidak terputus.",
+      "Tugas dan fokus dapat dijalankan tanpa berpindah ke workspace target yang lain.",
+    ],
+    example: "Buat target lulus kuliah lalu hubungkan proyek tugas akhir ke target itu.",
+    href: "/goals-projects",
+    icon: Target,
+    category: "Rencana",
+  },
+  {
+    id: "knowledge",
+    title: "Knowledge & Belajar",
+    summary:
+      "Semua pengetahuan pribadi berada di satu tempat, termasuk catatan, memory, dokumen, bacaan, dan pembelajaran.",
+    steps: [
+      "Catatan, memory, dokumen, bacaan, dan materi belajar dikelola dari workspace yang sama.",
+      "Gunakan pencarian workspace untuk menemukan informasi tanpa membuka halaman teknis.",
+      "Chat Licia dapat membantu mencari, merangkum, atau mengubah pengetahuan menjadi tindakan.",
+    ],
+    href: "/knowledge",
+    icon: BookOpen,
+    category: "Personal",
+  },
+  {
+    id: "wellbeing",
+    title: "Kesehatan & Rutinitas",
+    summary: "Hub gabungan untuk kesehatan, aktivitas, tidur, nutrisi, dan rutinitas harian.",
+    steps: [
+      "Masukkan data kesehatan di bagian yang sesuai.",
+      "Checklist rutinitas tetap mengikuti hari yang benar.",
+      "Gunakan ringkasan untuk melihat pola, bukan hanya daftar entri.",
+    ],
+    href: "/wellbeing",
+    icon: HeartPulse,
+    category: "Personal",
+  },
+  {
+    id: "finance",
+    title: "Keuangan",
+    summary: "Transaksi, anggaran, dompet, dan langganan berada dalam satu pusat keuangan.",
+    steps: [
+      "Catat pemasukan, pengeluaran, dan transfer saldo tanpa berpindah workspace.",
+      "Tambahkan langganan langsung dari Keuangan dan tentukan siklus serta tanggal tagihannya.",
+      "Catat pembayaran langganan sebagai pengeluaran dari workspace yang sama.",
+      "Gunakan ringkasan untuk melihat saldo, arus kas, komitmen rutin, dan kategori pengeluaran.",
+    ],
+    example: "Tambahkan langganan internet bulanan, lalu catat pembayarannya saat tagihan masuk.",
+    href: "/finance",
+    icon: Wallet,
+    category: "Personal",
+  },
+  {
+    id: "capture",
+    title: "Tangkap",
+    summary: "Masukkan teks atau gambar lalu biarkan Licia membantu menempatkannya di ruang kerja yang tepat.",
+    steps: [
+      "Gunakan Tangkap untuk ide atau informasi yang ingin disimpan dengan cepat.",
+      "Gambar dapat dibaca untuk jadwal, dokumen, struk, atau informasi visual lain.",
+      "Periksa hasil sebelum menerapkan perubahan dalam jumlah besar.",
+    ],
+    example: "Ambil jadwal dari foto lalu masukkan agenda yang benar ke Kalender.",
+    href: "/capture",
+    icon: Camera,
+    category: "Mulai",
+  },
+  {
+    id: "chat",
+    title: "Chat Licia",
+    summary:
+      "Tempat bercakap dan meminta bantuan yang membutuhkan konteks. Aksi yang sudah punya tombol khusus tetap dijalankan langsung di workspace masing-masing.",
+    steps: [
+      "Gunakan Chat untuk pertanyaan, penjelasan, ide, pencarian lintas Life OS, atau permintaan yang belum punya alur khusus.",
+      "Tombol seperti Prioritas dengan Licia, Agenda → Tugas, dan Tugas → Agenda tidak membuka Chat; hasilnya langsung dikerjakan di workspace.",
+      "Perubahan massal yang berisiko akan muncul sebagai ringkasan persetujuan di dalam percakapan, bukan panel yang menumpuk.",
+      "Gunakan tombol Batalkan ketika aksi terakhir masih dapat dipulihkan.",
+    ],
+    example: "Tanya kondisi minggu ini, lalu minta Licia menjelaskan faktor yang paling memengaruhinya.",
+    href: "/chat",
+    icon: Sparkles,
+    category: "AI & Privasi",
+  },
+  {
+    id: "insights",
+    title: "Insights",
+    summary: "Pusat wawasan untuk review, pola, peta, aktivitas, dan otomasi.",
+    steps: [
+      "Gunakan ringkasan untuk memahami sinyal penting terlebih dahulu.",
+      "Peta Hidup + Peta Koneksi tersedia dari satu konteks Peta & Relasi.",
+      "Linimasa + Analitik + Review dijelajahi melalui konteks Review & Pola.",
+      "Otomasi tetap tersedia dari Insights, bukan sebagai menu utama baru.",
+    ],
+    href: "/insights",
+    icon: Lightbulb,
+    category: "Personal",
+  },
+  {
+    id: "system",
+    title: "Sistem, Privasi & Perangkat",
+    summary: "Kontrol teknis disederhanakan agar pengguna tidak perlu memilih antara banyak pusat sistem.",
+    steps: [
+      "Pengaturan menjadi pintu utama untuk privasi AI, sinkronisasi, notifikasi, data, dan pemeriksaan sistem.",
+      "Riwayat aksi AI digunakan untuk transparansi dan undo dari operasi yang mendukung pemulihan.",
+      "Fitur yang sudah digabung tidak muncul kembali sebagai menu terpisah di ponsel maupun desktop.",
+    ],
+    href: "/settings",
+    icon: Settings2,
+    category: "Sistem",
+  },
+  {
+    id: "mobile-more",
+    title: "Lainnya di ponsel",
+    summary:
+      "Lainnya adalah katalog tujuan aktif di ponsel. Workspace yang sudah digabung tidak kembali muncul sebagai menu lama.",
+    steps: [
+      "Ketuk Lainnya pada footer untuk membuka seluruh tujuan aktif.",
+      "Pilih workspace seperti Rencana, Target & Proyek, Knowledge & Belajar, Keuangan, Kesehatan & Rutinitas, atau Insights.",
+      "Pintasan gabungan seperti Kalender & Pengingat, Perencana & Inbox, Peta & Relasi, dan Review & Pola tetap menuju workspace induknya.",
+      "Menu lama seperti Target, Proyek, Langganan, Catatan, Memory, Vault, Analitik, Timeline, atau Pengingat tidak ditampilkan lagi sebagai tujuan terpisah.",
+    ],
+    href: "/dashboard",
+    icon: Smartphone,
+    category: "Mulai",
+  },
+  {
+    id: "privacy",
+    title: "Privasi AI",
+    summary: "Tentukan bagian data mana yang boleh dibaca Licia.",
+    steps: [
+      "Izin mengikuti workspace yang terlihat oleh pengguna.",
+      "Keuangan dan Kesehatan tetap dapat dibatasi secara terpisah.",
+      "Mode konteks luas tidak mengabaikan izin domain sensitif.",
+    ],
+    href: "/settings#ai",
+    icon: ShieldCheck,
+    category: "AI & Privasi",
+  },
+  {
+    id: "settings",
+    title: "Pengaturan",
+    summary:
+      "Satu tempat untuk tampilan, workspace, AI, interaksi, perangkat, notifikasi, data, dan kompatibilitas fitur gabungan.",
+    steps: [
+      "Tampilan mengatur font, tema, ukuran, bahasa, dan halaman awal.",
+      "Workspace menjelaskan struktur canonical yang sama di desktop dan ponsel.",
+      "AI & Privasi mengatur perilaku dan izin data tanpa mengembalikan menu teknis lama.",
+      "Perangkat & Notifikasi dan Data & Akun menampung kontrol teknis yang jarang dipakai.",
+    ],
+    href: "/settings",
+    icon: Settings2,
+    category: "Sistem",
+  },
+  {
+    id: "search",
+    title: "Pencarian",
+    summary: "Cari lintas workspace tanpa perlu mengetahui asal fitur sebelumnya.",
+    steps: [
+      "Gunakan kata yang spesifik atau nama entitas.",
+      "Buka workspace sumber untuk melanjutkan tindakan.",
+      "Gunakan Chat hanya ketika pencarian perlu ditafsirkan atau ditindaklanjuti.",
+    ],
+    href: "/search",
+    icon: Search,
+    category: "Mulai",
+  },
+  {
+    id: "backup",
+    title: "Ekspor & Backup",
+    summary: "Simpan salinan data pribadi untuk arsip atau pemulihan.",
+    steps: [
+      "Buka Pengaturan → Data & Akun.",
+      "Gunakan Ekspor untuk membuat salinan.",
+      "Gunakan Backup & Restore untuk pemulihan atau pemindahan data.",
+    ],
+    href: "/settings#data",
+    icon: Database,
+    category: "Sistem",
+  },
 ];
-
-
 
 const quickPrompts = [
   "Apa yang paling penting hari ini?",
   "Rapikan jadwal saya besok dan cari konflik.",
   "Buat tugas dari ide ini dan beri deadline yang masuk akal.",
 ];
-
-
 
 export default function GuidePage() {
   const { t: tr } = useLanguage();
@@ -78,7 +269,7 @@ export default function GuidePage() {
         acc[item] = item === "Semua" ? guide.length : guide.filter((x) => x.category === item).length;
         return acc;
       }, {}),
-    []
+    [],
   );
 
   const filtered = useMemo(() => {
@@ -91,7 +282,7 @@ export default function GuidePage() {
             .map((st) => tr(st))
             .join(" ")} ${x.example ? tr(x.example) : ""}`
             .toLowerCase()
-            .includes(q))
+            .includes(q)),
     );
   }, [query, category, tr]);
 
@@ -115,7 +306,9 @@ export default function GuidePage() {
               {tr("Kenali Licia, tanpa harus menghafal banyak menu.")}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-textMuted">
-              {tr("Temukan workspace yang tepat, pelajari cara kerjanya, atau langsung minta bantuan Licia. Semua panduan mengikuti struktur aplikasi saat ini.")}
+              {tr(
+                "Temukan workspace yang tepat, pelajari cara kerjanya, atau langsung minta bantuan Licia. Semua panduan mengikuti struktur aplikasi saat ini.",
+              )}
             </p>
 
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
@@ -196,7 +389,10 @@ export default function GuidePage() {
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent/10 text-2xs font-bold text-accent">
                 {index + 1}
               </span>
-              <ArrowRight size={14} className="text-textMuted transition group-hover:translate-x-0.5 group-hover:text-accent" />
+              <ArrowRight
+                size={14}
+                className="text-textMuted transition group-hover:translate-x-0.5 group-hover:text-accent"
+              />
             </div>
             <p className="mt-4 text-xs font-bold leading-relaxed text-text">{tr(prompt)}</p>
             <p className="mt-1.5 text-2xs text-textMuted">{tr("Tanya Licia")}</p>
@@ -237,14 +433,14 @@ export default function GuidePage() {
                   "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-2xs font-bold transition",
                   category === item
                     ? "bg-accent text-white shadow-sm"
-                    : "border border-border bg-bg text-textMuted hover:border-accent/25 hover:text-text"
+                    : "border border-border bg-bg text-textMuted hover:border-accent/25 hover:text-text",
                 )}
               >
                 {tr(item)}
                 <span
                   className={clsx(
                     "rounded-full px-1.5 py-0.5 text-2xs",
-                    category === item ? "bg-white/15 text-white" : "bg-surface text-textMuted"
+                    category === item ? "bg-white/15 text-white" : "bg-surface text-textMuted",
                   )}
                 >
                   {counts[item]}
@@ -275,7 +471,7 @@ export default function GuidePage() {
               key={item.id}
               className={clsx(
                 "overflow-hidden rounded-2xl border bg-surface transition-all duration-200",
-                expanded ? "border-accent/25 shadow-md shadow-black/[0.03]" : "border-border hover:border-accent/15"
+                expanded ? "border-accent/25 shadow-md shadow-black/[0.03]" : "border-border hover:border-accent/15",
               )}
             >
               <button
@@ -306,7 +502,7 @@ export default function GuidePage() {
                 <span
                   className={clsx(
                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-bg text-textMuted transition",
-                    expanded && "bg-accent/10 text-accent"
+                    expanded && "bg-accent/10 text-accent",
                   )}
                 >
                   <ChevronDown size={15} className={clsx("transition-transform", expanded && "rotate-180")} />

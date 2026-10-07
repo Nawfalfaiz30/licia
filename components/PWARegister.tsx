@@ -18,8 +18,10 @@ const INSTALL_DISMISSED = "licia-pwa-install-dismissed";
 
 function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(display-mode: standalone)").matches === true
-    || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches === true ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
 }
 
 function isIOS(): boolean {
@@ -61,9 +63,12 @@ export function PWARegister() {
       } catch {}
       for (const action of actions) {
         try {
-          const payload = action.type === "quick_capture"
-            ? (action.payload.mode === "task" ? { title: action.payload.content, status: "todo", priority: "medium" } : { content: action.payload.content })
-            : action.payload;
+          const payload =
+            action.type === "quick_capture"
+              ? action.payload.mode === "task"
+                ? { title: action.payload.content, status: "todo", priority: "medium" }
+                : { content: action.payload.content }
+              : action.payload;
           const result = await fetch("/api/sync/mutation", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -84,7 +89,12 @@ export function PWARegister() {
           if (result.ok || data?.replayed) {
             await removeOfflineAction(action.id);
           } else if (result.status === 409 && data?.conflict) {
-            await saveOfflineConflict({ actionId: action.id, userId: action.userId, error: "SYNC_CONFLICT", response: data });
+            await saveOfflineConflict({
+              actionId: action.id,
+              userId: action.userId,
+              error: "SYNC_CONFLICT",
+              response: data,
+            });
             await removeOfflineAction(action.id);
           } else if (result.status >= 500 || !navigator.onLine) {
             break;
@@ -163,7 +173,10 @@ export function PWARegister() {
         });
 
         navigator.serviceWorker.addEventListener("message", (event) => {
-          if (event.data?.type === "LICIA_OFFLINE_SYNC" || event.data?.type === "LICIA_OFFLINE_SYNC_COMPLETE") { void flushQueue(); window.dispatchEvent(new CustomEvent("licia:sync-complete", { detail: event.data?.result })); }
+          if (event.data?.type === "LICIA_OFFLINE_SYNC" || event.data?.type === "LICIA_OFFLINE_SYNC_COMPLETE") {
+            void flushQueue();
+            window.dispatchEvent(new CustomEvent("licia:sync-complete", { detail: event.data?.result }));
+          }
           if (event.data?.type === "LICIA_SW_UPDATED") setShowUpdate(true);
         });
 
@@ -248,7 +261,9 @@ export function PWARegister() {
             {online ? <CloudUpload size={15} /> : <WifiOff size={15} />}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-text">{online ? (syncing ? tr("Menyinkronkan…") : tr("Data siap disinkronkan")) : tr("Licia sedang offline")}</p>
+            <p className="font-semibold text-text">
+              {online ? (syncing ? tr("Menyinkronkan…") : tr("Data siap disinkronkan")) : tr("Licia sedang offline")}
+            </p>
             <p className="mt-0.5 text-2xs leading-relaxed text-textMuted">
               {!online
                 ? tr("Capture baru tetap bisa masuk antrean lokal.")
@@ -258,7 +273,12 @@ export function PWARegister() {
             </p>
           </div>
           {queued > 0 && online && !syncing && (
-            <button onClick={() => void flushQueue()} className="rounded-lg p-2 text-textMuted hover:bg-bg hover:text-accent" aria-label={tr("Sinkronkan sekarang")} title={tr("Sinkronkan sekarang")}>
+            <button
+              onClick={() => void flushQueue()}
+              className="rounded-lg p-2 text-textMuted hover:bg-bg hover:text-accent"
+              aria-label={tr("Sinkronkan sekarang")}
+              title={tr("Sinkronkan sekarang")}
+            >
               <RefreshCw size={14} />
             </button>
           )}
@@ -268,22 +288,37 @@ export function PWARegister() {
       {installVisible && (
         <div className="fixed inset-x-3 bottom-[calc(4.9rem+env(safe-area-inset-bottom)+6.25rem)] z-banner mx-auto max-w-md rounded-3xl border border-accent/20 bg-surface/95 p-4 shadow-2xl backdrop-blur-xl md:bottom-5 md:right-5 md:left-auto md:mx-0">
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent"><Download size={18} /></span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+              <Download size={18} />
+            </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-text">{tr("Pasang Licia")}</p>
-                  <p className="mt-0.5 text-2xs leading-relaxed text-textMuted">{tr("Buka lebih cepat seperti aplikasi, dengan pengalaman mobile yang lebih nyaman.")}</p>
+                  <p className="mt-0.5 text-2xs leading-relaxed text-textMuted">
+                    {tr("Buka lebih cepat seperti aplikasi, dengan pengalaman mobile yang lebih nyaman.")}
+                  </p>
                 </div>
-                <button onClick={dismissInstall} className="rounded-lg p-1.5 text-textMuted hover:bg-bg hover:text-text" aria-label={tr("Tutup")}><X size={14}/></button>
+                <button
+                  onClick={dismissInstall}
+                  className="rounded-lg p-1.5 text-textMuted hover:bg-bg hover:text-text"
+                  aria-label={tr("Tutup")}
+                >
+                  <X size={14} />
+                </button>
               </div>
               {isIOSInstall ? (
                 <div className="mt-3 rounded-xl bg-bg p-3 text-2xs leading-relaxed text-textMuted">
-                  {tr("Di Safari iPhone/iPad: tekan")}{" "}<strong className="text-text">{tr("Bagikan")}</strong> → <strong className="text-text">{tr("Tambahkan ke Layar Utama")}</strong>.
+                  {tr("Di Safari iPhone/iPad: tekan")} <strong className="text-text">{tr("Bagikan")}</strong> →{" "}
+                  <strong className="text-text">{tr("Tambahkan ke Layar Utama")}</strong>.
                 </div>
               ) : (
-                <button onClick={() => void install()} className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90">
-                  <Download size={14}/> {" "}{tr("Install Licia")}</button>
+                <button
+                  onClick={() => void install()}
+                  className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+                >
+                  <Download size={14} /> {tr("Install Licia")}
+                </button>
               )}
             </div>
           </div>
@@ -293,12 +328,19 @@ export function PWARegister() {
       {showUpdate && (
         <div className="fixed inset-x-3 bottom-3 z-banner mx-auto max-w-md rounded-2xl border border-accent/20 bg-surface/95 px-4 py-3 shadow-xl backdrop-blur-xl">
           <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><Bell size={15}/></span>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+              <Bell size={15} />
+            </span>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-text">{tr("Pembaruan Licia tersedia")}</p>
               <p className="mt-0.5 text-2xs text-textMuted">{tr("Muat ulang untuk memakai versi terbaru.")}</p>
             </div>
-            <button onClick={() => void updateNow()} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-2xs font-semibold text-white"><Check size={12}/> {" "}{tr("Perbarui")}</button>
+            <button
+              onClick={() => void updateNow()}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-2xs font-semibold text-white"
+            >
+              <Check size={12} /> {tr("Perbarui")}
+            </button>
           </div>
         </div>
       )}

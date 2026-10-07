@@ -71,12 +71,21 @@ const WEEKDAYS: Array<{ re: string; day: number }> = [
  */
 export function parseMoneyId(value: string | number | null | undefined): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  const raw = String(value ?? "").trim().toLowerCase().replace(/rp\.?\s*/g, "").replace(/\s+/g, "");
+  const raw = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/rp\.?\s*/g, "")
+    .replace(/\s+/g, "");
   if (!raw) return null;
   const m = raw.match(/^(\d+(?:[.,]\d+)*)(k|rb|ribu|jt|juta)?$/);
   if (!m) return null;
   const suffix = m[2] || "";
-  const mult = suffix === "k" || suffix === "rb" || suffix === "ribu" ? 1_000 : suffix === "jt" || suffix === "juta" ? 1_000_000 : 1;
+  const mult =
+    suffix === "k" || suffix === "rb" || suffix === "ribu"
+      ? 1_000
+      : suffix === "jt" || suffix === "juta"
+        ? 1_000_000
+        : 1;
   let numeric = m[1];
   if (suffix) {
     // Dengan akhiran, titik/koma dibaca sebagai desimal: 1,5jt = 1.5 juta.
@@ -86,8 +95,9 @@ export function parseMoneyId(value: string | number | null | undefined): number 
   // Tanpa akhiran: "12.500" = ribuan (grup 3 digit), "12,5" = desimal.
   if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(numeric)) numeric = numeric.replace(/\./g, "").replace(",", ".");
   else if (/^\d+,\d+$/.test(numeric)) numeric = numeric.replace(",", ".");
-  else if (/^\d+\.\d+$/.test(numeric) && !/^\d{1,3}\.\d{3}$/.test(numeric)) { /* desimal titik: biarkan */ }
-  else numeric = numeric.replace(/\./g, "");
+  else if (/^\d+\.\d+$/.test(numeric) && !/^\d{1,3}\.\d{3}$/.test(numeric)) {
+    /* desimal titik: biarkan */
+  } else numeric = numeric.replace(/\./g, "");
   const n = Number(numeric);
   return Number.isFinite(n) ? n : null;
 }
@@ -230,7 +240,22 @@ export function parseSmartCapture(input: string, options: SmartParseOptions = {}
   const setPriority = (p: SmartPriority, raw: string) => {
     if (priority) return;
     priority = p;
-    chips.push({ kind: "priority", label: options.lang === "en" ? (p === "high" ? "High priority" : p === "low" ? "Low priority" : "Medium priority") : (p === "high" ? "Prioritas tinggi" : p === "low" ? "Prioritas rendah" : "Prioritas sedang"), raw: raw.trim() });
+    chips.push({
+      kind: "priority",
+      label:
+        options.lang === "en"
+          ? p === "high"
+            ? "High priority"
+            : p === "low"
+              ? "Low priority"
+              : "Medium priority"
+          : p === "high"
+            ? "Prioritas tinggi"
+            : p === "low"
+              ? "Prioritas rendah"
+              : "Prioritas sedang",
+      raw: raw.trim(),
+    });
   };
   take(/(^|\s)(?:!{1}([123])|p([123]))(?=\s|[.,;!?]|$)/i, (m) => {
     const n = m[2] || m[3];
@@ -254,14 +279,17 @@ export function parseSmartCapture(input: string, options: SmartParseOptions = {}
 
   /* 3. Tanggal eksplisit: ISO, dd/mm(/yyyy) */
   take(new RegExp(`${LEAD}\\b(\\d{4})-(\\d{1,2})-(\\d{1,2})\\b`, "i"), (m) => {
-    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    const y = Number(m[1]),
+      mo = Number(m[2]),
+      d = Number(m[3]);
     if (!validYmd(y, mo, d)) return false;
     dueDate = toYmd(y, mo, d);
     return true;
   });
   if (!dueDate) {
     take(new RegExp(`${LEAD}(?<![\\d/])(\\d{1,2})/(\\d{1,2})(?:/(\\d{2,4}))?(?![\\d/])`, "i"), (m) => {
-      const d = Number(m[1]), mo = Number(m[2]);
+      const d = Number(m[1]),
+        mo = Number(m[2]);
       let y = m[3] ? Number(m[3]) : parseYmd(today).y;
       if (m[3] && m[3].length === 2) y += 2000;
       if (!validYmd(y, mo, d)) return false;
@@ -287,7 +315,10 @@ export function parseSmartCapture(input: string, options: SmartParseOptions = {}
       if (wd == null || dom < 1 || dom > 31) return false;
       for (let i = 0; i <= 62; i += 1) {
         const cand = addDaysYmd(today, i);
-        if (parseYmd(cand).d === dom && weekdayOf(cand) === wd) { dueDate = cand; return true; }
+        if (parseYmd(cand).d === dom && weekdayOf(cand) === wd) {
+          dueDate = cand;
+          return true;
+        }
       }
       return false;
     });
@@ -299,14 +330,21 @@ export function parseSmartCapture(input: string, options: SmartParseOptions = {}
       const day = Number(m[1]);
       if (day < 1 || day > 31) return false;
       const t = parseYmd(today);
-      let y = t.y, mo = t.m;
+      let y = t.y,
+        mo = t.m;
       for (let i = 0; i < 13; i += 1) {
         if (day <= daysInMonth(y, mo)) {
           const cand = toYmd(y, mo, day);
-          if (cand >= today) { dueDate = cand; return true; }
+          if (cand >= today) {
+            dueDate = cand;
+            return true;
+          }
         }
         mo += 1;
-        if (mo > 12) { mo = 1; y += 1; }
+        if (mo > 12) {
+          mo = 1;
+          y += 1;
+        }
       }
       return false;
     });
@@ -354,7 +392,7 @@ export function parseSmartCapture(input: string, options: SmartParseOptions = {}
     const rx = new RegExp(`${LEAD}\\b(?:${re})\\b(?:\\s+(?:depan|ini|next|this))?(?!\\s+lalu\\b)`, "i");
     take(rx, () => {
       if (!dueDate) {
-        const delta = ((day - weekdayOf(today) + 7) % 7) || 7;
+        const delta = (day - weekdayOf(today) + 7) % 7 || 7;
         dueDate = addDaysYmd(today, delta);
       }
       return true; // hari tetap dibuang dari judul walau tanggal sudah ditentukan "tanggal N"
@@ -413,7 +451,11 @@ export function parseSmartCapture(input: string, options: SmartParseOptions = {}
  * Ubah hasil parse menjadi ISO UTC untuk kolom due_at. Bila hanya tanggal yang diketahui,
  * `defaultTime` dipakai (default 09:00 waktu lokal). Null bila tidak ada tanggal.
  */
-export function smartDueAtIso(result: Pick<SmartParseResult, "dueDate" | "dueTime">, timezone = "Asia/Jakarta", defaultTime = "09:00"): string | null {
+export function smartDueAtIso(
+  result: Pick<SmartParseResult, "dueDate" | "dueTime">,
+  timezone = "Asia/Jakarta",
+  defaultTime = "09:00",
+): string | null {
   if (!result.dueDate) return null;
   return localDateTimeToIso(result.dueDate, result.dueTime || defaultTime, timezone);
 }

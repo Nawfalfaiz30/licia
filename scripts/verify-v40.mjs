@@ -19,9 +19,11 @@ if (pkg.version !== "0.40.0") errors.push(`package version is ${pkg.version}`);
 if (pkg.scripts.test !== "node scripts/test-v40.mjs") errors.push("npm test is not wired to V40");
 if (pkg.scripts.verify !== "node scripts/verify-v40.mjs") errors.push("npm run verify is not wired to V40");
 const lock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
-if (lock.version !== "0.40.0" || lock.packages?.[""]?.version !== "0.40.0") errors.push("package-lock is not aligned with V40");
+if (lock.version !== "0.40.0" || lock.packages?.[""]?.version !== "0.40.0")
+  errors.push("package-lock is not aligned with V40");
 const nav = fs.readFileSync(path.join(root, "components/layout/nav-items.ts"), "utf8");
-if (nav.includes('item("/goals", "Target"') || nav.includes('item("/projects", "Proyek"')) errors.push("duplicate target/project nav remains");
+if (nav.includes('item("/goals", "Target"') || nav.includes('item("/projects", "Proyek"'))
+  errors.push("duplicate target/project nav remains");
 const guide = fs.readFileSync(path.join(root, "app/(app)/guide/page.tsx"), "utf8");
 if (/title:\"[^\"]*\bV\d/.test(guide)) errors.push("guide contains a versioned title");
 const settings = fs.readFileSync(path.join(root, "app/(app)/settings/page.tsx"), "utf8");

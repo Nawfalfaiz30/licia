@@ -29,14 +29,16 @@ describe("resolveTabTarget (perangkap fokus)", () => {
 describe("tumpukan overlay", () => {
   beforeEach(() => __resetOverlayState());
   it("hanya yang teratas yang aktif; menutup yang atas mengaktifkan yang bawah", () => {
-    pushOverlay("a"); pushOverlay("b");
+    pushOverlay("a");
+    pushOverlay("b");
     expect(isTopOverlay("b")).toBe(true);
     expect(isTopOverlay("a")).toBe(false);
     removeOverlay("b");
     expect(isTopOverlay("a")).toBe(true);
   });
   it("push ganda tidak menduplikasi", () => {
-    pushOverlay("a"); pushOverlay("a");
+    pushOverlay("a");
+    pushOverlay("a");
     expect(overlayDepth()).toBe(1);
   });
   it("tumpukan kosong → tak ada yang teratas", () => {
@@ -46,7 +48,18 @@ describe("tumpukan overlay", () => {
 
 describe("skala z-index", () => {
   it("urutan hirarki: nav < header < float < banner < popover < sheet < modal < palette < toast < skip", () => {
-    expect(zOrder()).toEqual(["nav", "header", "float", "banner", "popover", "sheet", "modal", "palette", "toast", "skip"]);
+    expect(zOrder()).toEqual([
+      "nav",
+      "header",
+      "float",
+      "banner",
+      "popover",
+      "sheet",
+      "modal",
+      "palette",
+      "toast",
+      "skip",
+    ]);
   });
   it("dialog konfirmasi (modal) berada di atas sheet; toast di atas semuanya kecuali skip-link", () => {
     expect(Z.modal).toBeGreaterThan(Z.sheet);
@@ -58,38 +71,99 @@ describe("UndoQueue", () => {
   const fake = () => {
     const jobs: Array<{ fn: () => void; ms: number; id: number; live: boolean }> = [];
     return {
-      timers: { set: (fn: () => void, ms: number) => { const j = { fn, ms, id: jobs.length, live: true }; jobs.push(j); return j; }, clear: (h: unknown) => { (h as { live: boolean }).live = false; } },
-      fire: () => jobs.filter((j) => j.live).forEach((j) => { j.live = false; j.fn(); }),
+      timers: {
+        set: (fn: () => void, ms: number) => {
+          const j = { fn, ms, id: jobs.length, live: true };
+          jobs.push(j);
+          return j;
+        },
+        clear: (h: unknown) => {
+          (h as { live: boolean }).live = false;
+        },
+      },
+      fire: () =>
+        jobs
+          .filter((j) => j.live)
+          .forEach((j) => {
+            j.live = false;
+            j.fn();
+          }),
     };
   };
   it("komit berjalan setelah jeda bila tidak dibatalkan", async () => {
-    const f = fake(); const q = new UndoQueue(f.timers); let n = 0;
-    q.schedule("t1", () => { n += 1; }, 5000);
+    const f = fake();
+    const q = new UndoQueue(f.timers);
+    let n = 0;
+    q.schedule(
+      "t1",
+      () => {
+        n += 1;
+      },
+      5000,
+    );
     expect(q.has("t1")).toBe(true);
-    f.fire(); await Promise.resolve();
+    f.fire();
+    await Promise.resolve();
     expect(n).toBe(1);
     expect(q.has("t1")).toBe(false);
   });
   it("cancel mencegah komit", async () => {
-    const f = fake(); const q = new UndoQueue(f.timers); let n = 0;
-    q.schedule("t1", () => { n += 1; }, 5000);
+    const f = fake();
+    const q = new UndoQueue(f.timers);
+    let n = 0;
+    q.schedule(
+      "t1",
+      () => {
+        n += 1;
+      },
+      5000,
+    );
     expect(q.cancel("t1")).toBe(true);
-    f.fire(); await Promise.resolve();
+    f.fire();
+    await Promise.resolve();
     expect(n).toBe(0);
     expect(q.cancel("t1")).toBe(false);
   });
   it("flushAll menjalankan semua komit tertunda (mis. tab ditutup)", async () => {
-    const f = fake(); const q = new UndoQueue(f.timers); const done: string[] = [];
-    q.schedule("a", () => { done.push("a"); }, 5000);
-    q.schedule("b", () => { done.push("b"); }, 5000);
+    const f = fake();
+    const q = new UndoQueue(f.timers);
+    const done: string[] = [];
+    q.schedule(
+      "a",
+      () => {
+        done.push("a");
+      },
+      5000,
+    );
+    q.schedule(
+      "b",
+      () => {
+        done.push("b");
+      },
+      5000,
+    );
     await q.flushAll();
     expect(done).toEqual(["a", "b"]);
     expect(q.size).toBe(0);
   });
   it("menjadwalkan id yang sama menjalankan komit lama lebih dulu", async () => {
-    const f = fake(); const q = new UndoQueue(f.timers); const done: string[] = [];
-    q.schedule("a", () => { done.push("lama"); }, 5000);
-    q.schedule("a", () => { done.push("baru"); }, 5000);
+    const f = fake();
+    const q = new UndoQueue(f.timers);
+    const done: string[] = [];
+    q.schedule(
+      "a",
+      () => {
+        done.push("lama");
+      },
+      5000,
+    );
+    q.schedule(
+      "a",
+      () => {
+        done.push("baru");
+      },
+      5000,
+    );
     await Promise.resolve();
     expect(done).toEqual(["lama"]);
     await q.flushAll();

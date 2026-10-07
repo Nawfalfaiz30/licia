@@ -22,8 +22,10 @@ function getOpenAI(): OpenAI {
 // nutrition estimate. Used by the Health page's manual "Catat" button so every
 // meal gets an estimate, not just ones logged through the main chat.
 export async function POST(req: Request) {
-  const originError = enforceSameOrigin(req); if (originError) return originError;
-  const sizeError = assertJsonSize(req, 32 * 1024); if (sizeError) return sizeError;
+  const originError = enforceSameOrigin(req);
+  if (originError) return originError;
+  const sizeError = assertJsonSize(req, 32 * 1024);
+  if (sizeError) return sizeError;
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,7 +33,8 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "Belum masuk (unauthorized)." }, { status: 401 });
   }
-  const gate = rateLimit(`nutrition:${user.id}`, 20, 60_000); if (gate) return gate;
+  const gate = rateLimit(`nutrition:${user.id}`, 20, 60_000);
+  if (gate) return gate;
 
   const { description } = (await req.json()) as { description: string };
   if (!description || typeof description !== "string") {
@@ -40,24 +43,28 @@ export async function POST(req: Request) {
 
   try {
     const model = selectAiModel({ text: "Estimasi nutrisi makanan" });
-    const completion = await withOpenAIRetry(() => chatCompletion(getOpenAI(), {
-      model,
-      ...generationOptions(model, 0.1),
-      max_completion_tokens: 120,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "Kamu ahli gizi. Diberi deskripsi makanan (sering dalam Bahasa Indonesia, termasuk makanan Indonesia), " +
-            "berikan PERKIRAAN kasar kandungan gizinya untuk satu porsi wajar. Balas HANYA JSON " +
-            'dengan format persis: {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}. ' +
-            "Kalau deskripsi terlalu tidak jelas untuk diperkirakan, tetap beri angka masuk akal untuk porsi " +
-            "sedang daripada menolak.",
-        },
-        { role: "user", content: description },
-      ],
-    }), 2);
+    const completion = await withOpenAIRetry(
+      () =>
+        chatCompletion(getOpenAI(), {
+          model,
+          ...generationOptions(model, 0.1),
+          max_completion_tokens: 120,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "Kamu ahli gizi. Diberi deskripsi makanan (sering dalam Bahasa Indonesia, termasuk makanan Indonesia), " +
+                "berikan PERKIRAAN kasar kandungan gizinya untuk satu porsi wajar. Balas HANYA JSON " +
+                'dengan format persis: {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}. ' +
+                "Kalau deskripsi terlalu tidak jelas untuk diperkirakan, tetap beri angka masuk akal untuk porsi " +
+                "sedang daripada menolak.",
+            },
+            { role: "user", content: description },
+          ],
+        }),
+      2,
+    );
     logCompletionFinish(completion, "estimate-nutrition");
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
@@ -78,9 +85,10 @@ export async function POST(req: Request) {
       protein_g: null,
       carbs_g: null,
       fat_g: null,
-      error: error instanceof Error && error.message.includes("OPENAI_API_KEY")
-        ? "Layanan AI belum dikonfigurasi di server."
-        : "Estimasi gizi AI sedang tidak tersedia."
+      error:
+        error instanceof Error && error.message.includes("OPENAI_API_KEY")
+          ? "Layanan AI belum dikonfigurasi di server."
+          : "Estimasi gizi AI sedang tidak tersedia.",
     });
   }
 }

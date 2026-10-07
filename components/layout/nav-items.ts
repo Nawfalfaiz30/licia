@@ -1,15 +1,43 @@
 import {
-  LayoutDashboard, MessageCircle, ListTodo, Timer, CalendarDays, Wallet, HeartPulse, Settings,
-  LibraryBig, Target, BrainCircuit, Lightbulb, CircleHelp, Search, Camera,
-  Compass, BarChart3, Zap,
+  LayoutDashboard,
+  MessageCircle,
+  ListTodo,
+  Timer,
+  CalendarDays,
+  Wallet,
+  HeartPulse,
+  Settings,
+  LibraryBig,
+  Target,
+  BrainCircuit,
+  Lightbulb,
+  CircleHelp,
+  Search,
+  Camera,
+  Compass,
+  BarChart3,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 
-export type NavItem = { href: string; label: string; i18nKey: string; icon: LucideIcon; primary?: boolean; sub?: boolean };
+export type NavItem = {
+  href: string;
+  label: string;
+  i18nKey: string;
+  icon: LucideIcon;
+  primary?: boolean;
+  sub?: boolean;
+};
 export type NavGroup = { label: string; i18nKey: string; items: NavItem[] };
 
-const item = (href: string, label: string, i18nKey: string, icon: LucideIcon, primary = false, sub = false): NavItem =>
-  ({ href, label, i18nKey, icon, ...(primary ? { primary: true } : {}), ...(sub ? { sub: true } : {}) });
+const item = (
+  href: string,
+  label: string,
+  i18nKey: string,
+  icon: LucideIcon,
+  primary = false,
+  sub = false,
+): NavItem => ({ href, label, i18nKey, icon, ...(primary ? { primary: true } : {}), ...(sub ? { sub: true } : {}) });
 
 const group = (label: string, i18nKey: string, items: NavItem[]): NavGroup => ({ label, i18nKey, items });
 

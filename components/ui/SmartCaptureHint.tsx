@@ -26,7 +26,14 @@ function addHour(time: string): string {
  *  - `allowTask` → "Jadikan tugas" (tanggal/jam/prioritas ikut terbawa);
  *  - `onApplySchedule` → mengisi form Kalender dari judul ("rapat besok jam 3 sore").
  */
-export function SmartCaptureHint({ text, allowTask = false, onApplySchedule, onTaskCreated, onMoneyDone, className }: {
+export function SmartCaptureHint({
+  text,
+  allowTask = false,
+  onApplySchedule,
+  onTaskCreated,
+  onMoneyDone,
+  className,
+}: {
   text: string;
   allowTask?: boolean;
   onApplySchedule?: (s: ScheduleSuggestion) => void;
@@ -51,26 +58,68 @@ export function SmartCaptureHint({ text, allowTask = false, onApplySchedule, onT
     setBusy(true);
     const created = await createTaskFromText(text, language);
     setBusy(false);
-    if (!created.ok) { haptic("warning"); notifyToast({ title: "Belum tersimpan", message: created.error, tone: "error" }); return; }
+    if (!created.ok) {
+      haptic("warning");
+      notifyToast({ title: "Belum tersimpan", message: created.error, tone: "error" });
+      return;
+    }
     haptic("success");
-    if (created.id && !created.queued) toastWithUndo({ title: t("Tugas dibuat"), message: created.title, undoLabel: t("Urungkan"), revert: async () => { await deleteTaskById(created.id!); } });
-    else notifyToast({ title: created.queued ? tr("Disimpan di perangkat") : tr("Tugas dibuat"), message: created.title, tone: "success" });
+    if (created.id && !created.queued)
+      toastWithUndo({
+        title: t("Tugas dibuat"),
+        message: created.title,
+        undoLabel: t("Urungkan"),
+        revert: async () => {
+          await deleteTaskById(created.id!);
+        },
+      });
+    else
+      notifyToast({
+        title: created.queued ? tr("Disimpan di perangkat") : tr("Tugas dibuat"),
+        message: created.title,
+        tone: "success",
+      });
     onTaskCreated?.();
   }
 
   return (
     <div className={className}>
-      <SmartChips chips={parsed.chips} hint={parsed.dueDate && !parsed.dueTime && allowTask ? t("Tanpa jam, tenggat diset pukul 09:00.") : null} />
+      <SmartChips
+        chips={parsed.chips}
+        hint={parsed.dueDate && !parsed.dueTime && allowTask ? t("Tanpa jam, tenggat diset pukul 09:00.") : null}
+      />
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {parsed.amount ? <MoneyAction amount={parsed.amount} text={text} onDone={onMoneyDone} /> : null}
         {allowTask && hasWhen ? (
-          <button type="button" onClick={() => void makeTask()} disabled={busy} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-accent/25 bg-accent/10 px-3 text-xs font-semibold text-accent transition hover:bg-accent/15 disabled:opacity-60">
-            {busy ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <CheckSquare size={13} aria-hidden="true" />}{t("Jadikan tugas")}
+          <button
+            type="button"
+            onClick={() => void makeTask()}
+            disabled={busy}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-accent/25 bg-accent/10 px-3 text-xs font-semibold text-accent transition hover:bg-accent/15 disabled:opacity-60"
+          >
+            {busy ? (
+              <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <CheckSquare size={13} aria-hidden="true" />
+            )}
+            {t("Jadikan tugas")}
           </button>
         ) : null}
         {onApplySchedule && (parsed.dueDate || parsed.dueTime) ? (
-          <button type="button" onClick={() => onApplySchedule({ title: parsed.title || text.trim(), date: parsed.dueDate, start: parsed.dueTime, end: parsed.dueTime ? addHour(parsed.dueTime) : null })} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-accent/25 bg-accent/10 px-3 text-xs font-semibold text-accent transition hover:bg-accent/15">
-            <CalendarCheck size={13} aria-hidden="true" />{t("Isi tanggal & jam dari judul")}
+          <button
+            type="button"
+            onClick={() =>
+              onApplySchedule({
+                title: parsed.title || text.trim(),
+                date: parsed.dueDate,
+                start: parsed.dueTime,
+                end: parsed.dueTime ? addHour(parsed.dueTime) : null,
+              })
+            }
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-accent/25 bg-accent/10 px-3 text-xs font-semibold text-accent transition hover:bg-accent/15"
+          >
+            <CalendarCheck size={13} aria-hidden="true" />
+            {t("Isi tanggal & jam dari judul")}
           </button>
         ) : null}
       </div>

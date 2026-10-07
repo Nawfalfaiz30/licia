@@ -16,22 +16,85 @@ export async function GET(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const admin = createAdminClient();
   const now = Date.now();
 
-  const [healthRes, heartbeatRes, reminderRes, notificationRes, subscriptionRes, taskReminderRes, scheduleReminderRes, overdueRes, stuckRes, aiUsageRes] = await Promise.all([
-    fetch(new URL("/api/health", req.url), { headers: { cookie: req.headers.get("cookie") || "" }, cache: "no-store" }).then((r) => r.json()).catch(() => null),
-    admin.from("system_health_heartbeats").select("component,status,details,updated_at").eq("component", "reminder-worker").maybeSingle(),
+  const [
+    healthRes,
+    heartbeatRes,
+    reminderRes,
+    notificationRes,
+    subscriptionRes,
+    taskReminderRes,
+    scheduleReminderRes,
+    overdueRes,
+    stuckRes,
+    aiUsageRes,
+  ] = await Promise.all([
+    fetch(new URL("/api/health", req.url), { headers: { cookie: req.headers.get("cookie") || "" }, cache: "no-store" })
+      .then((r) => r.json())
+      .catch(() => null),
+    admin
+      .from("system_health_heartbeats")
+      .select("component,status,details,updated_at")
+      .eq("component", "reminder-worker")
+      .maybeSingle(),
     count(supabase.from("reminders").select("id", { count: "exact", head: true }).eq("user_id", user.id)),
     count(supabase.from("notification_events").select("id", { count: "exact", head: true }).eq("user_id", user.id)),
-    count(supabase.from("push_subscriptions").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("enabled", true)),
-    count(supabase.from("reminders").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("target_type", "task").eq("enabled", true).in("status", ["pending", "waiting_for_device", "failed", "processing"])),
-    count(supabase.from("reminders").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("target_type", "schedule").eq("enabled", true).in("status", ["pending", "waiting_for_device", "failed", "processing"])),
-    count(supabase.from("reminders").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("enabled", true).in("status", ["pending", "waiting_for_device", "failed", "processing"]).lt("remind_at", new Date().toISOString())),
-    count(supabase.from("reminders").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("enabled", true).eq("status", "processing").lt("last_attempt_at", new Date(now - 10 * 60_000).toISOString())),
-    count(supabase.from("ai_usage_events").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", new Date(now - 24 * 3600000).toISOString())),
+    count(
+      supabase
+        .from("push_subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("enabled", true),
+    ),
+    count(
+      supabase
+        .from("reminders")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("target_type", "task")
+        .eq("enabled", true)
+        .in("status", ["pending", "waiting_for_device", "failed", "processing"]),
+    ),
+    count(
+      supabase
+        .from("reminders")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("target_type", "schedule")
+        .eq("enabled", true)
+        .in("status", ["pending", "waiting_for_device", "failed", "processing"]),
+    ),
+    count(
+      supabase
+        .from("reminders")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("enabled", true)
+        .in("status", ["pending", "waiting_for_device", "failed", "processing"])
+        .lt("remind_at", new Date().toISOString()),
+    ),
+    count(
+      supabase
+        .from("reminders")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("enabled", true)
+        .eq("status", "processing")
+        .lt("last_attempt_at", new Date(now - 10 * 60_000).toISOString()),
+    ),
+    count(
+      supabase
+        .from("ai_usage_events")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", new Date(now - 24 * 3600000).toISOString()),
+    ),
   ]);
 
   const schemaProbe = await Promise.all([
@@ -59,50 +122,132 @@ export async function GET(req: Request) {
     taskDependencies: !schemaProbe[9].error,
   };
 
-  const activeTargetReminders = await supabase.from("reminders").select("id,target_type,target_id").eq("user_id", user.id).eq("enabled", true).in("status", ["pending", "waiting_for_device", "failed", "processing"]).not("target_id", "is", null).limit(500);
-  const taskIds = Array.from(new Set((activeTargetReminders.data ?? []).filter((r: any) => r.target_type === "task").map((r: any) => String(r.target_id))));
-  const scheduleIds = Array.from(new Set((activeTargetReminders.data ?? []).filter((r: any) => r.target_type === "schedule").map((r: any) => String(r.target_id))));
+  const activeTargetReminders = await supabase
+    .from("reminders")
+    .select("id,target_type,target_id")
+    .eq("user_id", user.id)
+    .eq("enabled", true)
+    .in("status", ["pending", "waiting_for_device", "failed", "processing"])
+    .not("target_id", "is", null)
+    .limit(500);
+  const taskIds = Array.from(
+    new Set(
+      (activeTargetReminders.data ?? [])
+        .filter((r: any) => r.target_type === "task")
+        .map((r: any) => String(r.target_id)),
+    ),
+  );
+  const scheduleIds = Array.from(
+    new Set(
+      (activeTargetReminders.data ?? [])
+        .filter((r: any) => r.target_type === "schedule")
+        .map((r: any) => String(r.target_id)),
+    ),
+  );
   const [{ data: taskRows }, { data: scheduleRows }] = await Promise.all([
-    taskIds.length ? supabase.from("tasks").select("id").eq("user_id", user.id).in("id", taskIds) : Promise.resolve({ data: [] as any[] }),
-    scheduleIds.length ? supabase.from("schedule_blocks").select("id").eq("user_id", user.id).in("id", scheduleIds) : Promise.resolve({ data: [] as any[] }),
+    taskIds.length
+      ? supabase.from("tasks").select("id").eq("user_id", user.id).in("id", taskIds)
+      : Promise.resolve({ data: [] as any[] }),
+    scheduleIds.length
+      ? supabase.from("schedule_blocks").select("id").eq("user_id", user.id).in("id", scheduleIds)
+      : Promise.resolve({ data: [] as any[] }),
   ]);
   const validTaskIds = new Set((taskRows ?? []).map((r: any) => String(r.id)));
   const validScheduleIds = new Set((scheduleRows ?? []).map((r: any) => String(r.id)));
-  const orphanedReminders = (activeTargetReminders.data ?? []).filter((r: any) => (r.target_type === "task" && !validTaskIds.has(String(r.target_id))) || (r.target_type === "schedule" && !validScheduleIds.has(String(r.target_id)))).length;
+  const orphanedReminders = (activeTargetReminders.data ?? []).filter(
+    (r: any) =>
+      (r.target_type === "task" && !validTaskIds.has(String(r.target_id))) ||
+      (r.target_type === "schedule" && !validScheduleIds.has(String(r.target_id))),
+  ).length;
 
   const heartbeat = heartbeatRes.data;
   const heartbeatAgeMs = heartbeat?.updated_at ? now - new Date(heartbeat.updated_at).getTime() : Infinity;
   const pushConfig = getPushConfig();
   const cronConfigured = pushConfig.cron;
-  const workerStatus = heartbeat ? (heartbeatAgeMs <= 3 * 60_000 ? heartbeat.status : cronConfigured ? "degraded" : "degraded") : cronConfigured ? "error" : "degraded";
+  const workerStatus = heartbeat
+    ? heartbeatAgeMs <= 3 * 60_000
+      ? heartbeat.status
+      : cronConfigured
+        ? "degraded"
+        : "degraded"
+    : cronConfigured
+      ? "error"
+      : "degraded";
   const issues: string[] = [];
-  if (!schema.remindersV30 || !schema.notificationDeliveryFields || !schema.heartbeatTable || !schema.aiUsageEvents) issues.push("Migration V30 belum lengkap.");
-  if (!schema.syncDevices || !schema.syncEvents || !schema.syncMutations) issues.push("Migration V31 Sync Core belum dijalankan. Jalankan supabase/schema_v31_sync.sql.");
-  if (!schema.aiActionPlans || !schema.aiWatchers || !schema.taskDependencies) issues.push("Migration V35 belum lengkap. Jalankan supabase/schema_v35_ai_experience.sql.");
+  if (!schema.remindersV30 || !schema.notificationDeliveryFields || !schema.heartbeatTable || !schema.aiUsageEvents)
+    issues.push("Migration V30 belum lengkap.");
+  if (!schema.syncDevices || !schema.syncEvents || !schema.syncMutations)
+    issues.push("Migration V31 Sync Core belum dijalankan. Jalankan supabase/schema_v31_sync.sql.");
+  if (!schema.aiActionPlans || !schema.aiWatchers || !schema.taskDependencies)
+    issues.push("Migration V35 belum lengkap. Jalankan supabase/schema_v35_ai_experience.sql.");
   if (orphanedReminders > 0) issues.push(`${orphanedReminders} reminder aktif tidak memiliki target sumber.`);
   if ((stuckRes.count ?? 0) > 0) issues.push(`${stuckRes.count} reminder terdeteksi macet di processing.`);
-  if ((overdueRes.count ?? 0) > 0) issues.push(`${overdueRes.count} reminder sudah jatuh tempo dan masih belum terkirim.`);
+  if ((overdueRes.count ?? 0) > 0)
+    issues.push(`${overdueRes.count} reminder sudah jatuh tempo dan masih belum terkirim.`);
   if (workerStatus === "error") issues.push("Reminder worker belum mengirim heartbeat.");
-  if (!pushConfig.vapid) issues.push(`VAPID belum lengkap: ${pushConfig.missing.filter((key) => key.startsWith("VAPID_")).join(", ") || "VAPID_*"}.`);
+  if (!pushConfig.vapid)
+    issues.push(
+      `VAPID belum lengkap: ${pushConfig.missing.filter((key) => key.startsWith("VAPID_")).join(", ") || "VAPID_*"}.`,
+    );
   if (!pushConfig.serviceRole) issues.push("SUPABASE_SERVICE_ROLE_KEY belum dikonfigurasi di server.");
-  if (!pushConfig.cron) issues.push("LICIA_CRON_SECRET belum dikonfigurasi; reminder worker tidak dapat melakukan dispatch production.");
-  if ((notificationRes.count ?? 0) > 0 && !pushConfig.enabled) issues.push("Ada notification event tetapi jalur Web Push belum siap.");
+  if (!pushConfig.cron)
+    issues.push("LICIA_CRON_SECRET belum dikonfigurasi; reminder worker tidak dapat melakukan dispatch production.");
+  if ((notificationRes.count ?? 0) > 0 && !pushConfig.enabled)
+    issues.push("Ada notification event tetapi jalur Web Push belum siap.");
 
-  const components = [Boolean(healthRes?.database), schema.remindersV30, schema.notificationDeliveryFields, schema.heartbeatTable, schema.aiUsageEvents, schema.syncDevices, schema.syncEvents, schema.syncMutations, schema.aiActionPlans, schema.aiWatchers, schema.taskDependencies, orphanedReminders === 0, (stuckRes.count ?? 0) === 0, Boolean(pushConfig.serviceRole), Boolean(pushConfig.vapid)];
-  const healthScore = Math.round(components.filter(Boolean).length / components.length * 100);
+  const components = [
+    Boolean(healthRes?.database),
+    schema.remindersV30,
+    schema.notificationDeliveryFields,
+    schema.heartbeatTable,
+    schema.aiUsageEvents,
+    schema.syncDevices,
+    schema.syncEvents,
+    schema.syncMutations,
+    schema.aiActionPlans,
+    schema.aiWatchers,
+    schema.taskDependencies,
+    orphanedReminders === 0,
+    (stuckRes.count ?? 0) === 0,
+    Boolean(pushConfig.serviceRole),
+    Boolean(pushConfig.vapid),
+  ];
+  const healthScore = Math.round((components.filter(Boolean).length / components.length) * 100);
   const ok = Boolean(healthScore >= 95 && issues.length === 0);
-  return NextResponse.json({
-    ok,
-    checkedAt: new Date().toISOString(),
-    userId: user.id,
-    health: healthRes,
-    schema,
-    healthScore,
-    worker: { status: workerStatus, heartbeat: heartbeat?.updated_at || null, ageMs: Number.isFinite(heartbeatAgeMs) ? heartbeatAgeMs : null, details: heartbeat?.details ?? null, cronConfigured },
-    reminders: { total: reminderRes.count, activeTask: taskReminderRes.count, activeSchedule: scheduleReminderRes.count, overdue: overdueRes.count, stuckProcessing: stuckRes.count, orphaned: orphanedReminders },
-    notifications: { total: notificationRes.count, pushSubscriptions: subscriptionRes.count },
-    push: { enabled: pushConfig.enabled, vapid: pushConfig.vapid, serviceRole: pushConfig.serviceRole, cron: pushConfig.cron, missing: pushConfig.missing },
-    ai: { usageEvents24h: aiUsageRes.count },
-    issues,
-  }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(
+    {
+      ok,
+      checkedAt: new Date().toISOString(),
+      userId: user.id,
+      health: healthRes,
+      schema,
+      healthScore,
+      worker: {
+        status: workerStatus,
+        heartbeat: heartbeat?.updated_at || null,
+        ageMs: Number.isFinite(heartbeatAgeMs) ? heartbeatAgeMs : null,
+        details: heartbeat?.details ?? null,
+        cronConfigured,
+      },
+      reminders: {
+        total: reminderRes.count,
+        activeTask: taskReminderRes.count,
+        activeSchedule: scheduleReminderRes.count,
+        overdue: overdueRes.count,
+        stuckProcessing: stuckRes.count,
+        orphaned: orphanedReminders,
+      },
+      notifications: { total: notificationRes.count, pushSubscriptions: subscriptionRes.count },
+      push: {
+        enabled: pushConfig.enabled,
+        vapid: pushConfig.vapid,
+        serviceRole: pushConfig.serviceRole,
+        cron: pushConfig.cron,
+        missing: pushConfig.missing,
+      },
+      ai: { usageEvents24h: aiUsageRes.count },
+      issues,
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

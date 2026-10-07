@@ -12,16 +12,20 @@ describe("upgrade policies", () => {
   });
 
   it("enforces quiet hours and a daily proactive limit", () => {
-    expect(isWithinQuietHours(new Date("2026-10-07T22:30:00"), {
-      quiet_start: "22:00",
-      quiet_end: "07:00",
-    })).toBe(true);
-    expect(shouldProactivelyNotify({
-      suggestionsToday: 3,
-      candidateScore: 95,
-      prefs: { max_suggestions_per_day: 3 },
-      quietHours: false,
-    }).allowed).toBe(false);
+    expect(
+      isWithinQuietHours(new Date("2026-10-07T22:30:00"), {
+        quiet_start: "22:00",
+        quiet_end: "07:00",
+      }),
+    ).toBe(true);
+    expect(
+      shouldProactivelyNotify({
+        suggestionsToday: 3,
+        candidateScore: 95,
+        prefs: { max_suggestions_per_day: 3 },
+        quietHours: false,
+      }).allowed,
+    ).toBe(false);
   });
 
   it("has a healthy unique tool registry and can strictify schemas", () => {

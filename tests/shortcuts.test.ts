@@ -36,7 +36,9 @@ describe("isTypingTarget", () => {
     expect(isTypingTarget({ tagName: "textarea" } as any)).toBe(true);
     expect(isTypingTarget({ tagName: "SELECT" } as any)).toBe(true);
     expect(isTypingTarget({ tagName: "DIV", isContentEditable: true } as any)).toBe(true);
-    expect(isTypingTarget({ tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "textbox" : null) } as any)).toBe(true);
+    expect(
+      isTypingTarget({ tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "textbox" : null) } as any),
+    ).toBe(true);
   });
   it("tombol, tautan, body, dan null = bukan", () => {
     expect(isTypingTarget({ tagName: "BUTTON" } as any)).toBe(false);
