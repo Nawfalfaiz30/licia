@@ -17,6 +17,24 @@ import { ThemeModeControl } from "@/components/settings/ThemeModeControl";
 import type { ThemeMode } from "@/lib/theme";
 
 import { useLanguage } from "@/components/LanguageProvider";
+type AiPrivacyState = {
+  exclude_finance: boolean;
+  exclude_health: boolean;
+  private_mode: boolean;
+  log_retention_days: number;
+};
+
+type AiProactiveState = {
+  enabled: boolean;
+  max_suggestions_per_day: number;
+  quiet_start: string | null;
+  quiet_end: string | null;
+  allow_finance: boolean;
+  allow_health: boolean;
+  allow_schedule: boolean;
+  allow_tasks: boolean;
+};
+
 type SettingsState = {
   theme: ThemeMode;
   language: Language;
@@ -92,6 +110,8 @@ export default function SettingsPage() {
   const [health, setHealth] = useState<any>(null);
   const [healthBusy, setHealthBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [aiPrivacy, setAiPrivacy] = useState<AiPrivacyState>({ exclude_finance: false, exclude_health: false, private_mode: false, log_retention_days: 90 });
+  const [aiProactivePrefs, setAiProactivePrefs] = useState<AiProactiveState>({ enabled: true, max_suggestions_per_day: 3, quiet_start: null, quiet_end: null, allow_finance: true, allow_health: true, allow_schedule: true, allow_tasks: true });
 
   useEffect(() => {
     const root = document.documentElement;
@@ -265,6 +285,28 @@ export default function SettingsPage() {
       <Card className="border-accent/15 bg-accent/5 p-4 sm:p-5"><div className="flex items-start gap-3"><span className="rounded-2xl bg-accent/10 p-3 text-accent"><Sparkles size={18}/></span><div><h2 className="font-display text-xl text-text">{tr("AI lebih pintar, bukan lebih ramai")}</h2><p className="mt-1 text-xs leading-relaxed text-textMuted">{tr("Secara default Licia memakai context bertingkat. Context lintas Life OS dipakai saat memang diperlukan, sedangkan workspace gabungan tetap menjadi sumber utama agar AI tidak membaca data yang tidak relevan.")}</p></div></div><div className="mt-4 grid gap-2 md:grid-cols-2"><Toggle label={tr("Baca konteks lintas ruang kerja")} hint={tr("Aktifkan hanya untuk percakapan yang memang membutuhkan konteks banyak domain. Domain sensitif tetap mengikuti izin per-domain.")} checked={state.aiReadAllData} onChange={() => toggle("aiReadAllData")} /><Toggle label={tr("Hubungkan informasi secara otomatis")} checked={state.aiAutoLink} onChange={() => toggle("aiAutoLink")} /><Toggle label={tr("Beri saran saat memang membantu")} checked={state.aiProactive} onChange={() => toggle("aiProactive")} /><Toggle label={tr("Jalankan permintaan yang jelas")} checked={state.aiSuggestActions} onChange={() => toggle("aiSuggestActions")} /><Toggle label={tr("Tanya dulu sebelum menghapus")} checked={state.aiConfirmDestructive} onChange={() => toggle("aiConfirmDestructive")} /><Toggle label={tr("Tanya dulu untuk perubahan banyak data")} checked={state.aiConfirmMassive} onChange={() => toggle("aiConfirmMassive")} /></div></Card>
       <Card className="p-4 sm:p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-text">{tr("Cara Licia bekerja")}</p><p className="mt-1 text-2xs leading-relaxed text-textMuted">{tr("Pilih gaya yang paling cocok. Detailnya bisa kamu ubah lagi kapan saja.")}</p></div><Wand2 size={17} className="mt-0.5 text-accent"/></div><div className="mt-4 grid gap-2 md:grid-cols-3"><button type="button" onClick={() => applyAiPreset("focus")} className="rounded-2xl border border-border bg-bg p-3 text-left transition hover:border-accent/25"><p className="text-xs font-semibold text-text">{tr("Fokus")}</p><p className="mt-1 text-2xs text-textMuted">{tr("Ringkas dan minim saran tambahan.")}</p></button><button type="button" onClick={() => applyAiPreset("balanced")} className="rounded-2xl border border-accent/20 bg-accent/5 p-3 text-left transition hover:border-accent/30"><p className="text-xs font-semibold text-text">{tr("Seimbang")}</p><p className="mt-1 text-2xs text-textMuted">{tr("Mode nyaman untuk pemakaian harian.")}</p></button><button type="button" onClick={() => applyAiPreset("proactive")} className="rounded-2xl border border-border bg-bg p-3 text-left transition hover:border-accent/25"><p className="text-xs font-semibold text-text">{tr("Proaktif")}</p><p className="mt-1 text-2xs text-textMuted">{tr("Lebih sigap menawarkan aksi yang relevan.")}</p></button></div></Card>
       <Card className="p-4 sm:p-5"><h2 className="font-display text-xl text-text">{tr("Data yang boleh dibantu Licia")}</h2><p className="mt-1 text-xs leading-relaxed text-textMuted">{tr("Pilih bagian kehidupan yang boleh dibaca dan dibantu Licia. Kamu tetap bisa membatasi area tertentu kapan saja.")}</p><div className="mt-4 grid gap-2 sm:grid-cols-2">{privacyGroups.map((group) => { const checked = group.keys.every((key) => state.aiDomainPermissions[key] !== false); return <Toggle key={group.id} label={group.label} hint={group.hint} checked={checked} onChange={() => update("aiDomainPermissions", { ...state.aiDomainPermissions, ...Object.fromEntries(group.keys.map((key) => [key, checked ? false : true])) })} />; })}</div></Card>
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-center gap-2"><ShieldCheck size={17} className="text-accent"/><h2 className="font-display text-xl text-text">{tr("Privasi AI tingkat lanjut")}</h2></div>
+        <p className="mt-1 text-xs leading-relaxed text-textMuted">{tr("Kontrol ini berlaku di server, sehingga bukan sekadar preferensi tampilan.")}</p>
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          <Toggle label={tr("Mode privat")} hint={tr("Jangan menyimpan riwayat percakapan AI baru. Data sumber tetap mengikuti izin domain.")} checked={aiPrivacy.private_mode} onChange={() => setAiPrivacy((x) => ({ ...x, private_mode: !x.private_mode }))} />
+          <Toggle label={tr("Kecualikan Finance dari AI")} checked={aiPrivacy.exclude_finance} onChange={() => setAiPrivacy((x) => ({ ...x, exclude_finance: !x.exclude_finance }))} />
+          <Toggle label={tr("Kecualikan Health dari AI")} checked={aiPrivacy.exclude_health} onChange={() => setAiPrivacy((x) => ({ ...x, exclude_health: !x.exclude_health }))} />
+        </div>
+        <label className="mt-4 block"><span className="text-2xs font-bold uppercase tracking-[.08em] text-textMuted">{tr("Retensi log AI")}</span><select value={aiPrivacy.log_retention_days} onChange={(e) => setAiPrivacy((x) => ({ ...x, log_retention_days: Number(e.target.value) }))} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text"><option value={30}>{tr("30 hari")}</option><option value={90}>{tr("90 hari")}</option><option value={180}>{tr("180 hari")}</option><option value={365}>{tr("1 tahun")}</option}</select></label>
+      </Card>
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-center gap-2"><Sparkles size={17} className="text-accent"/><h2 className="font-display text-xl text-text">{tr("Asisten proaktif")}</h2></div>
+        <p className="mt-1 text-xs leading-relaxed text-textMuted">{tr("Batasi kapan dan seberapa sering Licia boleh mengangkat sinyal yang relevan.")}</p>
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          <Toggle label={tr("Aktifkan saran proaktif")} checked={aiProactivePrefs.enabled} onChange={() => setAiProactivePrefs((x) => ({ ...x, enabled: !x.enabled }))} />
+          <Toggle label={tr("Boleh membaca jadwal")} checked={aiProactivePrefs.allow_schedule} onChange={() => setAiProactivePrefs((x) => ({ ...x, allow_schedule: !x.allow_schedule }))} />
+          <Toggle label={tr("Boleh membaca tugas")} checked={aiProactivePrefs.allow_tasks} onChange={() => setAiProactivePrefs((x) => ({ ...x, allow_tasks: !x.allow_tasks }))} />
+          <Toggle label={tr("Boleh memakai Finance")} checked={aiProactivePrefs.allow_finance} onChange={() => setAiProactivePrefs((x) => ({ ...x, allow_finance: !x.allow_finance }))} />
+          <Toggle label={tr("Boleh memakai Health")} checked={aiProactivePrefs.allow_health} onChange={() => setAiProactivePrefs((x) => ({ ...x, allow_health: !x.allow_health }))} />
+        </div>
+        <label className="mt-4 block"><span className="text-2xs font-bold uppercase tracking-[.08em] text-textMuted">{tr("Maksimal saran per hari")}</span><select value={aiProactivePrefs.max_suggestions_per_day} onChange={(e) => setAiProactivePrefs((x) => ({ ...x, max_suggestions_per_day: Number(e.target.value) }))} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text">{[0,1,2,3,5,8].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      </Card>
       <Card className="p-4 sm:p-5"><div className="grid gap-4 sm:grid-cols-2"><label><span className="text-2xs font-bold uppercase tracking-[.08em] text-textMuted">{tr("Mode default")}</span><select value={state.defaultAiMode} onChange={(e) => update("defaultAiMode", e.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text"><option value="assistant">{tr("Assistant")}</option><option value="planner">{tr("Planner")}</option><option value="analyst">{tr("Analyst")}</option><option value="operator">{tr("Operator")}</option><option value="reflector">{tr("Reflector")}</option></select></label><label><span className="text-2xs font-bold uppercase tracking-[.08em] text-textMuted">{tr("Gaya jawaban")}</span><select value={state.aiResponseStyle} onChange={(e) => update("aiResponseStyle", e.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text"><option value="concise">{tr("Ringkas")}</option><option value="normal">{tr("Normal")}</option><option value="detailed">{tr("Detail")}</option></select></label></div></Card>
     </div>}
 
