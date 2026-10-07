@@ -1616,6 +1616,22 @@ export const toolDefs: ToolDef[] = [
   {
     type: "function",
     function: {
+      name: "delete_habits_bulk",
+      description: "Hapus banyak atau semua kebiasaan/rutinitas sekaligus. Gunakan untuk permintaan seperti \"hapus semua rutinitas\". Percobaan pertama hanya menampilkan target untuk konfirmasi; gunakan confirm_all=true hanya setelah pengguna menyetujui daftar yang sama.",
+      parameters: {
+        type: "object",
+        properties: {
+          keyword: { type: "string", description: "Opsional. Batasi ke rutinitas yang namanya mengandung kata ini." },
+          habit_ids: { type: "array", items: { type: "string" }, description: "ID rutinitas yang sudah diverifikasi sebelumnya. Gunakan hanya untuk replay target yang sama." },
+          confirm_all: { type: "boolean", description: "true hanya setelah konfirmasi eksplisit pengguna atas daftar target." },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "create_subscription",
       description: "Catat langganan baru (streaming, gym, aplikasi, dll) yang berulang tiap bulan/tahun.",
       parameters: {

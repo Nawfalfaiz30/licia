@@ -41,13 +41,15 @@ const readTools: Partial<Record<AiDomain, string[]>> = {
 const writeTools: Partial<Record<AiDomain, string[]>> = {
   overview: [], tasks: ["create_task_with_subtasks", "create_task_dependency", "delete_task_dependency", "update_task", "update_tasks_bulk", "delete_task", "delete_tasks_bulk", "delete_subtask", "create_task_from_schedule", "create_task_from_inbox", "create_task_from_note", "create_task_from_project", "create_task_from_goal", "create_schedule_from_task", "create_schedule_reminder"], calendar: ["create_daily_schedule", "update_schedule_block", "delete_schedule_block", "delete_schedule_blocks_bulk", "create_schedule_from_task", "create_task_from_schedule", "create_schedule_reminder"], focus: ["log_pomodoro_session", "delete_pomodoro_session", "update_task"],
   finance: ["log_expense", "delete_expense", "log_expenses_batch", "update_expense", "log_income", "update_income", "delete_income", "create_budget", "update_budget", "delete_budget", "create_account", "update_account", "delete_account", "transfer_money", "get_account_transactions", "get_net_worth", "create_subscription", "update_subscription", "delete_subscription"], health: ["log_health", "delete_health_log"],
-  goals: ["create_goal", "update_goal", "delete_goal", "create_task_from_goal"], notes: ["create_note", "update_note", "delete_note", "create_task_from_note"], inbox: ["capture_inbox_item", "create_task_from_inbox"], decisions: ["log_decision", "update_decision", "delete_decision"], learning: ["create_skill", "update_skill", "delete_skill"], reading: ["log_reading", "update_reading", "delete_reading"], habits: ["create_habit", "update_habit", "checkin_habit", "uncheckin_habit", "delete_habit"], subscriptions: ["create_subscription", "update_subscription", "delete_subscription"], memory: ["save_memory", "delete_memory"], vault: ["create_vault_item", "update_vault_item", "delete_vault_item"], automations: ["create_automation", "update_automation", "delete_automation", "create_ai_watcher", "update_ai_watcher", "delete_ai_watcher", "create_schedule_reminder", "create_reminder", "update_reminder", "delete_reminder"], reminders: ["create_reminder", "update_reminder", "delete_reminder", "create_schedule_reminder"], projects: ["create_project", "update_project", "delete_project", "create_task_from_project"], notifications: ["mark_notification_read", "delete_notification", "delete_all_notifications"], journal: ["manage_life_os_data"], relations: ["manage_life_os_data"],
+  goals: ["create_goal", "update_goal", "delete_goal", "create_task_from_goal"], notes: ["create_note", "update_note", "delete_note", "create_task_from_note"], inbox: ["capture_inbox_item", "create_task_from_inbox"], decisions: ["log_decision", "update_decision", "delete_decision"], learning: ["create_skill", "update_skill", "delete_skill"], reading: ["log_reading", "update_reading", "delete_reading"], habits: ["create_habit", "update_habit", "checkin_habit", "uncheckin_habit", "delete_habit", "delete_habits_bulk"], subscriptions: ["create_subscription", "update_subscription", "delete_subscription"], memory: ["save_memory", "delete_memory"], vault: ["create_vault_item", "update_vault_item", "delete_vault_item"], automations: ["create_automation", "update_automation", "delete_automation", "create_ai_watcher", "update_ai_watcher", "delete_ai_watcher", "create_schedule_reminder", "create_reminder", "update_reminder", "delete_reminder"], reminders: ["create_reminder", "update_reminder", "delete_reminder", "create_schedule_reminder"], projects: ["create_project", "update_project", "delete_project", "create_task_from_project"], notifications: ["mark_notification_read", "delete_notification", "delete_all_notifications"], journal: ["manage_life_os_data"], relations: ["manage_life_os_data"],
 };
 
 const deletePattern = /\b(hapus|delete|buang|hilangkan|hapuskan)\b/i;
 const updatePattern = /\b(ubah|edit|update|ganti|pindah|arsipkan|aktifkan|nonaktifkan|matikan|nyalakan|hubungkan|tandai|centang|selesaikan)\b/i;
 const createPattern = /\b(buat|buatkan|catat|simpan|tambah|tambahkan|masukkan|input|import|jadwalkan|ubah jadi|jadikan|convert|konversi|log|check[-\s]?in)\b/i;
 const actionPattern = new RegExp(`${deletePattern.source}|${updatePattern.source}|${createPattern.source}`, "i");
+const massDeletePattern = /\b(semua|seluruh|semuanya|all|massal|bulk)\b/i;
+const broadCollectionDeleteTools = ["delete_tasks_bulk", "delete_schedule_blocks_bulk", "delete_habits_bulk", "delete_all_reminders", "delete_all_notifications"];
 const capabilityPattern = /\b(apa yang bisa|apa saja yang bisa|kemampuan|fitur|modul|crud|create|read|update|delete|semua data|seluruh data|life os|bisa melakukan|bisa ngapain)\b/i;
 
 function selectWriteNames(names: string[], text: string) {
@@ -115,7 +117,14 @@ export function selectReadToolDefs<T extends { function?: { name?: string } }>(d
 export function selectToolDefs<T extends { function?: { name?: string } }>(defs: T[], domains: AiDomain[], userText = "") {
   const names = new Set<string>();
   const wantsWrite = actionPattern.test(userText);
+  const broadCollectionDelete = wantsWrite && deletePattern.test(userText) && massDeletePattern.test(userText);
   if (capabilityPattern.test(userText)) names.add("get_life_os_capabilities");
+  if (broadCollectionDelete) {
+    // "Hapus semua" tanpa domain tetap memberi model write surface koleksi yang aman.
+    // Interceptor bulk di chatOrchestrator menahan mutation pertama untuk konfirmasi.
+    for (const name of broadCollectionDeleteTools) names.add(name);
+    for (const name of ["get_tasks", "get_schedule", "get_habits", "get_reminders", "get_notifications"]) names.add(name);
+  }
   if (/\b(hubungkan|terhubung|terkait|relasi|hubungan|rantai|graph|graf|project.*task|task.*project|target.*project|project.*target|task.*agenda|agenda.*task|task.*fokus|fokus.*task)\b/i.test(userText)) names.add("get_life_graph");
   // Tool khusus tetap diprioritaskan, tetapi fallback jangan dimatikan bila
   // pesan menunjuk entity yang memang belum punya CRUD khusus.

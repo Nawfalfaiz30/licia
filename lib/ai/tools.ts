@@ -2828,6 +2828,72 @@ async function updateHabit(ctx: HandlerCtx, args: any) {
   return { ok: true, habit: data };
 }
 
+async function deleteHabitsBulk(ctx: HandlerCtx, args: any) {
+  let query = ctx.supabase
+    .from("habits")
+    .select("id,name,target_per_week,icon")
+    .eq("user_id", ctx.userId)
+    .order("created_at", { ascending: false });
+
+  const keyword = String(args.keyword ?? "").trim();
+  const requestedIds = Array.isArray(args.habit_ids)
+    ? args.habit_ids.map((value: unknown) => String(value).trim()).filter((value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)).slice(0, 1000)
+    : [];
+  if (requestedIds.length) query = query.in("id", requestedIds);
+  if (keyword) query = query.ilike("name", "%" + keyword.replace(/[%_]/g, "\\  const keyword = String(args.keyword ?? "").trim();
+  if (keyword) query = query.ilike("name", "%" + keyword.replace(/[%_]/g, "\\$&") + "%");
+
+  const { data, error } = await query.limit(1000);") + "%");
+
+  const { data, error } = await query.limit(1000);
+  if (error) return { ok: false, error: error.message };
+
+  const targets = data ?? [];
+  if (!targets.length) {
+    return {
+      ok: true,
+      status: "no_match",
+      count: 0,
+      deleted: [],
+      message: keyword ? "Tidak ada rutinitas yang cocok dengan \"" + keyword + "\"." : "Tidak ada rutinitas yang tersimpan.",
+    };
+  }
+
+  if (args.confirm_all !== true) {
+    return {
+      ok: true,
+      status: "confirmation_required",
+      code: "HABIT_BULK_DELETE_CONFIRM",
+      requires_confirmation: true,
+      target_count: targets.length,
+      targets,
+      message: keyword
+        ? "Ada " + targets.length + " rutinitas yang cocok dengan \"" + keyword + "\" dan akan dihapus."
+        : "Ada " + targets.length + " rutinitas yang akan dihapus.",
+    };
+  }
+
+  const ids = targets.map((row: any) => String(row.id)).filter(Boolean);
+  const { data: deleted, error: deleteError } = await ctx.supabase
+    .from("habits")
+    .delete()
+    .in("id", ids)
+    .eq("user_id", ctx.userId)
+    .select("id,name,target_per_week,icon");
+
+  if (deleteError) return { ok: false, error: deleteError.message, retryable: true };
+
+  const actual = deleted?.length ?? 0;
+  return {
+    ok: true,
+    status: actual === ids.length ? "completed" : "partial",
+    operation: "bulk_delete_habits",
+    count: actual,
+    requested_count: ids.length,
+    deleted: deleted ?? [],
+  };
+}
+
 async function deleteHabit(ctx: HandlerCtx, args: any) {
   if (args.confirm_habit_id) {
     const { data, error } = await ctx.supabase
@@ -3151,6 +3217,7 @@ export const toolHandlers: Record<string, (ctx: HandlerCtx, args: any) => any> =
   "checkin_habit": checkinHabit,
   "uncheckin_habit": uncheckinHabit,
   "delete_habit": deleteHabit,
+  "delete_habits_bulk": deleteHabitsBulk,
   "create_subscription": createSubscription,
   "get_subscriptions": getSubscriptions,
   "update_subscription": updateSubscription,

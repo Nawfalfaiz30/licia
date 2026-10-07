@@ -176,6 +176,39 @@ async function loadServerPendingAction(
   return query.data as PendingActionRecord;
 }
 
+async function loadLatestServerPendingAction(
+  supabase: any,
+  userId: string,
+): Promise<PendingActionRecord | null> {
+  const query = await supabase
+    .from("ai_pending_actions")
+    .select("id,user_id,user_text,timezone,actions,status,expires_at,created_at")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (query.error || !Array.isArray(query.data)) return null;
+
+  for (const row of query.data) {
+    const expiresAt = new Date(String(row?.expires_at || "")).getTime();
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      const expiredId = String(row?.id || "");
+      if (expiredId && ENTITY_UUID_RE.test(expiredId)) {
+        await supabase.from("ai_pending_actions")
+          .update({ status: "expired" })
+          .eq("id", expiredId)
+          .eq("user_id", userId)
+          .eq("status", "pending");
+      }
+      continue;
+    }
+    if (Array.isArray(row?.actions) && row.actions.length && typeof row.actions[0]?.tool === "string") {
+      return row as PendingActionRecord;
+    }
+  }
+  return null;
+}
 function publicPendingAction(record: PendingActionRecord, fallback?: PendingAction | null): PendingAction | null {
   const first = Array.isArray(record.actions) ? record.actions[0] : null;
   if (!first?.tool || !first.arguments) return fallback ?? null;
@@ -212,7 +245,7 @@ function mutationApplied(tool: string, result: any) {
   if (["single_candidate_needs_confirmation", "multiple_candidates", "confirmation_required", "preview", "no_match", "no_changes", "account_required", "already_linked"].includes(status)) return false;
   if (result?.requires_confirmation === true) return false;
   if (isMutationToolName(tool) && result?.verified === false) return false;
-  if (tool === "delete_schedule_blocks_bulk" || tool === "delete_tasks_bulk") return Number(result?.count || 0) > 0 && result?.verified !== false;
+  if (tool === "delete_schedule_blocks_bulk" || tool === "delete_tasks_bulk" || tool === "delete_habits_bulk") return Number(result?.count || 0) > 0 && result?.verified !== false;
   if (tool === "delete_all_notifications") return Number(result?.deleted || 0) > 0 && result?.verified !== false;
   if (tool === "delete_all_reminders") return Number(result?.deleted || 0) > 0 && result?.verified !== false;
   if (tool.startsWith("delete_")) return Boolean(result?.deleted || result?.archived || Number(result?.deleted_count || 0) > 0) && result?.verified !== false;
@@ -486,13 +519,17 @@ function plannedActionDetail(tool: string, rawArgs: string) {
     const keyword = typeof args.keyword === "string" && args.keyword.trim() ? ` yang cocok dengan “${args.keyword.trim()}”` : "";
     return `Menghapus seluruh tugas${status}${keyword} dalam satu operasi`;
   }
+  if (tool === "delete_habits_bulk") {
+    const keyword = typeof args.keyword === "string" && args.keyword.trim() ? ` yang cocok dengan “${args.keyword.trim()}”` : "";
+    return `Menghapus seluruh rutinitas${keyword} dalam satu operasi`;
+  }
   if (args.amount != null) return `${actionLabel(tool, { ok: true })}: Rp ${Number(args.amount).toLocaleString("id-ID")}`;
   return actionLabel(tool, { ok: true });
 }
 
 function actionLabel(tool:string, result:any){
   const map:Record<string,string>={
-    create_task_with_subtasks:"Membuat tugas",create_task_from_schedule:"Mengubah agenda menjadi tugas",create_task_from_inbox:"Mengubah Inbox menjadi tugas",create_task_from_note:"Mengubah catatan menjadi tugas",create_task_from_project:"Mengubah project menjadi tugas",create_task_from_goal:"Mengubah target menjadi tugas",create_schedule_from_task:"Menjadwalkan tugas",create_schedule_reminder:"Membuat pengingat agenda",update_task:"Memperbarui tugas",update_tasks_bulk:"Memperbarui beberapa tugas",delete_task:"Menghapus tugas",delete_tasks_bulk:"Menghapus banyak tugas",create_project:"Membuat proyek",update_project:"Memperbarui proyek",delete_project:"Menghapus proyek",create_goal:"Membuat target",update_goal:"Memperbarui target",delete_goal:"Menghapus target",log_expense:"Mencatat pengeluaran",update_expense:"Memperbarui pengeluaran",delete_expense:"Menghapus pengeluaran",log_income:"Mencatat pemasukan",update_income:"Memperbarui pemasukan",delete_income:"Menghapus pemasukan",create_daily_schedule:"Membuat agenda",update_schedule_block:"Memperbarui agenda",delete_schedule_block:"Menghapus agenda", delete_schedule_blocks_bulk:"Menghapus banyak agenda",capture_inbox_item:"Menambahkan ke Inbox",create_note:"Membuat catatan",update_note:"Memperbarui catatan",delete_note:"Menghapus catatan",save_memory:"Menyimpan memory",delete_memory:"Menghapus memory",create_vault_item:"Membuat item Vault",update_vault_item:"Memperbarui Vault",delete_vault_item:"Menghapus item Vault",create_automation:"Membuat otomasi",update_automation:"Memperbarui otomasi",delete_automation:"Menghapus otomasi",create_habit:"Membuat rutinitas",update_habit:"Memperbarui rutinitas",checkin_habit:"Check-in rutinitas",create_subscription:"Membuat langganan",update_subscription:"Memperbarui langganan",delete_subscription:"Menghapus langganan",log_decision:"Mencatat keputusan",update_decision:"Memperbarui keputusan",delete_decision:"Menghapus keputusan",create_skill:"Membuat skill",update_skill:"Memperbarui skill",delete_skill:"Menghapus skill",create_reminder:"Membuat pengingat",update_reminder:"Memperbarui pengingat",delete_reminder:"Membatalkan pengingat",get_notifications:"Membaca riwayat notifikasi",delete_notification:"Menghapus notifikasi",delete_all_notifications:"Menghapus semua riwayat notifikasi",mark_notification_read:"Menandai notifikasi terbaca",delete_all_reminders:"Menghapus semua pengingat"};
+    create_task_with_subtasks:"Membuat tugas",create_task_from_schedule:"Mengubah agenda menjadi tugas",create_task_from_inbox:"Mengubah Inbox menjadi tugas",create_task_from_note:"Mengubah catatan menjadi tugas",create_task_from_project:"Mengubah project menjadi tugas",create_task_from_goal:"Mengubah target menjadi tugas",create_schedule_from_task:"Menjadwalkan tugas",create_schedule_reminder:"Membuat pengingat agenda",update_task:"Memperbarui tugas",update_tasks_bulk:"Memperbarui beberapa tugas",delete_task:"Menghapus tugas",delete_tasks_bulk:"Menghapus banyak tugas",create_project:"Membuat proyek",update_project:"Memperbarui proyek",delete_project:"Menghapus proyek",create_goal:"Membuat target",update_goal:"Memperbarui target",delete_goal:"Menghapus target",log_expense:"Mencatat pengeluaran",update_expense:"Memperbarui pengeluaran",delete_expense:"Menghapus pengeluaran",log_income:"Mencatat pemasukan",update_income:"Memperbarui pemasukan",delete_income:"Menghapus pemasukan",create_daily_schedule:"Membuat agenda",update_schedule_block:"Memperbarui agenda",delete_schedule_block:"Menghapus agenda", delete_schedule_blocks_bulk:"Menghapus banyak agenda",capture_inbox_item:"Menambahkan ke Inbox",create_note:"Membuat catatan",update_note:"Memperbarui catatan",delete_note:"Menghapus catatan",save_memory:"Menyimpan memory",delete_memory:"Menghapus memory",create_vault_item:"Membuat item Vault",update_vault_item:"Memperbarui Vault",delete_vault_item:"Menghapus item Vault",create_automation:"Membuat otomasi",update_automation:"Memperbarui otomasi",delete_automation:"Menghapus otomasi",create_habit:"Membuat rutinitas",update_habit:"Memperbarui rutinitas",checkin_habit:"Check-in rutinitas",delete_habits_bulk:"Menghapus banyak rutinitas",create_subscription:"Membuat langganan",update_subscription:"Memperbarui langganan",delete_subscription:"Menghapus langganan",log_decision:"Mencatat keputusan",update_decision:"Memperbarui keputusan",delete_decision:"Menghapus keputusan",create_skill:"Membuat skill",update_skill:"Memperbarui skill",delete_skill:"Menghapus skill",create_reminder:"Membuat pengingat",update_reminder:"Memperbarui pengingat",delete_reminder:"Membatalkan pengingat",get_notifications:"Membaca riwayat notifikasi",delete_notification:"Menghapus notifikasi",delete_all_notifications:"Menghapus semua riwayat notifikasi",mark_notification_read:"Menandai notifikasi terbaca",delete_all_reminders:"Menghapus semua pengingat"};
   return map[tool] || (result?.ok ? "Menjalankan aksi" : "Gagal menjalankan aksi");
 }
 
@@ -820,7 +857,8 @@ async function handleChatPost(req: Request) {
   const requestedPendingId = typeof pendingActionId === "string" && pendingActionId.trim()
     ? pendingActionId.trim()
     : legacyPendingAction?.pendingId || null;
-  const serverPendingActionRecord = await loadServerPendingAction(supabase, user.id, requestedPendingId);
+  const serverPendingActionRecord = await loadServerPendingAction(supabase, user.id, requestedPendingId)
+    ?? (isExplicitConfirmation(String(message || "")) ? await loadLatestServerPendingAction(supabase, user.id) : null);
   const pendingAction = serverPendingActionRecord
     ? publicPendingAction(serverPendingActionRecord, legacyPendingAction)
     : legacyPendingAction;
@@ -1269,6 +1307,47 @@ async function handleChatPost(req: Request) {
     return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains, pendingAction: null, pendingBulkAction: null, pendingScheduleImport: null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: performedActions, undoActionId: null });
   }
 
+  // Deterministic bulk confirmation: the server-side pending record is the source of truth.
+  // The chat client only needs to send a short confirmation such as "Iya".
+  const storedBulkActions = !pendingAction && isExplicitConfirmation(String(message || ""))
+    && serverPendingActionRecord && Array.isArray(serverPendingActionRecord.actions)
+    ? serverPendingActionRecord.actions.filter((action: any) => action?.tool && action?.arguments).slice(0, 10)
+    : [];
+  const storedBulkTools = new Set(["delete_tasks_bulk", "delete_schedule_blocks_bulk", "delete_habits_bulk", "delete_all_reminders", "delete_all_notifications", "log_expenses_batch", "update_tasks_bulk"]);
+  const isStoredBulkConfirmation = storedBulkActions.length > 0 && storedBulkActions.every((action: any) => storedBulkTools.has(String(action.tool)));
+  if (isStoredBulkConfirmation) {
+    const bulkResults: any[] = [];
+    for (const action of storedBulkActions) {
+      let argsObject: any = {};
+      try { argsObject = JSON.parse(String(action.arguments || "{}")); } catch { argsObject = {}; }
+      const execution = await executeAndVerifyMutation({ supabase, userId: user.id, timezone, tool: String(action.tool), args: argsObject });
+      bulkResults.push({ tool: String(action.tool), ...execution });
+      performedActions.push({ tool: String(action.tool), ok: execution.applied, label: actionLabel(String(action.tool), execution.result) });
+      if (execution.applied) {
+        if (execution.undoActionId) undoActionIds.push(execution.undoActionId);
+        latestActionEntityIds = uniqueStrings([...latestActionEntityIds, ...collectResultEntityIds(execution.result)]).slice(-12);
+      }
+    }
+    const appliedCount = bulkResults.filter((item) => item.applied).length;
+    const allApplied = appliedCount === bulkResults.length && bulkResults.length > 0;
+    if (serverPendingActionRecord && allApplied) {
+      await supabase.from("ai_pending_actions")
+        .update({ status: "applied", applied_at: new Date().toISOString() })
+        .eq("id", serverPendingActionRecord.id)
+        .eq("user_id", user.id)
+        .eq("status", "pending");
+    }
+    const resultSummary = bulkResults.map((item: any) => {
+      const result = item.result || {};
+      const count = Number(result.count ?? result.deleted ?? result.created ?? result.updated ?? 0);
+      return actionLabel(item.tool, result) + (count ? " (" + count + ")" : "") + ": " + (item.applied ? "berhasil" : "belum terverifikasi");
+    }).join("; ");
+    finalText = allApplied
+      ? "Siap. " + resultSummary + ". Perubahan sudah diverifikasi."
+      : "Sebagian perubahan belum berhasil diverifikasi. " + (resultSummary || "Tidak ada perubahan yang diterapkan.");
+    await saveServerChatTurn(supabase, user.id, "assistant", finalText, typeof turnId === "string" ? turnId.slice(0, 120) : null, { domains, mode: selectedMode, verifiedActions: appliedCount });
+    return NextResponse.json({ reply: finalText, turnMessages: [{ role: "assistant", content: finalText }], domains, pendingAction: null, pendingActionId: null, pendingBulkAction: allApplied ? null : { id: serverPendingActionRecord.id, expiresAt: serverPendingActionRecord.expires_at, actions: serverPendingActionRecord.actions, risk: "destructive", requiresConfirmation: true }, pendingScheduleImport: pendingScheduleImport || null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: performedActions, undoActionId: undoActionIds.at(-1) || null, conversationState: { ...conversationDecision.state, activeEntityIds: latestActionEntityIds.length ? latestActionEntityIds : conversationDecision.state.activeEntityIds, lastActionTools: performedActions.filter((a) => a.ok).map((a) => a.tool).slice(-8) }, aiMeta: { model: selectedAiModel, contextMode: aiReadAllData ? "all" : "smart", domains, deniedDomains, temporalGuard: temporalGuard.active, operation: conversationDecision.currentOperation, mutationExpected: true, verifiedActions: appliedCount } });
+  }
   // Deterministic confirmation path: once Licia has shown exactly one destructive
   // candidate, a clear confirmation executes that stored target directly.
   // This prevents the delete tool from being called again without confirm_*_id.
@@ -1402,7 +1481,7 @@ async function handleChatPost(req: Request) {
       // delete_all_notifications memiliki konfirmasi eksplisit di tool. Jangan bungkus
       // konfirmasi percakapan itu ke ai_pending_actions, karena batch replay akan
       // mengulang confirm=false dan sengaja ditolak oleh tool.
-      const isBulkMutation = mutations.length > 1 || mutations.some((call) => ["log_expenses_batch", "update_tasks_bulk", "delete_tasks_bulk", "delete_schedule_blocks_bulk"].includes(call.function.name));
+      const isBulkMutation = mutations.length > 1 || mutations.some((call) => ["log_expenses_batch", "update_tasks_bulk", "delete_tasks_bulk", "delete_schedule_blocks_bulk", "delete_habits_bulk"].includes(call.function.name));
       if (isBulkMutation) {
         const pending = {
           user_id: user.id,
@@ -1416,8 +1495,25 @@ async function handleChatPost(req: Request) {
               if ((!Array.isArray(args.exclude_keywords) || args.exclude_keywords.length === 0) && extracted.length) args.exclude_keywords = extracted;
               args.confirm_all = true;
             }
+            let actionPreview = plannedActionDetail(call.function.name, JSON.stringify(args));
+            if (call.function.name === "delete_habits_bulk") {
+              const previewResult = await executeTool(
+                { supabase, userId: user.id, timezone },
+                "delete_habits_bulk",
+                JSON.stringify({ ...args, confirm_all: false }),
+              );
+              const previewTargets = Array.isArray(previewResult?.targets) ? previewResult.targets : [];
+              if (previewTargets.length) {
+                args.habit_ids = previewTargets
+                  .map((row: any) => String(row?.id || ""))
+                  .filter((value: string) => ENTITY_UUID_RE.test(value))
+                  .slice(0, 1000);
+                actionPreview = "Menghapus " + previewTargets.length + " rutinitas: " + previewTargets.slice(0, 8).map((row: any) => String(row?.name || "")).filter(Boolean).join(", ") + (previewTargets.length > 8 ? " …" : "");
+              }
+              args.confirm_all = true;
+            }
             const argumentsJson = JSON.stringify(args);
-            return { tool: call.function.name, arguments: argumentsJson, preview: plannedActionDetail(call.function.name, argumentsJson) };
+            return { tool: call.function.name, arguments: argumentsJson, preview: actionPreview };
           })),
           status: "pending",
           expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
