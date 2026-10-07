@@ -1307,6 +1307,8 @@ async function handleChatPost(req: Request) {
     return NextResponse.json({ reply, turnMessages: [{ role: "assistant", content: reply }], domains, pendingAction: null, pendingBulkAction: null, pendingScheduleImport: null, visionUsed: Boolean(imageDataUrl), mode: selectedMode, actions: performedActions, undoActionId: null });
   }
 
+  let finalText = "";
+
   // Deterministic bulk confirmation: the server-side pending record is the source of truth.
   // The chat client only needs to send a short confirmation such as "Iya".
   const storedBulkActions = !pendingAction && isExplicitConfirmation(String(message || ""))
@@ -1315,7 +1317,7 @@ async function handleChatPost(req: Request) {
     : [];
   const storedBulkTools = new Set(["delete_tasks_bulk", "delete_schedule_blocks_bulk", "delete_habits_bulk", "delete_all_reminders", "delete_all_notifications", "log_expenses_batch", "update_tasks_bulk"]);
   const isStoredBulkConfirmation = storedBulkActions.length > 0 && storedBulkActions.every((action: any) => storedBulkTools.has(String(action.tool)));
-  if (isStoredBulkConfirmation) {
+  if (isStoredBulkConfirmation && serverPendingActionRecord) {
     const bulkResults: any[] = [];
     for (const action of storedBulkActions) {
       let argsObject: any = {};
@@ -1432,7 +1434,6 @@ async function handleChatPost(req: Request) {
   }
 
   const turnMessages: RawMsg[] = [newUserMessage];
-  let finalText = "";
   let nextPendingAction: PendingAction | null = pendingAction;
   const toolExecutionCache = new Map<string, { result: any; attempts: number; lastOk: boolean }>();
   let pendingBulkAction: any = null;
