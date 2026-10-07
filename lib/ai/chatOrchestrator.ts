@@ -611,9 +611,12 @@ export async function chatPost(req: Request) {
     }
     const wantsStream = (req.headers.get("accept") || "").includes("text/event-stream")
       && !/^(0|false|no|off)$/i.test((process.env.LICIA_CHAT_STREAM || "").trim());
+    const tracedHeaders = new Headers(req.headers);
+    tracedHeaders.set("x-licia-request-id", requestId);
+    const tracedReq = new Request(req, { headers: tracedHeaders, signal: req.signal });
     const response = !wantsStream
-      ? await handleChatPost(req)
-      : await streamChatResponse(() => handleChatPost(req), req.signal);
+      ? await handleChatPost(tracedReq)
+      : await streamChatResponse(() => handleChatPost(tracedReq), req.signal);
     if (traceId) await finishAiTrace(traceClient, traceId, {
       status: response.status >= 500 ? "error" : response.status === 499 ? "cancelled" : "completed",
       latencyMs: Date.now() - startedAt,
@@ -638,6 +641,7 @@ export async function chatPost(req: Request) {
 }
 
 async function handleChatPost(req: Request) {
+  const requestId = req.headers.get("x-licia-request-id") || makeRequestId("chat");
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
   const sizeError = assertJsonSize(req, 10 * 1024 * 1024);
@@ -1258,7 +1262,7 @@ async function handleChatPost(req: Request) {
       }
     }
     await supabase.from("ai_function_call_logs").insert({
-      user_id: user.id, raw_user_text: message?.trim() || "[gambar]", function_name: "create_daily_schedule", arguments: JSON.stringify({ blocks }), status: applied ? "success" : "error",
+      user_id: user.id, request_id: requestId, raw_user_text: message?.trim() || "[gambar]", function_name: "create_daily_schedule", arguments: JSON.stringify({ blocks }), status: applied ? "success" : "error",
     });
     const created = Array.isArray(result?.blocks) ? result.blocks : [];
     const summary = created.map((block: any) => `${block.block_date} ${String(block.start_time).slice(0, 5)}–${String(block.end_time).slice(0, 5)} — ${block.title}`).join("\n");
@@ -1306,7 +1310,7 @@ async function handleChatPost(req: Request) {
       }
     }
     await supabase.from("ai_function_call_logs").insert({
-      user_id: user.id, raw_user_text: message?.trim() || "", function_name: "create_reminder", arguments: JSON.stringify({ title: continuityReminder.title, remind_at: continuityReminder.remindAt }), status: reminderResult?.ok ? "success" : "error",
+      user_id: user.id, request_id: requestId, raw_user_text: message?.trim() || "", function_name: "create_reminder", arguments: JSON.stringify({ title: continuityReminder.title, remind_at: continuityReminder.remindAt }), status: reminderResult?.ok ? "success" : "error",
     });
     const localDisplay = new Date(continuityReminder.remindAt).toLocaleString("id-ID", { timeZone: timezone, weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
     const reply = reminderResult?.ok
@@ -1354,7 +1358,7 @@ async function handleChatPost(req: Request) {
       }
     }
     await supabase.from("ai_function_call_logs").insert({
-      user_id: user.id, raw_user_text: message?.trim() || "", function_name: tool, arguments: args, status: applied ? "success" : "error",
+      user_id: user.id, request_id: requestId, raw_user_text: message?.trim() || "", function_name: tool, arguments: args, status: applied ? "success" : "error",
     });
     if (serverPendingActionRecord && applied) {
       await supabase.from("ai_pending_actions")
@@ -1682,7 +1686,7 @@ async function handleChatPost(req: Request) {
         nextPendingAction = null;
       }
       await supabase.from("ai_function_call_logs").insert({
-        user_id: user.id,
+        user_id: user.id, request_id: requestId,
         raw_user_text: message?.trim() || (imageDataUrl ? "[gambar]" : ""),
         function_name: executionToolName,
         arguments: call.function.arguments,
