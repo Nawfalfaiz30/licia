@@ -42,7 +42,7 @@ export async function GET(req: Request) {
       { results: cached },
       { headers: { "Cache-Control": "private, no-store", "X-Licia-Cache": "HIT" } },
     );
-  const like = `%${q.replace(/[\\%_]/g, "\\q.replace(/[%_]/g, "\\$&")")}%`;
+  const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
   const [
     tasks,
     projects,
