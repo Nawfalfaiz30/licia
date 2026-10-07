@@ -1,19 +1,7 @@
 import { toolDefs } from "@/lib/ai/toolDefinitions";
 import { isUuid, toolHandlers, type HandlerCtx } from "@/lib/ai/tools";
 import { validateToolArguments } from "@/lib/ai/toolValidation";
-import { getStepUpState, stepUpToolResponse } from "@/lib/security/step-up";
-
-const STEP_UP_REQUIRED_TOOLS = new Set([
-  "delete_tasks_bulk",
-  "delete_schedule_blocks_bulk",
-  "delete_all_reminders",
-  "delete_all_notifications",
-  "delete_account",
-  "create_vault_item",
-  "update_vault_item",
-  "delete_vault_item",
-  "transfer_money",
-]);
+import { getStepUpState, stepUpToolResponse, toolRequiresStepUp } from "@/lib/security/step-up";
 
 export async function executeTool(ctx: HandlerCtx, name: string, rawArgs: string): Promise<any> {
   let args: any = {};
@@ -36,7 +24,7 @@ export async function executeTool(ctx: HandlerCtx, name: string, rawArgs: string
   if (idField && args[idField] !== undefined && args[idField] !== null && !isUuid(args[idField])) {
     return { ok: false, code: "INVALID_ENTITY_ID", error: String(idField) + " harus berupa UUID nyata dari hasil baca/search, bukan nomor urut." };
   }
-  if (STEP_UP_REQUIRED_TOOLS.has(name)) {
+  if (toolRequiresStepUp(name)) {
     const stepUp = await getStepUpState(ctx.supabase);
     if (stepUp.status === "unavailable") {
       return {
