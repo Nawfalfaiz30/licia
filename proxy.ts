@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { legacyRedirect } from "@/lib/coreMode";
 
 const APP_ROUTES = [
   "/dashboard", "/today", "/chat", "/tasks", "/knowledge", "/goals-projects", "/wellbeing", "/pomodoro", "/focus", "/calendar", "/finance", "/health",
@@ -40,6 +41,13 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = isPath(pathname, "/login") || isPath(pathname, "/signup");
   const isAppRoute = APP_ROUTES.some((prefix) => isPath(pathname, prefix));
 
+  const consolidated = legacyRedirect(pathname);
+  if (consolidated) {
+    const url = request.nextUrl.clone();
+    url.pathname = consolidated;
+    return NextResponse.redirect(url, 308);
+  }
+
   if (!user && isAppRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -49,7 +57,7 @@ export async function proxy(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/today";
     url.search = "";
     return NextResponse.redirect(url);
   }
