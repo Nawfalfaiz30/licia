@@ -2554,6 +2554,7 @@ async function handleChatPost(req: Request) {
                 args = JSON.parse(String(call.function.arguments || "{}"));
               } catch {}
               args = await enrichFinanceAccountArgs(supabase, user.id, call.function.name, args, message || "");
+              let actionPreview = plannedActionDetail(call.function.name, JSON.stringify(args));
               if (call.function.name === "delete_schedule_blocks_bulk") {
                 const extracted = extractMassDeleteExceptions(message || "");
                 if ((!Array.isArray(args.exclude_keywords) || args.exclude_keywords.length === 0) && extracted.length)
@@ -2586,11 +2587,7 @@ async function handleChatPost(req: Request) {
                 args.confirm_all = true;
               }
               const argumentsJson = JSON.stringify(args);
-              return {
-                tool: call.function.name,
-                arguments: argumentsJson,
-                preview: plannedActionDetail(call.function.name, argumentsJson),
-              };
+              return { tool: call.function.name, arguments: argumentsJson, preview: actionPreview };
             }),
           ),
           status: "pending",
