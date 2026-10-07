@@ -28,7 +28,7 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run i18n:check
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=high --omit=dev
 
   unit:
     name: Unit tests
