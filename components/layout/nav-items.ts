@@ -36,6 +36,7 @@ export const navGroups: NavGroup[] = [
     item("/wellbeing", "Kesehatan & Rutinitas", "health_habits", HeartPulse),
     item("/automations", "Otomasi", "automations", Zap),
     item("/life-map", "Peta", "life_map", Compass),
+    item("/insights", "Insights", "insights", Lightbulb),
   ]),
   group("Bantuan", "nav_system_help", [
     item("/guide", "Panduan", "guide", CircleHelp),
