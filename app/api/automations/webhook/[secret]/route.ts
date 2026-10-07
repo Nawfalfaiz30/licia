@@ -18,7 +18,7 @@ export async function POST(req:Request,{params}:Params){
   const eventType=String(body.event_type||body.type||"webhook").slice(0,80);
   if(Array.isArray(webhook.events)&&webhook.events.length&&!webhook.events.includes(eventType))return NextResponse.json({ok:true,ignored:true});
   const {data,error}=await supabase.from("automation_webhook_events").insert({
-    user_id:webhook.user_id,webhook_id:webhook.id,event_type,payload:body
+    user_id:webhook.user_id,webhook_id:webhook.id,event_type:eventType,payload:body
   }).select("id,created_at").single();
   await supabase.from("automation_webhooks").update({last_triggered_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("id",webhook.id);
   if(error)return NextResponse.json({error:"Webhook event gagal diantrikan."},{status:500});
