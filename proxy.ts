@@ -65,6 +65,6 @@ export const config = {
     "/review/:path*", "/review-center/:path*", "/timeline/:path*", "/analytics/:path*", "/insights/:path*", "/decisions/:path*", "/learning/:path*",
     "/memory/:path*", "/vault/:path*", "/automations/:path*", "/life-map/:path*", "/life-graph/:path*", "/settings/:path*",
     "/reminders/:path*", "/relations/:path*", "/privacy-center/:path*", "/search/:path*", "/command/:path*", "/capture/:path*", "/pulse/:path*",
-    "/ai-history/:path*", "/guide/:path*", "/system/:path*", "/plan/:path*", "/copilot/:path*", "/sync/:path*", "/login", "/signup",
+    "/ai-history/:path*", "/guide/:path*", "/system/:path*", "/step-up", "/plan/:path*", "/copilot/:path*", "/sync/:path*", "/login", "/signup",
   ],
 };
