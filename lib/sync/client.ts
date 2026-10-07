@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { enqueueMutation, getDeviceId, type SyncEntityType, type SyncOperation } from "@/lib/pwa/offlineQueue";
+import { syncMutationRequiresStepUp } from "@/lib/security/step-up";
 
 type SyncOptions = {
   entityType: SyncEntityType;
@@ -21,6 +22,8 @@ export type SyncMutationResult = {
   conflict?: boolean;
   conflictId?: string | null;
   error?: string;
+  code?: string;
+  stepUpUrl?: string;
   response?: { entityId?: string | null; record?: Record<string, unknown> | null; deleted?: boolean; [key: string]: unknown } | null;
 };
 
@@ -46,6 +49,10 @@ export async function mutateEntity(options: SyncOptions): Promise<SyncMutationRe
     payload,
     conflictStrategy: options.conflictStrategy || readConflictStrategy(),
   };
+
+  if (syncMutationRequiresStepUp(options.entityType, options.operation) && !navigator.onLine) {
+    return { ok: false, error: "Aksi sensitif membutuhkan koneksi internet untuk verifikasi keamanan tambahan." };
+  }
 
   if (!navigator.onLine && options.offlineOk !== false) {
     const queued = await enqueueMutation({
@@ -74,6 +81,10 @@ export async function mutateEntity(options: SyncOptions): Promise<SyncMutationRe
     if (response.ok || data?.replayed) {
       window.dispatchEvent(new CustomEvent("licia:sync-request"));
       return data as SyncMutationResult;
+    }
+    if (response.status === 403 && data?.code === "STEP_UP_REQUIRED" && typeof data.stepUpUrl === "string") {
+      window.location.assign(data.stepUpUrl);
+      return { ok: false, code: "STEP_UP_REQUIRED", stepUpUrl: data.stepUpUrl, error: String(data.error || "Verifikasi keamanan tambahan diperlukan.") };
     }
     if (response.status === 409 && data?.conflict) {
       window.dispatchEvent(new CustomEvent("licia:sync-conflict", { detail: data }));
