@@ -1,22 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Playfair_Display, Poppins, Plus_Jakarta_Sans, Inter, Nunito } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { getServerLanguage } from "@/lib/i18n-server";
 import { ThemeSync } from "@/components/layout/ThemeSync";
 
-// Semua kandidat font dimuat sekaligus (masing-masing dapat CSS variable
-// sendiri), supaya pilihan font di Pengaturan bisa langsung berpindah tanpa
-// perlu reload halaman untuk memuat font baru.
-const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", weight: ["400", "500", "600", "700"], style: ["normal", "italic"], preload: false });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", weight: ["400", "500", "600", "700"], preload: false });
-const poppins = Poppins({ subsets: ["latin"], variable: "--font-poppins", weight: ["400", "500", "600", "700"], preload: false });
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", weight: ["400", "500", "600", "700"], preload: false });
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", weight: ["400", "500", "600", "700"], preload: false });
-const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito", weight: ["400", "500", "600", "700"], preload: false });
 
-const fontVariables = [fraunces, playfair, poppins, jakarta, inter, nunito].map((f) => f.variable).join(" ");
+// Keep typography deterministic at build time. The app exposes the same
+// six font choices as system-first stacks, so production builds never need
+// to download Google Fonts during the Next.js build step.
+const fontStyles = {
+  "--font-fraunces": 'Georgia, "Times New Roman", serif',
+  "--font-playfair": 'Georgia, "Times New Roman", serif',
+  "--font-poppins": '"Century Gothic", "Trebuchet MS", Arial, sans-serif',
+  "--font-jakarta": '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  "--font-inter": 'Inter, "Segoe UI", Arial, sans-serif',
+  "--font-nunito": '"Trebuchet MS", "Segoe UI", Arial, sans-serif',
+} as React.CSSProperties;
 
 export const viewport: Viewport = {
   themeColor: "#3d5fd9",
@@ -50,7 +50,7 @@ const themeInitScript = `
     var accentTokens = localStorage.getItem('licia-accent-tokens');
     if (accentTokens) {
       var tokens = JSON.parse(accentTokens);
-      for (var tk in tokens) { if (/^--accent-(fill|ink)-(light|dark)-rgb$/.test(tk) && /^\d{1,3} \d{1,3} \d{1,3}$/.test(tokens[tk])) document.documentElement.style.setProperty(tk, tokens[tk]); }
+      for (var tk in tokens) { if (/^--accent-(fill|ink)-(light|dark)-rgb$/.test(tk) && /^\\d{1,3} \\d{1,3} \\d{1,3}$/.test(tokens[tk])) document.documentElement.style.setProperty(tk, tokens[tk]); }
     }
 
     // Latar disimpan terpisah per mode — pakai yang sesuai mode aktif sekarang.
@@ -106,7 +106,7 @@ export default async function RootLayout({
 }) {
   const language = await getServerLanguage();
   return (
-    <html lang={language} data-language={language} className={fontVariables} suppressHydrationWarning>
+    <html lang={language} data-language={language} style={fontStyles} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
