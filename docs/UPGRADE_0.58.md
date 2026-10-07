@@ -10,7 +10,7 @@ Implemented:
 - Local secret hygiene script.
 - SECURITY.md and pull-request security checklist.
 - Vault envelope v2 with PBKDF2-SHA256 600,000 iterations and transparent v1 read/migration.
-- Request IDs and AI privacy preferences.
+- Request IDs, AI privacy preferences, server-enforced private mode, and domain-level exclusions.
 - RLS-oriented maintenance functions and observability tables.
 - Branch-ready CI quality gates.
 
@@ -27,9 +27,9 @@ Implemented:
 - Indexing hooks for notes, memories, decisions, and reading.
 - Curated memory metadata fields.
 - AI request tracing.
-- Bounded proactive policy with quiet hours and daily limits.
+- Bounded proactive policy with quiet hours, daily limits, and a deduplicated per-day suggestion ledger.
 - Model health endpoint.
-- 150-case evaluation gate and seed corpus.
+- 150-case evaluation gate and seed corpus, plus optional LLM-as-judge runner.
 - Finance, Health, and private-mode context exclusions.
 
 Still credential/provider dependent:
@@ -43,7 +43,7 @@ Implemented:
 - Core navigation model and legacy redirects.
 - Today as default authenticated home.
 - SSR public landing page with metadata.
-- Web Vitals collection for LCP, INP, and CLS.
+- Web Vitals collection for LCP, INP, and CLS with one compact report per page.
 - Service-worker version bump and user-accepted update behavior.
 - Lucide import optimization.
 - Playwright configuration and critical-flow suite.
@@ -80,4 +80,4 @@ Implemented:
 
 ## Verification status
 
-This branch was edited through GitHub connectors. The environment available to this session could not start a Vercel sandbox, so I did not claim a successful local typecheck, build, or test run. CI is configured to perform those checks on GitHub.
+This branch was edited through GitHub connectors. Local clone/build execution was unavailable because outbound GitHub DNS was blocked and Vercel Sandbox access for the linked team returned 403. I did not claim a local build/test success. GitHub Actions is configured to perform static checks, unit tests, eval validation, and build.
