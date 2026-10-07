@@ -52,6 +52,7 @@
     "i18n:check": "node scripts/i18n.mjs check",
     "db:verify": "node scripts/verify-migrations.mjs",
     "retention": "node scripts/retention.mjs",
+    "backup:scheduled": "node scripts/run-scheduled-exports.mjs",
     "test:pcf": "node scripts/test-pcf.mjs"
   },
   "dependencies": {
