@@ -18,7 +18,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Refresh lockfile
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+        run: rm -f package-lock.json && npm install --package-lock-only --ignore-scripts --no-audit --no-fund --prefer-offline
       - name: Commit lockfile when changed
         run: |
           if git diff --quiet -- package-lock.json; then
