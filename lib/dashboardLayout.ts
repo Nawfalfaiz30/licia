@@ -73,14 +73,16 @@ export function normalizeLayout(input: unknown): DashboardLayout {
   const raw = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const seen = new Set<DashboardWidgetId>();
   const order: DashboardWidgetId[] = [];
-  for (const id of Array.isArray(raw.order) ? raw.order : []) {
+  const storedOrder = Array.isArray(raw.order) ? raw.order : [];
+  for (const id of storedOrder) {
     if (isId(id) && !seen.has(id)) {
       seen.add(id);
       order.push(id);
     }
   }
-  // Widget yang belum ada di urutan tersimpan disisipkan setelah widget bawaan sebelumnya.
-  ALL_IDS.forEach((id, index) => {
+  // Widget yang belum ada di urutan tersimpan disisipkan mengikuti urutan bawaan yang aktif.
+  const defaultOrder = DEFAULT_DASHBOARD_LAYOUT.order;
+  defaultOrder.forEach((id, index) => {
     if (seen.has(id)) return;
     let insertAt = 0;
     for (let i = index - 1; i >= 0; i -= 1) {

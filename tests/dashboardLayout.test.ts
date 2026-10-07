@@ -11,15 +11,17 @@ import {
   setTodayOnly,
   toggleWidget,
   widgetOrder,
+  DEFAULT_DASHBOARD_LAYOUT,
 } from "@/lib/dashboardLayout";
 
 const ids = DASHBOARD_WIDGETS.map((w) => w.id);
+const defaultIds = DEFAULT_DASHBOARD_LAYOUT.order;
 
 describe("normalizeLayout", () => {
   it("masukan kosong/buruk → bawaan", () => {
     for (const bad of [null, undefined, 42, "x", [], {}]) {
       const l = normalizeLayout(bad);
-      expect(l.order).toEqual(ids);
+      expect(l.order).toEqual(defaultIds);
       expect(l.hidden).toEqual([]);
       expect(l.todayOnly).toBe(false);
     }
@@ -37,7 +39,7 @@ describe("normalizeLayout", () => {
   it("widget baru disisipkan setelah tetangga bawaannya", () => {
     const old = ids.filter((id) => id !== "insights");
     const l = normalizeLayout({ order: old });
-    expect(l.order.indexOf("insights")).toBe(l.order.indexOf("now") + 1);
+    expect(l.order.indexOf("insights")).toBe(l.order.indexOf("body") + 1);
   });
   it("todayOnly hanya true bila persis true", () => {
     expect(normalizeLayout({ todayOnly: "true" }).todayOnly).toBe(false);
@@ -49,8 +51,8 @@ describe("serialisasi", () => {
   it("bolak-balik stabil dan JSON rusak tidak melempar", () => {
     const l = moveWidget(resetLayout(), "stats", -1);
     expect(parseLayout(serializeLayout(l))).toEqual(l);
-    expect(parseLayout("{bukan json").order).toEqual(ids);
-    expect(parseLayout(null).order).toEqual(ids);
+    expect(parseLayout("{bukan json").order).toEqual(defaultIds);
+    expect(parseLayout(null).order).toEqual(defaultIds);
   });
 });
 
