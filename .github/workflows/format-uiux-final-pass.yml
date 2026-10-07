@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/uiux-final-pass
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
