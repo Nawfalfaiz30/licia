@@ -5,11 +5,7 @@ import { StepUpAuth } from "@/components/auth/StepUpAuth";
 
 export const dynamic = "force-dynamic";
 
-export default async function StepUpPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ next?: string }>;
-}) {
+export default async function StepUpPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const params = await searchParams;
   const nextPath = safeStepUpNextPath(params?.next, "/chat");
   const supabase = await createClient();

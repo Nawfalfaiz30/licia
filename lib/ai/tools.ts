@@ -4454,7 +4454,7 @@ async function deleteHabitsBulk(ctx: HandlerCtx, args: any) {
       target_count: targets.length,
       targets,
       message: keyword
-        ? 'Ada ' + targets.length + ' rutinitas yang cocok dengan "' + keyword + '" dan akan dihapus.'
+        ? "Ada " + targets.length + ' rutinitas yang cocok dengan "' + keyword + '" dan akan dihapus.'
         : "Ada " + targets.length + " rutinitas yang akan dihapus.",
     };
   }

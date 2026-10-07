@@ -1953,7 +1953,8 @@ export const toolDefs: ToolDef[] = [
           habit_ids: {
             type: "array",
             items: { type: "string" },
-            description: "ID rutinitas yang sudah diverifikasi sebelumnya. Gunakan hanya untuk replay target yang sama.",
+            description:
+              "ID rutinitas yang sudah diverifikasi sebelumnya. Gunakan hanya untuk replay target yang sama.",
           },
           confirm_all: {
             type: "boolean",

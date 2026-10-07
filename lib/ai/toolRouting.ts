@@ -242,7 +242,13 @@ const createPattern =
   /\b(buat|buatkan|catat|simpan|tambah|tambahkan|masukkan|input|import|jadwalkan|ubah jadi|jadikan|convert|konversi|log|check[-\s]?in)\b/i;
 const actionPattern = new RegExp(`${deletePattern.source}|${updatePattern.source}|${createPattern.source}`, "i");
 const massDeletePattern = /\b(semua|seluruh|semuanya|all|massal|bulk)\b/i;
-const broadCollectionDeleteTools = ["delete_tasks_bulk", "delete_schedule_blocks_bulk", "delete_habits_bulk", "delete_all_reminders", "delete_all_notifications"];
+const broadCollectionDeleteTools = [
+  "delete_tasks_bulk",
+  "delete_schedule_blocks_bulk",
+  "delete_habits_bulk",
+  "delete_all_reminders",
+  "delete_all_notifications",
+];
 const capabilityPattern =
   /\b(apa yang bisa|apa saja yang bisa|kemampuan|fitur|modul|crud|create|read|update|delete|semua data|seluruh data|life os|bisa melakukan|bisa ngapain)\b/i;
 
@@ -357,7 +363,8 @@ export function selectToolDefs<T extends { function?: { name?: string } }>(
     // "Hapus semua" tanpa domain tetap memberi model write surface koleksi yang aman.
     // Interceptor bulk di chatOrchestrator menahan mutation pertama untuk konfirmasi.
     for (const name of broadCollectionDeleteTools) names.add(name);
-    for (const name of ["get_tasks", "get_schedule", "get_habits", "get_reminders", "get_notifications"]) names.add(name);
+    for (const name of ["get_tasks", "get_schedule", "get_habits", "get_reminders", "get_notifications"])
+      names.add(name);
   }
   if (
     /\b(hubungkan|terhubung|terkait|relasi|hubungan|rantai|graph|graf|project.*task|task.*project|target.*project|project.*target|task.*agenda|agenda.*task|task.*fokus|fokus.*task)\b/i.test(

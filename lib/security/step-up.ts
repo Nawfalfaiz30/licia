@@ -60,7 +60,14 @@ export function isRecentStepUp(aal: unknown, lastMfaAt: number | null, now = Dat
 
 export function safeStepUpNextPath(value: string | null | undefined, fallback = "/chat"): string {
   const raw = String(value || "").trim();
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\") || raw.includes("\n") || raw.includes("\r")) {
+  if (
+    !raw ||
+    !raw.startsWith("/") ||
+    raw.startsWith("//") ||
+    raw.includes("\\") ||
+    raw.includes("\n") ||
+    raw.includes("\r")
+  ) {
     return fallback;
   }
   try {
@@ -93,10 +100,7 @@ export async function getStepUpState(supabase: SupabaseClient): Promise<StepUpSt
   }
 }
 
-export async function requireRecentStepUp(
-  supabase: SupabaseClient,
-  nextPath: string,
-): Promise<NextResponse | null> {
+export async function requireRecentStepUp(supabase: SupabaseClient, nextPath: string): Promise<NextResponse | null> {
   const state = await getStepUpState(supabase);
   if (state.status === "fresh") return null;
 

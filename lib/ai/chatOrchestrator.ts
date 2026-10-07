@@ -218,10 +218,7 @@ async function loadServerPendingAction(
   return query.data as PendingActionRecord;
 }
 
-async function loadLatestServerPendingAction(
-  supabase: any,
-  userId: string,
-): Promise<PendingActionRecord | null> {
+async function loadLatestServerPendingAction(supabase: any, userId: string): Promise<PendingActionRecord | null> {
   const query = await supabase
     .from("ai_pending_actions")
     .select("id,user_id,user_text,timezone,actions,status,expires_at,created_at")
@@ -1345,8 +1342,9 @@ async function handleChatPost(req: Request) {
     typeof pendingActionId === "string" && pendingActionId.trim()
       ? pendingActionId.trim()
       : legacyPendingAction?.pendingId || null;
-  const serverPendingActionRecord = await loadServerPendingAction(supabase, user.id, requestedPendingId)
-    ?? (isExplicitConfirmation(String(message || "")) ? await loadLatestServerPendingAction(supabase, user.id) : null);
+  const serverPendingActionRecord =
+    (await loadServerPendingAction(supabase, user.id, requestedPendingId)) ??
+    (isExplicitConfirmation(String(message || "")) ? await loadLatestServerPendingAction(supabase, user.id) : null);
   const pendingAction = serverPendingActionRecord
     ? publicPendingAction(serverPendingActionRecord, legacyPendingAction)
     : legacyPendingAction;
@@ -2322,10 +2320,13 @@ async function handleChatPost(req: Request) {
 
   const turnMessages: RawMsg[] = [newUserMessage];
   let finalText = "";
-  const storedBulkActions = !pendingAction && isExplicitConfirmation(String(message || ""))
-    && serverPendingActionRecord && Array.isArray(serverPendingActionRecord.actions)
-    ? serverPendingActionRecord.actions.filter((action: any) => action?.tool && action?.arguments).slice(0, 10)
-    : [];
+  const storedBulkActions =
+    !pendingAction &&
+    isExplicitConfirmation(String(message || "")) &&
+    serverPendingActionRecord &&
+    Array.isArray(serverPendingActionRecord.actions)
+      ? serverPendingActionRecord.actions.filter((action: any) => action?.tool && action?.arguments).slice(0, 10)
+      : [];
   const storedBulkTools = new Set([
     "delete_tasks_bulk",
     "delete_schedule_blocks_bulk",
@@ -2336,8 +2337,7 @@ async function handleChatPost(req: Request) {
     "update_tasks_bulk",
   ]);
   const isStoredBulkConfirmation =
-    storedBulkActions.length > 0 &&
-    storedBulkActions.every((action: any) => storedBulkTools.has(String(action.tool)));
+    storedBulkActions.length > 0 && storedBulkActions.every((action: any) => storedBulkTools.has(String(action.tool)));
 
   if (isStoredBulkConfirmation && serverPendingActionRecord) {
     const bulkResults: any[] = [];
@@ -2396,8 +2396,7 @@ async function handleChatPost(req: Request) {
 
     finalText = allApplied
       ? "Siap. " + resultSummary + ". Perubahan sudah diverifikasi."
-      : "Sebagian perubahan belum berhasil diverifikasi. " +
-        (resultSummary || "Tidak ada perubahan yang diterapkan.");
+      : "Sebagian perubahan belum berhasil diverifikasi. " + (resultSummary || "Tidak ada perubahan yang diterapkan.");
 
     await saveServerChatTurn(
       supabase,
@@ -2538,9 +2537,13 @@ async function handleChatPost(req: Request) {
       const isBulkMutation =
         mutations.length > 1 ||
         mutations.some((call) =>
-          ["log_expenses_batch", "update_tasks_bulk", "delete_tasks_bulk", "delete_schedule_blocks_bulk", "delete_habits_bulk"].includes(
-            call.function.name,
-          ),
+          [
+            "log_expenses_batch",
+            "update_tasks_bulk",
+            "delete_tasks_bulk",
+            "delete_schedule_blocks_bulk",
+            "delete_habits_bulk",
+          ].includes(call.function.name),
         );
       if (isBulkMutation) {
         const pending = {

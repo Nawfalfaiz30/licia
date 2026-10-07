@@ -158,9 +158,13 @@ export function StepUpAuth({ nextPath }: { nextPath: string }) {
             </span>
             <div>
               <p className="text-2xs font-bold uppercase tracking-[.16em] text-accent">{tr("Step-up security")}</p>
-              <h1 className="mt-1 font-display text-2xl text-text sm:text-3xl">{tr("Verifikasi sebelum aksi sensitif")}</h1>
+              <h1 className="mt-1 font-display text-2xl text-text sm:text-3xl">
+                {tr("Verifikasi sebelum aksi sensitif")}
+              </h1>
               <p className="mt-2 text-sm leading-relaxed text-textMuted">
-                {tr("Licia meminta faktor kedua sebelum ekspor data penuh, pemulihan backup, operasi Vault, transfer uang, atau penghapusan massal.")}
+                {tr(
+                  "Licia meminta faktor kedua sebelum ekspor data penuh, pemulihan backup, operasi Vault, transfer uang, atau penghapusan massal.",
+                )}
               </p>
             </div>
           </div>
@@ -173,7 +177,9 @@ export function StepUpAuth({ nextPath }: { nextPath: string }) {
                   <div>
                     <p className="text-sm font-semibold text-text">{tr("Aktifkan Authenticator")}</p>
                     <p className="mt-1 text-xs leading-relaxed text-textMuted">
-                      {tr("Licia menggunakan TOTP seperti Google Authenticator, Microsoft Authenticator, atau 1Password. Setelah verifikasi pertama selesai, sesi Licia lain dapat diminta login ulang oleh Supabase.")}
+                      {tr(
+                        "Licia menggunakan TOTP seperti Google Authenticator, Microsoft Authenticator, atau 1Password. Setelah verifikasi pertama selesai, sesi Licia lain dapat diminta login ulang oleh Supabase.",
+                      )}
                     </p>
                   </div>
                 </div>
@@ -203,15 +209,21 @@ export function StepUpAuth({ nextPath }: { nextPath: string }) {
                       className="rounded-xl border border-border bg-white p-2"
                     />
                     <div className="w-full rounded-xl border border-border bg-surface p-3">
-                      <p className="text-2xs font-bold uppercase tracking-[.1em] text-textMuted">{tr("Secret manual")}</p>
-                      <code className="mt-1 block break-all text-xs font-semibold text-text">{enrollment.totp.secret || "—"}</code>
+                      <p className="text-2xs font-bold uppercase tracking-[.1em] text-textMuted">
+                        {tr("Secret manual")}
+                      </p>
+                      <code className="mt-1 block break-all text-xs font-semibold text-text">
+                        {enrollment.totp.secret || "—"}
+                      </code>
                     </div>
                   </div>
                 </div>
               ) : null}
 
               <label className="block">
-                <span className="text-2xs font-bold uppercase tracking-[.08em] text-textMuted">{tr("Kode 6 digit")}</span>
+                <span className="text-2xs font-bold uppercase tracking-[.08em] text-textMuted">
+                  {tr("Kode 6 digit")}
+                </span>
                 <input
                   value={code}
                   onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -261,14 +273,19 @@ export function StepUpAuth({ nextPath }: { nextPath: string }) {
           ) : null}
 
           {error ? (
-            <div className="mt-4 flex items-start gap-2 rounded-2xl border border-danger/20 bg-danger/5 p-3 text-xs leading-relaxed text-danger" role="alert">
+            <div
+              className="mt-4 flex items-start gap-2 rounded-2xl border border-danger/20 bg-danger/5 p-3 text-xs leading-relaxed text-danger"
+              role="alert"
+            >
               <AlertTriangle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
               <span>{error}</span>
             </div>
           ) : null}
 
           <p className="mt-5 text-2xs leading-relaxed text-textMuted">
-            {tr("Verifikasi step-up berlaku sekitar 10 menit. Untuk keamanan, jangan berikan kode authenticator kepada siapa pun.")}
+            {tr(
+              "Verifikasi step-up berlaku sekitar 10 menit. Untuk keamanan, jangan berikan kode authenticator kepada siapa pun.",
+            )}
           </p>
         </section>
       </div>

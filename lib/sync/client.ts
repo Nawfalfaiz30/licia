@@ -91,7 +91,12 @@ export async function mutateEntity(options: SyncOptions): Promise<SyncMutationRe
     }
     if (response.status === 403 && data?.code === "STEP_UP_REQUIRED" && typeof data.stepUpUrl === "string") {
       window.location.assign(data.stepUpUrl);
-      return { ok: false, code: "STEP_UP_REQUIRED", stepUpUrl: data.stepUpUrl, error: String(data.error || "Verifikasi keamanan tambahan diperlukan.") };
+      return {
+        ok: false,
+        code: "STEP_UP_REQUIRED",
+        stepUpUrl: data.stepUpUrl,
+        error: String(data.error || "Verifikasi keamanan tambahan diperlukan."),
+      };
     }
     if (response.status === 409 && data?.conflict) {
       window.dispatchEvent(new CustomEvent("licia:sync-conflict", { detail: data }));
