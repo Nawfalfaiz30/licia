@@ -1,4 +1,5 @@
 import { redactVaultContent } from "@/lib/ai/vaultRedact";
+import { hybridSearch } from "@/lib/ai/retrieval";
 import { getLifeOsCapabilities } from "@/lib/ai/capabilities";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dateStrInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone, startOfMonthIsoForTimezone, startOfWeekIsoForTimezone, ensureTimezoneOffset, formatDateTimeInTimezone, formatTimeInTimezone } from "@/lib/date";
@@ -3037,6 +3038,20 @@ async function getUnifiedLifeSnapshot(ctx: HandlerCtx, args: any = {}) {
   return { ok: true, generated_at: new Date().toISOString(), timezone: ctx.timezone, summary: { open_tasks: open.length, upcoming_agenda: agenda.length, active_projects: projects.filter((x:any)=>!['archived','completed'].includes(String(x.status))).length, active_goals: goals.filter((x:any)=>x.status==='active').length, focus_minutes_recent: focus.reduce((n:number,x:any)=>n+Number(x.focus_minutes||0),0), recent_income: incomes.reduce((n:number,x:any)=>n+Number(x.amount||0),0), recent_expense: expenses.reduce((n:number,x:any)=>n+Number(x.amount||0),0), open_inbox: inbox.filter((x:any)=>x.status==='open').length, memory_count: memories.filter((x:any)=>x.enabled!==false).length, pending_reminders: reminders.filter((x:any)=>x.enabled!==false && ["pending","waiting_for_device","failed"].includes(x.status)).length, unread_notifications: notificationEvents.filter((x:any)=>!x.read_at).length, relation_count: relations.length, journal_entries: journal.length }, modules: { tasks: open, schedule: agenda, projects, goals, notes, inbox, focus, habits, skills, reading, expenses, incomes, subscriptions, memories, vault, automations, reminders, notification_events: notificationEvents, decisions, journal, relations, interactions, accounts, budgets, health_metrics: healthMetrics, daily_plans: dailyPlans, reading_sessions: readingSessions, sleep, hydration, caffeine, meals, medications, fatigue, movement, anime } };
 }
 
+async function searchAiKnowledge(ctx: HandlerCtx, args: any) {
+  const query = String(args?.query || "").trim();
+  const limit = Math.max(1, Math.min(Number(args?.limit || 8), 20));
+  if (!query) return { ok: false, error: "Query pencarian belum diisi." };
+  const result = await hybridSearch(ctx.supabase, query, limit);
+  return {
+    ok: !result.error,
+    query,
+    mode: result.mode,
+    hits: result.hits,
+    ...(result.error ? { error: "Pencarian semantik belum siap; periksa indeks AI atau migration." } : {}),
+  };
+}
+
 export const toolHandlers: Record<string, (ctx: HandlerCtx, args: any) => any> = {
   "log_expense": logExpense,
   "get_expense_summary": getExpenseSummary,
@@ -3156,6 +3171,7 @@ export const toolHandlers: Record<string, (ctx: HandlerCtx, args: any) => any> =
   "update_subscription": updateSubscription,
   "delete_subscription": deleteSubscription,
   "get_life_os_capabilities": (_ctx, args) => getLifeOsCapabilities({ domain: args?.domain, includeFields: args?.include_fields === true }),
+  "search_ai_knowledge": searchAiKnowledge,
 };
 
 
