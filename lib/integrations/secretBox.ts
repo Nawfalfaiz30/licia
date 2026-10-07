@@ -28,8 +28,10 @@ export function decryptSecret(payload: string) {
   }
 }
 
-export function hmacSha256Hex(value: string) {
-  return crypto.createHmac("sha256", keyBytes()).update(value).digest("hex");
+const OAUTH_STATE_KDF_ITERATIONS = 600_000;
+
+export function oauthStateFingerprint(value: string) {
+  return crypto.pbkdf2Sync(value, keyBytes(), OAUTH_STATE_KDF_ITERATIONS, 32, "sha256").toString("hex");
 }
 
 export function sha256Hex(value: string) {
