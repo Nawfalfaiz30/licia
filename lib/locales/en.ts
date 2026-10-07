@@ -3466,7 +3466,8 @@ export const enPhrases: Record<string, string> = {
   "Rasio tabungan": "Savings rate",
   "dari pemasukan": "of income",
   "vs bulan lalu {delta} poin": "{delta} points vs last month",
-  "Prioritas, jadwal, dan langkah yang perlu kamu lihat hari ini.": "Priorities, schedule, and next steps to see today.",
+  "Prioritas, jadwal, dan langkah yang perlu kamu lihat hari ini.":
+    "Priorities, schedule, and next steps to see today.",
   Execution: "Execution",
   "{active} tugas aktif": "{active} active tasks",
   "{minutes} mnt": "{minutes} min",
@@ -3481,7 +3482,8 @@ export const enPhrases: Record<string, string> = {
   "Tiga langkah yang paling perlu dilihat": "Three steps to focus on",
   "Semua tugas": "All tasks",
   "Hari ini cukup tertata": "Today is under control",
-  "Tidak ada tugas terbuka. Kamu bisa menjaga ritme atau membuat langkah baru.": "No open tasks. You can keep your rhythm or create a new step.",
+  "Tidak ada tugas terbuka. Kamu bisa menjaga ritme atau membuat langkah baru.":
+    "No open tasks. You can keep your rhythm or create a new step.",
   "Belum ada agenda": "No events yet",
   "Tambah agenda": "Add event",
   "{remaining} ml menuju 2 L": "{remaining} ml to reach 2 L",
