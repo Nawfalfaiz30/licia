@@ -235,7 +235,7 @@ function loadEnglish() {
     if (
       ts.isPropertyAssignment(n) &&
       n.name &&
-      (ts.isStringLiteral(n.name) || ts.isNoSubstitutionTemplateLiteral(n.name)) &&
+      (ts.isIdentifier(n.name) || ts.isStringLiteral(n.name) || ts.isNoSubstitutionTemplateLiteral(n.name)) &&
       n.initializer &&
       (ts.isStringLiteral(n.initializer) || ts.isNoSubstitutionTemplateLiteral(n.initializer))
     )
