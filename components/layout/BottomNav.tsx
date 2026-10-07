@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { CalendarDays, MoreHorizontal } from "lucide-react";
-import { primaryNavItems, moreNavGroups } from "./nav-items";
+import { allNavItems, moreNavGroups } from "./nav-items";
 import { MoreSheet } from "./MoreSheet";
 import { useLanguage } from "@/components/LanguageProvider";
 import { haptic } from "@/lib/interaction";
@@ -16,12 +16,12 @@ export function BottomNav() {
   const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const todayNavItem = { href: "/today", label: "Hari Ini", i18nKey: "today", icon: CalendarDays };
+  const coreNav = ["/today", "/chat", "/tasks", "/calendar", "/finance"];
   const visiblePrimary = [
-    primaryNavItems.find((item) => item.href === "/dashboard"),
-    todayNavItem,
-    primaryNavItems.find((item) => item.href === "/chat"),
-    moreNavGroups.flatMap((group) => group.items).find((item) => item.href === "/finance"),
+    { href: "/today", label: "Hari Ini", i18nKey: "today", icon: CalendarDays },
+    ...coreNav
+      .filter((href) => href !== "/today")
+      .map((href) => allNavItems.find((item) => item.href === href)),
   ].filter((item): item is NonNullable<typeof item> => Boolean(item));
   const isPrimary = visiblePrimary.some((i) => pathname?.startsWith(i.href));
   const isInMore = !isPrimary && moreNavGroups.some((g) => g.items.some((i) => pathname?.startsWith(i.href)));
