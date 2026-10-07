@@ -15,6 +15,12 @@ type ToolDef = OpenAI.Chat.Completions.ChatCompletionTool;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function isUuid(value: unknown) { return UUID_RE.test(String(value || "").trim()); }
 
+// Escape user input used inside PostgREST/Postgres LIKE/ILIKE patterns.
+// Backslash is itself the escape character, so it must be escaped too.
+function escapeLikePattern(value: unknown): string {
+  return String(value ?? "").replace(/[\\%_]/g, "\\$&");
+}
+
 function normalizeMoneyAmount(value: unknown): number {
   if (typeof value === "number") return value;
   const raw = String(value ?? "").trim().toLocaleLowerCase("id-ID")
@@ -111,7 +117,7 @@ async function resolveAccount(ctx: HandlerCtx, accountId?: unknown, accountName?
       .from("accounts")
       .select("id,name,starting_balance,account_type,is_default")
       .eq("user_id", ctx.userId)
-      .ilike("name", `%${fallbackName.replace(/[%_]/g, "\\$&")}%`);
+      .ilike("name", `%${escapeLikePattern(fallbackName)}%`);
     if (error) return { ok: false as const, error: error.message };
     const exact = (data ?? []).find((row: any) => String(row.name).trim().toLowerCase() === fallbackName.toLowerCase());
     if (exact) return { ok: true as const, account: exact };
@@ -243,7 +249,7 @@ async function deleteExpense(ctx: HandlerCtx, args: any) {
     .eq("user_id", ctx.userId);
 
   if (args.keyword) {
-    const key = String(args.keyword).replace(/[%,()]/g, " ").trim(); if (key) query = query.or(`note.ilike.%${key}%,category.ilike.%${key}%`);
+    const key = String(args.keyword).replace(/[\%,()]/g, " ").trim(); if (key) query = query.or(`note.ilike.%${key}%,category.ilike.%${key}%`);
   }
   if (args.from_date) query = query.gte("occurred_at", args.from_date);
   if (args.to_date) query = query.lte("occurred_at", `${args.to_date}T23:59:59`);
@@ -482,7 +488,7 @@ async function getLifeModuleData(ctx: HandlerCtx, args: any) {
   const moduleName = String(args.module || "").trim();
   const limit = Math.min(30, Math.max(1, Number(args.limit) || 12));
   const keyword = String(args.keyword || "").trim();
-  const like = keyword ? `%${keyword.replace(/[%_]/g, "\\$&" )}%` : null;
+  const like = keyword ? `%${escapeLikePattern(keyword)}%` : null;
   try {
     const q = (table: string, select: string) => {
       let query: any = ctx.supabase.from(table).select(select).eq("user_id", ctx.userId);
@@ -801,7 +807,7 @@ async function deleteReminder(ctx: HandlerCtx, args: any) {
   }
   const keyword = String(args.keyword || "").trim();
   let query = ctx.supabase.from("reminders").select("id,title,body,remind_at,status").eq("user_id", ctx.userId).in("status", ["pending", "waiting_for_device", "failed"]).order("remind_at", { ascending: true }).limit(8);
-  if (keyword) { const safe = keyword.replace(/[%_]/g, "\\$&"); query = query.ilike("title", `%${safe}%`); }
+  if (keyword) { const safe = escapeLikePattern(keyword); query = query.ilike("title", `%${safe}%`); }
   const { data, error } = await query;
   if (error) return { ok: false, error: error.message };
   if (!data?.length) return { ok: false, status: "not_found", message: "Pengingat tidak ditemukan." };
@@ -2660,7 +2666,7 @@ async function deleteVaultItem(ctx: HandlerCtx, args: any) {
     return { ok: true, deleted: data };
   }
   let query = ctx.supabase.from("vault_items").select("id,title,item_type,pinned").eq("user_id", ctx.userId);
-  if (args.keyword) { const key = String(args.keyword).replace(/[%,()]/g, " ").trim(); if (key) query = query.or(`title.ilike.%${key}%,content.ilike.%${key}%`); }
+  if (args.keyword) { const key = String(args.keyword).replace(/[\%,()]/g, " ").trim(); if (key) query = query.or(`title.ilike.%${key}%,content.ilike.%${key}%`); }
   const { data, error } = await query.order("updated_at", { ascending: false }).limit(10);
   if (error) return { ok: false, error: error.message };
   if (!data?.length) return { ok: true, status: "no_match", message: "Item Vault tidak ditemukan." };
@@ -2933,7 +2939,7 @@ async function getNotifications(ctx: HandlerCtx, args: any) {
   let query: any = ctx.supabase.from("notification_events").select("id,title,body,href,tone,source_type,source_id,scheduled_at,delivered_at,read_at,created_at").eq("user_id", ctx.userId);
   if (args.unread_only === true) query = query.is("read_at", null);
   if (args.keyword) {
-    const keyword = String(args.keyword).trim().replace(/[\%_]/g, "\\$&");
+    const keyword = escapeLikePattern(String(args.keyword).trim());
     if (keyword) query = query.or(`title.ilike.%${keyword}%,body.ilike.%${keyword}%`);
   }
   const { data, error } = await query.order("created_at", { ascending: false }).limit(limit);
@@ -2951,7 +2957,7 @@ async function deleteNotification(ctx: HandlerCtx, args: any) {
   }
   let query: any = ctx.supabase.from("notification_events").select("id,title,body,read_at,created_at").eq("user_id", ctx.userId);
   if (args.keyword) {
-    const keyword = String(args.keyword).trim().replace(/[\%_]/g, "\\$&");
+    const keyword = escapeLikePattern(String(args.keyword).trim());
     if (keyword) query = query.or(`title.ilike.%${keyword}%,body.ilike.%${keyword}%`);
   }
   const { data, error } = await query.order("created_at", { ascending: false }).limit(10);
@@ -2986,7 +2992,7 @@ async function searchLifeOs(ctx: HandlerCtx, args: any) {
   const keyword = String(args.keyword || "").trim();
   if (keyword.length < 2) return { ok: false, error: "Kata kunci pencarian terlalu pendek." };
   const limit = Math.min(10, Math.max(1, Number(args.limit) || 5));
-  const like = `%${keyword.replace(/[%_]/g, "\\$&")}%`;
+  const like = `%${escapeLikePattern(keyword)}%`;
   try {
     const queries = [
       ["tasks", "id,title,status,priority,due_at,project_id", `title.ilike.${like}`],
