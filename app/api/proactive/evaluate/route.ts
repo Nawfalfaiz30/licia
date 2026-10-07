@@ -27,10 +27,17 @@ export async function GET(req: Request) {
       .select("enabled,max_suggestions_per_day,quiet_start,quiet_end")
       .eq("user_id", user.id)
       .maybeSingle();
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const { count: suggestionsToday } = await supabase
+      .from("ai_proactive_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", dayStart.toISOString());
     const policy = shouldProactivelyNotify({
       now,
       prefs: proactivePrefs || { enabled: true, max_suggestions_per_day: 3 },
-      suggestionsToday: Number((preferences as any).proactiveSuggestionsToday || 0),
+      suggestionsToday: Number(suggestionsToday || 0),
       candidateScore: 100,
     });
     if (!policy.allowed) return [];
@@ -98,7 +105,21 @@ export async function GET(req: Request) {
     if ((inbox.data || []).length >= 3) {
       suggestions.push({ id: "inbox-backlog", title: "Inbox mulai menumpuk", message: `Ada ${inbox.data?.length} item yang belum dipilah. Rapikan beberapa sekarang agar tidak menjadi beban mental.`, href: "/inbox", tone: "info", action: "Buka Inbox" });
     }
-    return suggestions.slice(0, 3);
+    const visibleSuggestions = suggestions.slice(0, 3);
+    if (visibleSuggestions.length) {
+      const dayKey = now.toISOString().slice(0, 10);
+      await supabase.from("ai_proactive_events").upsert(
+        visibleSuggestions.map((item, index) => ({
+          user_id: user.id,
+          dedupe_key: user.id + ":" + dayKey + ":" + item.id,
+          suggestion_id: item.id,
+          title: item.title,
+          score: 100 - index,
+        })),
+        { onConflict: "dedupe_key" }
+      );
+    }
+    return visibleSuggestions;
   }, 30_000);
 
   return NextResponse.json({ suggestions, generatedAt: new Date().toISOString() }, { headers: { "Cache-Control": "private, max-age=30" } });
