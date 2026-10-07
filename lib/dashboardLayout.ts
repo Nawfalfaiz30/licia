@@ -86,7 +86,7 @@ export function normalizeLayout(input: unknown): DashboardLayout {
     if (seen.has(id)) return;
     let insertAt = 0;
     for (let i = index - 1; i >= 0; i -= 1) {
-      const at = order.indexOf(ALL_IDS[i]);
+      const at = order.indexOf(defaultOrder[i]);
       if (at >= 0) {
         insertAt = at + 1;
         break;
