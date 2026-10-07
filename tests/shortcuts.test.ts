@@ -4,8 +4,8 @@ import { navGroups } from "@/components/layout/nav-items";
 
 describe("resolveGoTo", () => {
   it("huruf dikenal → tujuan, tidak peka huruf besar", () => {
-    expect(resolveGoTo("d")?.href).toBe("/dashboard");
-    expect(resolveGoTo("D")?.href).toBe("/dashboard");
+    expect(resolveGoTo("d")?.href).toBe("/today");
+    expect(resolveGoTo("D")?.href).toBe("/today");
     expect(resolveGoTo("/")?.href).toBe("/search");
   });
   it("huruf tak dikenal dan kunci prototipe → null", () => {
