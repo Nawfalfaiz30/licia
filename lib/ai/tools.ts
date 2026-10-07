@@ -1,5 +1,5 @@
 import { redactVaultContent } from "@/lib/ai/vaultRedact";
-import { hybridSearch } from "@/lib/ai/retrieval";
+import { hybridSearch, upsertKnowledgeDocument } from "@/lib/ai/retrieval";
 import { getLifeOsCapabilities } from "@/lib/ai/capabilities";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dateStrInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone, startOfMonthIsoForTimezone, startOfWeekIsoForTimezone, ensureTimezoneOffset, formatDateTimeInTimezone, formatTimeInTimezone } from "@/lib/date";
@@ -33,6 +33,30 @@ function normalizeMoneyAmount(value: unknown): number {
 import { toolDefs } from "@/lib/ai/toolDefinitions";
 
 export type HandlerCtx = { supabase: SupabaseClient; userId: string; timezone: string };
+
+async function indexKnowledgeBestEffort(
+  ctx: HandlerCtx,
+  input: { sourceType: "note" | "memory" | "decision" | "reading"; sourceId: string; title?: string; content?: string },
+) {
+  try {
+    const { data: privacy } = await ctx.supabase
+      .from("ai_privacy_preferences")
+      .select("private_mode")
+      .eq("user_id", ctx.userId)
+      .maybeSingle();
+    if (privacy?.private_mode === true) return;
+    await upsertKnowledgeDocument(ctx.supabase, {
+      userId: ctx.userId,
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+      title: input.title,
+      content: input.content,
+      sourceHash: JSON.stringify([input.title || "", input.content || ""]),
+    });
+  } catch {
+    // Indexing must never make the primary CRUD mutation fail.
+  }
+}
 
 function isCashAccount(row: any) {
   const type = String(row?.account_type || "").trim().toLowerCase();
@@ -1608,6 +1632,7 @@ async function updateDecision(ctx: HandlerCtx, args: any) {
   if (args.confidence !== undefined) patch.confidence = Math.max(1, Math.min(5, Number(args.confidence)));
   const { data, error } = await ctx.supabase.from("decisions").update(patch).eq("id", args.decision_id).eq("user_id", ctx.userId).select().single();
   if (error) return { ok: false, error: error.message };
+  if (data?.id) void indexKnowledgeBestEffort(ctx, { sourceType: "decision", sourceId: data.id, title: String(data.title || "Keputusan"), content: [data.context, data.decision, data.outcome].filter(Boolean).join("\n") });
   return { ok: true, decision: data };
 }
 
@@ -2452,6 +2477,7 @@ async function createNote(ctx: HandlerCtx, args: any) {
     .select()
     .single();
   if (error) return { ok: false, error: error.message };
+  if (data?.id) void indexKnowledgeBestEffort(ctx, { sourceType: "note", sourceId: data.id, title: String(data.title || "Catatan"), content: String(data.content || "") });
   return { ok: true, note: data };
 }
 
@@ -2518,6 +2544,7 @@ async function logReading(ctx: HandlerCtx, args: any) {
     .select()
     .single();
   if (error) return { ok: false, error: error.message };
+  if (data?.id) void indexKnowledgeBestEffort(ctx, { sourceType: "reading", sourceId: data.id, title: String(data.title || "Bacaan"), content: [data.author, data.notes].filter(Boolean).join("\n") });
   return { ok: true, reading: data };
 }
 
