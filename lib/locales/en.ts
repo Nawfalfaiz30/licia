@@ -4,6 +4,8 @@
  * Placeholder {nama} harus sama persis di kedua sisi.
  */
 export const enPhrases: Record<string, string> = {
+  "agenda lainnya": "more agenda",
+  "Pemasukan": "Income",
   "Bulan sebelumnya": "Previous month",
   "Bulan berikutnya": "Next month",
   "Saldo semua dompet": "All wallet balances",
