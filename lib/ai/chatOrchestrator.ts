@@ -7,6 +7,8 @@ import { getOrCreateProfile } from "@/lib/getOrCreateProfile";
 import { buildSystemPrompt, AiMode } from "@/lib/ai/systemPrompt";
 import { languageDirective, languageFromCookieHeader } from "@/lib/ai/language";
 import { toolDefs } from "@/lib/ai/toolDefinitions";
+import { getStrictToolDefs, AI_TOOL_SCHEMA_VERSION } from "@/lib/ai/toolSchema";
+import { finishAiTrace, makeRequestId, startAiTrace } from "@/lib/ai/trace";
 import { executeTool } from "@/lib/ai/toolExecutor";
 import { emitProgress, streamChatResponse, toolLabel } from "@/lib/ai/progress";
 import { buildConnectedContext } from "@/lib/ai/context";
@@ -586,10 +588,53 @@ export async function chatDelete(req: Request) {
  * jawaban dikirim sebagai SSE (status → tool_start/tool_done → final). Selain itu perilaku JSON lama tidak berubah.
  */
 export async function chatPost(req: Request) {
-  const wantsStream = (req.headers.get("accept") || "").includes("text/event-stream")
-    && !/^(0|false|no|off)$/i.test((process.env.LICIA_CHAT_STREAM || "").trim());
-  if (!wantsStream) return handleChatPost(req);
-  return streamChatResponse(() => handleChatPost(req), req.signal);
+  const requestId = makeRequestId("chat");
+  const startedAt = Date.now();
+  let traceId: string | null = null;
+  try {
+    const traceClient = await createClient();
+    const { data: { user } } = await traceClient.auth.getUser();
+    if (user) {
+      const trace = await startAiTrace(traceClient, {
+        userId: user.id,
+        requestId,
+        promptVersion: process.env.LICIA_AI_PROMPT_VERSION || "2026-10-07.1",
+        model: process.env.LICIA_AI_MODEL || "configured-by-environment",
+        toolModel: process.env.LICIA_AI_TOOL_MODEL || null,
+        metadata: {
+          stream: (req.headers.get("accept") || "").includes("text/event-stream"),
+          strictTools: /^(1|true|yes|on)$/i.test(process.env.LICIA_AI_STRICT_TOOLS || ""),
+          toolSchemaVersion: AI_TOOL_SCHEMA_VERSION,
+        },
+      });
+      traceId = trace.id;
+    }
+    const wantsStream = (req.headers.get("accept") || "").includes("text/event-stream")
+      && !/^(0|false|no|off)$/i.test((process.env.LICIA_CHAT_STREAM || "").trim());
+    const response = !wantsStream
+      ? await handleChatPost(req)
+      : await streamChatResponse(() => handleChatPost(req), req.signal);
+    if (traceId) await finishAiTrace(traceClient, traceId, {
+      status: response.status >= 500 ? "error" : response.status === 499 ? "cancelled" : "completed",
+      latencyMs: Date.now() - startedAt,
+      metadata: { status: response.status, requestId },
+    });
+    const headers = new Headers(response.headers);
+    headers.set("x-licia-request-id", requestId);
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  } catch (error) {
+    try {
+      const traceClient = await createClient();
+      const { data: { user } } = await traceClient.auth.getUser();
+      if (user) await finishAiTrace(traceClient, traceId, {
+        status: "error",
+        latencyMs: Date.now() - startedAt,
+        error,
+        metadata: { requestId },
+      });
+    } catch {}
+    throw error;
+  }
 }
 
 async function handleChatPost(req: Request) {
@@ -1100,13 +1145,14 @@ async function handleChatPost(req: Request) {
   // explicit reminder request must execute the pending reminder instead of relying on
   // the model to reconstruct the previous turn and rediscover the tool call.
   const continuityReminder = detectReminderContinuity(history ?? [], message || "", timezone, continuityReference);
-  const routedTools = selectToolDefs(toolDefs, domains, routingText);
+  const modelToolDefs = /^(1|true|yes|on)$/i.test(process.env.LICIA_AI_STRICT_TOOLS || "") ? getStrictToolDefs(toolDefs) : toolDefs;
+  const routedTools = selectToolDefs(modelToolDefs, domains, routingText);
   // Saat pengguna mengaktifkan "Akses seluruh data Life OS", expose seluruh tool BACA
   // agar AI benar-benar dapat menjangkau domain yang tidak disebut secara eksplisit.
   // Tool WRITE tetap dirouting berdasarkan intent supaya token/context tidak membengkak
   // pada pertanyaan biasa.
-  const universalReadTools = aiReadAllData ? selectReadToolDefs(toolDefs) : [];
-  const pendingTool = pendingAction ? toolDefs.filter((def) => def.function?.name === pendingAction.tool) : [];
+  const universalReadTools = aiReadAllData ? selectReadToolDefs(modelToolDefs) : [];
+  const pendingTool = pendingAction ? modelToolDefs.filter((def) => def.function?.name === pendingAction.tool) : [];
   const deniedToolNames = getDomainToolNames(deniedDomains);
   const privacyBroadTools = new Set([
     "get_unified_life_snapshot",
@@ -1115,7 +1161,7 @@ async function handleChatPost(req: Request) {
     "get_life_module_data",
     "search_life_os",
   ]);
-  const temporalTool = temporalGuard.active ? toolDefs.find((def) => def.function?.name === "resolve_calendar_date") : null;
+  const temporalTool = temporalGuard.active ? modelToolDefs.find((def) => def.function?.name === "resolve_calendar_date") : null;
   const selectedTools = [...routedTools, ...universalReadTools, ...(temporalTool ? [temporalTool] : []), ...pendingTool.filter((candidate) => !routedTools.some((t) => t.function?.name === candidate.function?.name))]
     .filter((def, index, all) => all.findIndex((candidate) => candidate.function?.name === def.function?.name) === index)
     .filter((def) => {
