@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertJsonSize, rateLimit } from "@/lib/security";
 import { sha256Hex } from "@/lib/integrations/secretBox";
 import { rateLimit } from "@/lib/security";
 
@@ -7,6 +8,7 @@ type Params={params:Promise<{secret:string}>};
 
 export async function POST(req:Request,{params}:Params){
   const {secret}=await params;
+  const sizeError=assertJsonSize(req,256*1024); if(sizeError)return sizeError;
   if(!secret||secret.length<24)return NextResponse.json({error:"Webhook token tidak valid."},{status:401});
   const gate=rateLimit("automation-webhook:"+sha256Hex(secret),60,60_000); if(gate)return gate;
   const supabase=createAdminClient();
