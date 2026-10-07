@@ -1,0 +1,19 @@
+title = "Licia secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow documented placeholder examples only"
+regexes = [
+  '''https://YOUR_PROJECT\.supabase\.co''',
+  '''YOUR_[A-Z0-9_]+''',
+  '''ci-placeholder-[a-z-]+''',
+]
+paths = [
+  '''^docs/''',
+  '''^README\.md$''',
+  '''^\.env\.example$''',
+  '''^\.env\.production\.example$''',
+  '''^\.env\.local\.example$''',
+]
