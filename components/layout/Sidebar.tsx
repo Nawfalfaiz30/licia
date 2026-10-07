@@ -1,73 +1,42 @@
 "use client";
-
-import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { LogOut } from "lucide-react";
-import Image from "next/image";
-import { navGroups } from "./nav-items";
+import { navGroups, isNavPathActive } from "./nav-items";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export function Sidebar() {
-  const { t: tr } = useLanguage();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
-  const { t } = useLanguage();
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
-
+  async function handleLogout() { await supabase.auth.signOut(); router.replace("/login"); router.refresh(); }
   return (
-    <aside className="licia-sidebar hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r border-border bg-surface px-4 py-6">
-      <div className="flex items-center gap-2.5 px-2 mb-6 shrink-0">
-        <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-accent/30 shrink-0">
-          <Image src="/licia-avatar.png" alt={tr("Licia")} fill className="object-cover" />
-        </div>
-        <span className="licia-sidebar-label font-display text-xl text-text">{tr("Licia")}</span>
+    <aside className="licia-sidebar fixed inset-y-0 left-0 z-sidebar hidden w-[72px] flex-col border-r border-border bg-surface px-2 py-4 md:flex xl:w-64 xl:px-4 xl:py-6">
+      <div className="flex shrink-0 items-center justify-center gap-2.5 px-1 pb-5 xl:justify-start xl:px-2">
+        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-accent/30"><Image src="/licia-avatar.png" alt={t("Licia")} fill className="object-cover" /></div>
+        <span className="hidden font-display text-xl text-text xl:inline">{t("Licia")}</span>
       </div>
-
       <nav className="flex-1 space-y-5 overflow-y-auto no-scrollbar">
-        {navGroups.map((group) => (
-          <div key={t(group.i18nKey)}>
-            <p className="licia-sidebar-label text-2xs text-textMuted uppercase tracking-wide px-3 mb-1.5">
-              {t(group.i18nKey)}
-            </p>
-            <div className="space-y-1">
-              {group.items.map((item) => {
-                const active = pathname?.startsWith(item.href);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    title={t(item.i18nKey)}
-                    className={clsx(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                      active ? "bg-accent/10 text-accent" : "text-textMuted hover:bg-bg hover:text-text",
-                    )}
-                  >
-                    <Icon size={18} />
-                    <span className="licia-sidebar-label min-w-0 truncate">{t(item.i18nKey)}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+        {navGroups.map((group) => <section key={group.i18nKey}>
+          <p className="mb-1.5 hidden px-2 text-2xs font-bold uppercase tracking-[.12em] text-textMuted xl:block">{t(group.i18nKey)}</p>
+          <div className="space-y-1">{group.items.map((item) => {
+            const active = isNavPathActive(pathname, item.href); const Icon = item.icon;
+            return <a key={item.href} href={item.href} aria-current={active ? "page" : undefined} title={t(item.i18nKey)}
+              className={clsx("group flex min-h-11 items-center justify-center gap-3 rounded-xl px-2.5 py-2.5 text-sm font-medium transition-colors duration-150 xl:justify-start xl:px-3",
+                active ? "bg-accent/10 text-accent" : "text-textMuted hover:bg-bg hover:text-text")}>
+              <span className={clsx("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", active && "bg-accent/10")}><Icon size={18} aria-hidden="true" /></span>
+              <span className="hidden min-w-0 truncate xl:inline">{t(item.i18nKey)}</span>
+            </a>;
+          })}</div>
+        </section>)}
       </nav>
-
-      <div className="px-2 pt-3 shrink-0">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-sm text-textMuted hover:text-danger transition"
-        >
-          <LogOut size={16} />
-          {t("logout")}
+      <div className="mt-3 shrink-0 border-t border-border pt-3">
+        <button type="button" onClick={() => void handleLogout()} title={t("Keluar")}
+          className="group flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-2 text-sm text-textMuted transition-colors duration-150 hover:bg-danger/5 hover:text-danger xl:justify-start xl:px-3">
+          <LogOut size={16} aria-hidden="true" /><span className="hidden xl:inline">{t("Keluar")}</span>
         </button>
       </div>
     </aside>

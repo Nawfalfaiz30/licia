@@ -1,116 +1,65 @@
 import {
-  LayoutDashboard,
-  MessageCircle,
-  ListTodo,
-  Timer,
-  CalendarDays,
-  Wallet,
-  HeartPulse,
-  Settings,
-  LibraryBig,
-  Target,
-  BrainCircuit,
-  Lightbulb,
-  CircleHelp,
-  Search,
-  Camera,
-  Compass,
-  BarChart3,
-  Zap,
+  LayoutDashboard, MessageCircle, ListTodo, Timer, CalendarDays, Wallet, HeartPulse, Settings,
+  LibraryBig, Target, BrainCircuit, Lightbulb, CircleHelp, Search, Camera, Compass, BarChart3, Zap,
   type LucideIcon,
 } from "lucide-react";
 
-export type NavItem = {
-  href: string;
-  label: string;
-  i18nKey: string;
-  icon: LucideIcon;
-  primary?: boolean;
-  sub?: boolean;
-};
+export type NavItem = { href: string; label: string; i18nKey: string; icon: LucideIcon; primary?: boolean; sub?: boolean };
 export type NavGroup = { label: string; i18nKey: string; items: NavItem[] };
 
-const item = (
-  href: string,
-  label: string,
-  i18nKey: string,
-  icon: LucideIcon,
-  primary = false,
-  sub = false,
-): NavItem => ({ href, label, i18nKey, icon, ...(primary ? { primary: true } : {}), ...(sub ? { sub: true } : {}) });
-
+const item = (href: string, label: string, i18nKey: string, icon: LucideIcon, primary = false, sub = false): NavItem => ({
+  href, label, i18nKey, icon, ...(primary ? { primary: true } : {}), ...(sub ? { sub: true } : {}),
+});
 const group = (label: string, i18nKey: string, items: NavItem[]): NavGroup => ({ label, i18nKey, items });
 
-/**
- * One canonical desktop navigation. A merged workspace owns its former child
- * features; old routes remain reachable for compatibility but are not surfaced
- * as duplicate destinations.
- */
 export const navGroups: NavGroup[] = [
   group("Inti", "nav_core", [
-    item("/today", "Hari Ini", "today", CalendarDays, true),
-    item("/chat", "Chat Licia", "chat", MessageCircle, true),
+    item("/today", "Beranda", "home", LayoutDashboard, true),
     item("/tasks", "Tugas", "tasks", ListTodo, true),
+    item("/chat", "Chat Licia", "chat", MessageCircle, true),
     item("/calendar", "Kalender", "calendar", CalendarDays, true),
-    item("/knowledge", "Catatan", "knowledge", LibraryBig, true),
     item("/finance", "Keuangan", "finance", Wallet, true),
   ]),
   group("Rencana", "nav_plan", [
-    item("/plan", "Rencana", "plan", BrainCircuit),
-    item("/focus", "Fokus", "focus", Timer),
+    item("/plan", "Rencana", "plan", BrainCircuit), item("/focus", "Fokus", "focus", Timer),
     item("/goals-projects", "Target & Proyek", "goals_projects", Target),
   ]),
   group("Ruang Hidup", "nav_personal_os", [
+    item("/knowledge", "Catatan & Belajar", "knowledge_learning", LibraryBig),
     item("/wellbeing", "Kesehatan & Rutinitas", "health_habits", HeartPulse),
     item("/automations", "Otomasi", "automations", Zap),
-    item("/life-map", "Peta", "life_map", Compass),
-    item("/insights", "Insights", "insights", Lightbulb),
+    item("/life-map", "Peta Hidup", "life_map", Compass),
+    item("/insights", "Insight", "insights", Lightbulb),
   ]),
-  group("Bantuan", "nav_system_help", [
-    item("/guide", "Panduan", "guide", CircleHelp),
-    item("/settings", "Pengaturan", "settings", Settings),
-  ]),
+  group("Bantuan", "nav_system_help", [item("/guide", "Panduan", "guide", CircleHelp), item("/settings", "Pengaturan", "settings", Settings)]),
 ];
 
-/**
- * Mobile discovery catalog. It intentionally shows only canonical workspaces
- * and a small number of genuinely useful combined entry points. Merged child
- * modules such as Langganan, Notes, Memory, Vault, Habits, Reading, Projects,
- * Goals, Analytics, Timeline, etc. are not resurrected as duplicate cards.
- */
 export const moreNavGroups: NavGroup[] = [
-  group("Workspace utama", "nav_workspace_main", [
-    item("/dashboard", "Beranda", "home", LayoutDashboard),
-    item("/plan", "Rencana", "plan", ListTodo),
-    item("/chat", "Chat Licia", "chat", MessageCircle),
-    item("/capture", "Tangkap", "capture", Camera),
-    item("/insights", "Insights", "insights", Lightbulb),
+  group("Lainnya", "nav_other", [
+    item("/finance", "Keuangan", "finance", Wallet), item("/plan", "Rencana", "plan", BrainCircuit), item("/focus", "Fokus", "focus", Timer),
+    item("/goals-projects", "Target & Proyek", "goals_projects", Target), item("/wellbeing", "Kesehatan & Rutinitas", "health_habits", HeartPulse),
+    item("/automations", "Pusat Otomasi", "automations_center", Zap), item("/life-map", "Peta Hidup", "life_map", Compass),
+    item("/insights", "Insight", "insights", Lightbulb), item("/guide", "Panduan", "guide", CircleHelp), item("/settings", "Pengaturan", "settings", Settings),
   ]),
-  group("Rencana", "nav_plan", [
-    item("/tasks", "Tugas", "tasks", ListTodo),
-    item("/calendar", "Kalender & Pengingat", "calendar_reminders", CalendarDays, false, true),
-    item("/focus", "Fokus", "focus", Timer, false, true),
-    item("/plan", "Perencana & Inbox", "planner_inbox", BrainCircuit, false, true),
-  ]),
-  group("Ruang Hidup", "nav_personal_os", [
-    item("/goals-projects", "Target & Proyek", "goals_projects", Target),
-    item("/knowledge", "Knowledge & Belajar", "knowledge_learning", LibraryBig),
-    item("/finance", "Keuangan", "finance", Wallet),
-    item("/wellbeing", "Kesehatan & Rutinitas", "health_habits", HeartPulse),
-  ]),
-  group("Wawasan & Otomasi", "nav_insights", [
-    item("/life-map", "Peta & Relasi", "life_map_relations", Compass, false, true),
-    item("/analytics", "Review & Pola", "review_patterns", BarChart3, false, true),
-    item("/automations", "Otomasi", "automations", Zap, false, true),
-  ]),
-  group("Sistem", "nav_system_help", [
-    item("/search", "Pencarian", "search", Search),
-    item("/guide", "Panduan", "guide", CircleHelp),
-    item("/settings", "Pengaturan", "settings", Settings),
+  group("Akses cepat", "nav_workspace_main", [
+    item("/capture", "Tangkap Cepat", "capture", Camera), item("/knowledge", "Catatan & Belajar", "knowledge_learning", LibraryBig),
+    item("/search", "Pencarian", "search", Search), item("/analytics", "Analitik Pribadi", "analytics", BarChart3),
   ]),
 ];
 
 export const allNavItems = navGroups.flatMap((g) => g.items);
-export const primaryNavItems = allNavItems.filter((i) => i.primary);
+export const primaryNavItems = navGroups[0].items.filter((x) => x.primary);
+export const mobilePrimaryNavItems = [
+  navGroups[0].items.find((x) => x.href === "/today")!,
+  navGroups[0].items.find((x) => x.href === "/tasks")!,
+  navGroups[0].items.find((x) => x.href === "/chat")!,
+  navGroups[0].items.find((x) => x.href === "/calendar")!,
+];
 export const allFeatureItems = moreNavGroups.flatMap((g) => g.items);
 export const featureGroups = moreNavGroups;
+
+export function isNavPathActive(pathname: string | null, href: string): boolean {
+  if (!pathname) return false;
+  if (href === "/today") return pathname === "/today" || pathname === "/dashboard" || pathname === "/";
+  return pathname === href || pathname.startsWith(href + "/");
+}

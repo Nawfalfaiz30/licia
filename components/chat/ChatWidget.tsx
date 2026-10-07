@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   Command,
   Layers3,
-  Paperclip,
+  Plus,
   CircleHelp,
   Wand2,
   BrainCircuit,
@@ -114,6 +114,7 @@ type DisplayMsg = {
   actionSummary?: ActionSummary[];
   undoActionId?: string;
   actionState?: "success" | "partial" | "undone";
+  retryText?: string;
 };
 
 const GREETING: DisplayMsg = {
@@ -421,6 +422,7 @@ const ChatMessage = memo(function ChatMessage({
   onDelete,
   onFeedback,
   onUndo,
+  onRetry,
   showAvatar = true,
 }: {
   message: DisplayMsg;
@@ -428,6 +430,7 @@ const ChatMessage = memo(function ChatMessage({
   onDelete: (turnId?: string, messageId?: string) => void;
   onFeedback: (message: DisplayMsg, useful: boolean, category?: string) => void;
   onUndo?: (actionId: string, messageId: string) => void;
+  onRetry?: (text: string) => void;
   showAvatar?: boolean;
 }) {
   const { t: tr } = useLanguage();
@@ -513,6 +516,11 @@ const ChatMessage = memo(function ChatMessage({
             </details>
           ) : null}
         </div>
+        {m.retryText && onRetry && (
+          <button type="button" onClick={() => onRetry(m.retryText!)} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-2xs font-semibold text-accent">
+            Kirim ulang
+          </button>
+        )}
         {m.createdAt && m.id !== "greeting" && (
           <div className="mt-0.5 hidden min-h-4 items-center gap-1.5 px-1 text-2xs text-textMuted opacity-0 transition-opacity group-hover/chat-row:opacity-100 sm:flex">
             <span>{isUser ? "Kamu" : "Licia"}</span>
@@ -599,6 +607,8 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
     messageId?: string;
   } | null>(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const isNearBottomRef = useRef(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -709,7 +719,7 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }));
+    requestAnimationFrame(() => { if (isNearBottomRef.current) { el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); setShowJumpToLatest(false); } else setShowJumpToLatest(true); });
   }, [displayMessages, loading]);
 
   useEffect(() => {
@@ -718,6 +728,23 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, [input]);
+
+  useEffect(() => {
+    const updateKeyboardState = () => {
+      const viewport = window.visualViewport;
+      const open = Boolean(viewport && window.innerHeight - viewport.height > 120);
+      document.documentElement.classList.toggle("kb-open", open);
+    };
+    updateKeyboardState();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", updateKeyboardState);
+    viewport?.addEventListener("scroll", updateKeyboardState);
+    return () => {
+      viewport?.removeEventListener("resize", updateKeyboardState);
+      viewport?.removeEventListener("scroll", updateKeyboardState);
+      document.documentElement.classList.remove("kb-open");
+    };
+  }, []);
 
   async function processImageFile(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -882,7 +909,8 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
             actionState: actionSummary.length ? "success" : undefined,
           };
       appendDisplayMessage(setDisplayHistory, assistantMessage);
-      if (Array.isArray(data.actions) && data.actions.some((a: any) => a?.ok))
+      if (Array.isArray(data.actions) && data.actions.some((a: any) => a?.ok)) {
+        try { window.dispatchEvent(new CustomEvent("licia:data-invalidated")); localStorage.setItem("licia-data-revision", String(Date.now())); } catch {}
         notifyToast({
           title: "Licia selesai menjalankan aksi",
           message: data.actions
@@ -892,6 +920,7 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
             .join(" • "),
           tone: "success",
         });
+      }
     } catch (error) {
       setRawHistory((prev) => [...prev, rawUser].slice(-MAX_RAW_MESSAGES));
       const aborted = (error as any)?.name === "AbortError";
@@ -905,6 +934,7 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
             ? error.message
             : tr("Koneksi ke Licia terputus. Coba lagi sebentar ya."),
         createdAt: Date.now(),
+        retryText: aborted ? undefined : text,
       };
       appendDisplayMessage(setDisplayHistory, errorMessage);
       if (!aborted)
@@ -925,7 +955,8 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
     const native = e.nativeEvent as KeyboardEvent;
     if (native.isComposing && native.keyCode === 229) return;
 
-    const shouldSend = enterToSend ? !e.shiftKey : e.ctrlKey || e.metaKey;
+    const desktop = window.matchMedia("(min-width: 768px)").matches;
+    const shouldSend = e.ctrlKey || e.metaKey || (desktop && enterToSend && !e.shiftKey);
 
     if (!shouldSend) return;
 
@@ -1143,7 +1174,7 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
       data-chat-style={chatStyle}
       className={clsx(
         "chat-v48 flex min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-border bg-surface",
-        compact ? "h-[500px]" : "h-[calc(100dvh-108px)] min-h-[430px] max-h-[900px] sm:rounded-[1.5rem]",
+        compact ? "h-[500px]" : "h-full min-h-0 sm:rounded-[1.5rem]",
       )}
     >
       <header className="chat-v48-header relative z-30 flex shrink-0 items-center gap-2.5 border-b border-border/80 bg-surface px-3 py-3 sm:px-4">
@@ -1159,16 +1190,6 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
             <p className="truncate text-2xs text-textMuted">{tr("Asisten pribadi terhubung ke Life OS")}</p>
-            {conversationState?.activeDomain && conversationState.activeDomain !== "overview" && (
-              <button
-                type="button"
-                onClick={resetConversationContext}
-                className="shrink-0 rounded-full bg-accent/5 px-1.5 py-0.5 text-2xs font-semibold text-accent hover:bg-accent/10"
-                title={tr("Mulai topik baru")}
-              >
-                {tr("Fokus:")} {conversationState.activeDomain.replaceAll("_", " ")} · ×
-              </button>
-            )}
           </div>
         </div>
         <span className="hidden shrink-0 rounded-full border border-border bg-bg px-2 py-1 text-2xs font-semibold text-textMuted sm:inline-flex">
@@ -1248,6 +1269,7 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
 
       <div
         ref={scrollRef}
+        onScroll={(event) => { const el = event.currentTarget; isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; if (isNearBottomRef.current) setShowJumpToLatest(false); }}
         className="chat-v48-pane min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 sm:py-6"
       >
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-3.5 sm:gap-4">
@@ -1305,6 +1327,7 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
               onDelete={deleteTurn}
               onFeedback={sendFeedback}
               onUndo={(actionId, messageId) => void undoLastAction(actionId, messageId)}
+              onRetry={(text) => void handleSend(text)}
               showAvatar={message.role === "user" || index === 0 || displayMessages[index - 1]?.role !== "assistant"}
             />
           ))}
@@ -1410,16 +1433,22 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
             </div>
           )}
 
-          {latestAiMessage?.aiMeta && (
-            <div className="chat-v48-context flex flex-wrap items-center gap-1.5 px-1 pb-1 text-2xs text-textMuted">
-              <span className="rounded-full border border-border bg-bg px-2 py-1 font-semibold">
-                {tr("Konteks: {contextLabel}", { contextLabel })}
-              </span>
-              {latestAiMessage.aiMeta.temporalGuard && (
-                <span className="rounded-full bg-accent/5 px-2 py-1 font-semibold text-accent">
-                  {tr("Tanggal tervalidasi")}
-                </span>
-              )}
+
+          {showJumpToLatest && (
+            <div className="sticky bottom-2 z-20 flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = scrollRef.current;
+                  if (!el) return;
+                  isNearBottomRef.current = true;
+                  setShowJumpToLatest(false);
+                  el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+                }}
+                className="inline-flex min-h-9 items-center rounded-full border border-accent/20 bg-surface px-3 text-2xs font-semibold text-accent shadow-lg"
+              >
+                {tr("Pesan terbaru")}
+              </button>
             </div>
           )}
         </div>
@@ -1427,6 +1456,32 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
 
       <div className="chat-v48-composer shrink-0 border-t border-border/80 bg-surface/95 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-4 sm:pb-3">
         <div className="mx-auto max-w-2xl">
+          <div className="mb-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {["Tugas hari ini","Jadwal besok","Catat pengeluaran","Ringkas hari ini"].map((prompt) => (
+              <button key={prompt} type="button" onClick={() => setInput(tr(prompt))} className="shrink-0 rounded-full border border-border bg-bg px-3 py-1.5 text-2xs font-semibold text-textMuted hover:border-accent/25 hover:text-accent">
+                {tr(prompt)}
+              </button>
+            ))}
+          </div>
+          {conversationState?.activeDomain && conversationState.activeDomain !== "overview" && (
+            <div className="mb-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button type="button" onClick={resetConversationContext} className="shrink-0 rounded-full border border-accent/20 bg-accent/5 px-3 py-1.5 text-2xs font-semibold text-accent">
+                {tr("Konteks:")} {contextLabel} ×
+              </button>
+            </div>
+          )
+          <div className="mb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
+            {[
+              [tr("Tugas hari ini"), tr("Apa yang paling penting hari ini?")],
+              [tr("Jadwal besok"), tr("Apa jadwal saya besok?")],
+              [tr("Catat pengeluaran"), tr("Catat pengeluaran baru")],
+              [tr("Ringkas hari ini"), tr("Ringkas hari saya")],
+            ].map(([label,prompt]) => <button key={label} type="button" onClick={() => { setInput(prompt); textareaRef.current?.focus(); }} className="shrink-0 rounded-full border border-border bg-bg px-3 py-2 text-2xs font-semibold text-textMuted hover:border-accent/25 hover:text-accent">{label}</button>)}
+          </div>
+          <div className="mb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
+            {latestAiMessage?.aiMeta && <span className="shrink-0 rounded-full border border-border bg-bg px-2.5 py-1.5 text-2xs font-semibold text-textMuted">{tr("Konteks: {contextLabel}", { contextLabel })}</span>}
+            {conversationState?.activeDomain && conversationState.activeDomain !== "overview" && <button type="button" onClick={resetConversationContext} className="shrink-0 rounded-full border border-accent/15 bg-accent/5 px-2.5 py-1.5 text-2xs font-semibold text-accent">{tr("Konteks:")} {conversationState.activeDomain.replaceAll("_"," ")} · ×</button>}
+          </div>
           {pendingImage && (
             <div className="mb-1.5 flex items-center gap-2 rounded-xl border border-border bg-bg px-2.5 py-1.5">
               <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg">
@@ -1449,7 +1504,7 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
               title={tr("Lampirkan gambar")}
               aria-label={tr("Lampirkan gambar")}
             >
-              <Paperclip size={16} />
+              <Plus size={18} />
             </button>
             <input
               ref={fileInputRef}
@@ -1468,12 +1523,12 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
               disabled={loading}
               rows={1}
               placeholder={tr("Tulis ke Licia…")}
-              className="max-h-36 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-1.5 py-2.5 text-sm leading-relaxed text-text outline-none placeholder:text-textMuted"
+              className="max-h-36 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-1.5 py-2.5 text-[16px] leading-relaxed text-text outline-none placeholder:text-textMuted"
             />
             <button
               onClick={() => void handleSend()}
               disabled={loading || compressingImage || (!input.trim() && !pendingImage)}
-              className="touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-md shadow-accent/15 transition hover:scale-[1.02] active:scale-95 disabled:opacity-40"
+              className="touch-target flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-md shadow-accent/15 transition hover:scale-[1.02] active:scale-95 disabled:opacity-40"
               title={tr("Kirim")}
               aria-label={tr("Kirim")}
             >

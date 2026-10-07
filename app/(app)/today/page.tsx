@@ -1,323 +1,104 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  Droplets,
-  Inbox,
-  Sparkles,
-  Target,
-  Timer,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, CalendarDays, Clock3, Droplets, Inbox, Sparkles, Timer, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui";
-import { dateStrInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone } from "@/lib/date";
-import { previewPlainText } from "@/lib/text";
+import { dateStrInTimezone, formatTimeInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone } from "@/lib/date";
 import { getServerT } from "@/lib/i18n-server";
-function minutesLabel(n: number) {
-  if (n < 60) return `${n} m`;
-  return `${Math.floor(n / 60)}j ${n % 60 ? `${n % 60}m` : ""}`.trim();
-}
-function time(v: string) {
-  return v?.slice(0, 5) || v;
-}
-export default async function TodayPage() {
-  const { t: tr, locale } = await getServerT();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await supabase.from("users").select("display_name,timezone").eq("id", user.id).single();
-  const timezone = profile?.timezone || "Asia/Jakarta";
-  const now = new Date();
-  const today = dateStrInTimezone(now, timezone);
-  const start = startOfDayIsoForTimezone(now, timezone);
-  const end = endOfDayIsoForTimezone(now, timezone);
-  const [{ data: tasks }, { data: agenda }, { data: focus }, { data: inbox }, { data: habits }, { data: hydration }] =
-    await Promise.all([
-      supabase
-        .from("tasks")
-        .select("id,title,status,priority,due_at,estimated_minutes,project_id")
-        .eq("user_id", user.id)
-        .neq("status", "done")
-        .order("due_at", { ascending: true, nullsFirst: false })
-        .limit(25),
-      supabase
-        .from("schedule_blocks")
-        .select("id,title,start_time,end_time,location,description,project_id,task_id")
-        .eq("user_id", user.id)
-        .order("start_time"),
-      supabase
-        .from("pomodoro_sessions")
-        .select("focus_minutes,completed,started_at")
-        .eq("user_id", user.id)
-        .gte("started_at", start)
-        .lte("started_at", end)
-        .order("started_at", { ascending: false }),
-      supabase
-        .from("smart_inbox_items")
-        .select("id,content,status,created_at")
-        .eq("user_id", user.id)
-        .eq("status", "open")
-        .order("created_at", { ascending: false })
-        .limit(6),
-      supabase
-        .from("habit_checkins")
-        .select("id,habit_id,checkin_date")
-        .eq("user_id", user.id)
-        .eq("checkin_date", today),
-      supabase
-        .from("hydration_logs")
-        .select("amount_ml")
-        .eq("user_id", user.id)
-        .gte("logged_at", start)
-        .lte("logged_at", end),
-    ]);
-  const openTasks = (tasks || []) as any[];
-  const agendaRows = (agenda || []) as any[];
-  const focusRows = focus || [];
-  const inboxRows = inbox || [];
-  const focusMinutes = focusRows
-    .filter((x: any) => x.completed !== false)
-    .reduce((s: number, x: any) => s + Number(x.focus_minutes || 0), 0);
-  const water = (hydration || []).reduce((s: number, x: any) => s + Number(x.amount_ml || 0), 0);
-  const overdue = openTasks.filter((t) => t.due_at && new Date(t.due_at).getTime() < Date.now());
-  const dueSoon = openTasks.filter((t) => t.due_at && new Date(t.due_at).getTime() <= Date.now() + 48 * 60 * 60 * 1000);
-  const hour = new Date().toLocaleTimeString(locale, { timeZone: timezone, hour: "2-digit", hour12: false });
-  const currentAgenda = agendaRows.find((a: any) => String(a.start_time) <= hour && hour < String(a.end_time));
-  const late = Number(hour) >= 18;
-  const greeting = late ? tr("Sore yang tenang") : tr("Mari lihat hari ini");
-  return (
-    <div className="today-page space-y-4 animate-licia-page-in">
-      <section className="today-hero rounded-[1.7rem] border border-accent/15 bg-surface p-3.5 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-2xs font-bold uppercase tracking-[.15em] text-accent">{today}</p>
-            <h1 className="mt-1 font-display text-3xl text-text sm:text-4xl">
-              {greeting}
-              {profile?.display_name ? tr(", {display_name}.", { display_name: profile.display_name }) : "."}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-textMuted">
-              {tr(
-                "Satu layar untuk melihat ritme hari ini: apa yang sudah berjalan, apa yang dekat, dan apa yang bisa kamu lakukan berikutnya.",
-              )}
-            </p>
-          </div>
-          <Link
-            href="/chat?prompt=Analisis hari saya dan sarankan tiga langkah yang paling relevan berdasarkan kalender, task, inbox, fokus, dan target."
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-xs font-semibold text-white"
-          >
-            <Sparkles size={14} /> {tr("Tanya Licia")}
-          </Link>
+
+function minutesLabel(n:number){ if(n<60)return `${n} m`; return `${Math.floor(n/60)}j ${n%60?`${n%60}m`:""}`.trim(); }
+function time(v:string){ return v?.slice(0,5)||v; }
+
+export default async function TodayPage(){
+  const {t:tr}=await getServerT();
+  const supabase=await createClient();
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user)return null;
+  const {data:profile}=await supabase.from("users").select("display_name,timezone").eq("id",user.id).single();
+  const timezone=profile?.timezone||"Asia/Jakarta";
+  const now=new Date();
+  const today=dateStrInTimezone(now,timezone);
+  const start=startOfDayIsoForTimezone(now,timezone);
+  const end=endOfDayIsoForTimezone(now,timezone);
+  const [{data:tasks},{data:agenda},{data:focus},{data:inbox},{data:habits},{data:hydration}]=await Promise.all([
+    supabase.from("tasks").select("id,title,status,priority,due_at,estimated_minutes,project_id").eq("user_id",user.id).neq("status","done").order("due_at",{ascending:true,nullsFirst:false}).limit(25),
+    supabase.from("schedule_blocks").select("id,title,start_time,end_time,location,task_id").eq("user_id",user.id).eq("block_date",today).order("start_time"),
+    supabase.from("pomodoro_sessions").select("focus_minutes,completed,started_at").eq("user_id",user.id).gte("started_at",start).lte("started_at",end).order("started_at",{ascending:false}),
+    supabase.from("smart_inbox_items").select("id,content,status,created_at").eq("user_id",user.id).eq("status","open").order("created_at",{ascending:false}).limit(6),
+    supabase.from("habit_checkins").select("id,habit_id,checkin_date").eq("user_id",user.id).eq("checkin_date",today),
+    supabase.from("hydration_logs").select("amount_ml").eq("user_id",user.id).gte("logged_at",start).lte("logged_at",end),
+  ]);
+  const openTasks=(tasks||[]) as any[];
+  const agendaRows=(agenda||[]) as any[];
+  const focusMinutes=(focus||[]).filter((x:any)=>x.completed!==false).reduce((s:number,x:any)=>s+Number(x.focus_minutes||0),0);
+  const water=(hydration||[]).reduce((s:number,x:any)=>s+Number(x.amount_ml||0),0);
+  const overdue=openTasks.filter((t:any)=>t.due_at&&new Date(t.due_at).getTime()<now.getTime());
+  const dueSoon=openTasks.filter((t:any)=>t.due_at&&new Date(t.due_at).getTime()<=now.getTime()+48*60*60*1000);
+  const priorities=(overdue.length?[...overdue,...openTasks.filter((x)=>!overdue.includes(x))]:dueSoon.length?dueSoon:openTasks).slice(0,3);
+  const clock=new Intl.DateTimeFormat("en-GB",{timeZone:timezone,hour:"2-digit",minute:"2-digit",hour12:false}).format(now);
+  const hour=Number(clock.slice(0,2));
+  const greeting=hour<12?tr("Selamat pagi"):hour<18?tr("Selamat siang"):tr("Selamat malam");
+  const currentAgenda=agendaRows.find((a:any)=>String(a.start_time).slice(0,5)<=clock&&clock<String(a.end_time).slice(0,5));
+  const hydrationPct=Math.min(100,Math.round(water/2000*100));
+  return <div className="today-page space-y-4 animate-licia-page-in">
+    <section className="rounded-2xl border border-accent/15 bg-surface px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-2xs font-semibold text-accent">{today}</p>
+          <h1 className="mt-0.5 truncate font-display text-2xl text-text sm:text-3xl">{greeting}{profile?.display_name?tr(", {display_name}.",{display_name:profile.display_name}):"."}</h1>
+          <p className="mt-1 truncate text-xs text-textMuted">{tr("{tasks} tugas aktif · {agenda} agenda · {focus} fokus",{tasks:openTasks.length,agenda:agendaRows.length,focus:minutesLabel(focusMinutes)})}</p>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className="rounded-2xl bg-bg p-3">
-            <p className="text-2xs text-textMuted">{tr("Tugas terbuka")}</p>
-            <p className="mt-1 font-display text-2xl text-text">{openTasks.length}</p>
-          </div>
-          <div className="rounded-2xl bg-danger/5 p-3">
-            <p className="text-2xs text-textMuted">{tr("Terlambat")}</p>
-            <p className="mt-1 font-display text-2xl text-danger">{overdue.length}</p>
-          </div>
-          <div className="rounded-2xl bg-accent/5 p-3">
-            <p className="text-2xs text-textMuted">{tr("Fokus")}</p>
-            <p className="mt-1 font-display text-2xl text-accent">{minutesLabel(focusMinutes)}</p>
-          </div>
-          <div className="rounded-2xl bg-accentSoft/5 p-3">
-            <p className="text-2xs text-textMuted">{tr("Hidrasi")}</p>
-            <p className="mt-1 font-display text-2xl text-accentSoft">{tr("{water} ml", { water })}</p>
-          </div>
-        </div>
-      </section>
-      <section className="grid grid-cols-3 gap-2">
-        <Link
-          href="/plan"
-          className="group flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-2 text-2xs font-bold text-textMuted transition hover:border-accent/25 hover:text-accent"
-        >
-          <CalendarDays size={14} />
-          {tr("Atur hari")}
-          <ArrowRight size={11} className="transition group-hover:translate-x-0.5" />
-        </Link>
-        <Link
-          href="/capture"
-          className="group flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-2 text-2xs font-bold text-textMuted transition hover:border-accent/25 hover:text-accent"
-        >
-          <Inbox size={14} />
-          {tr("Tangkap")}
-          <ArrowRight size={11} className="transition group-hover:translate-x-0.5" />
-        </Link>
-        <Link
-          href="/chat?prompt=Analisis%20hari%20saya"
-          className="group flex min-h-12 items-center justify-center gap-2 rounded-xl border border-accent/15 bg-accent/5 px-2 text-2xs font-bold text-accent"
-        >
-          <Sparkles size={14} />
-          {tr("Tanya Licia")}
-          <ArrowRight size={11} className="transition group-hover:translate-x-0.5" />
-        </Link>
-      </section>
-      {currentAgenda && (
-        <Link
-          href="/calendar"
-          className="today-current-card flex items-center gap-3 rounded-2xl border border-accent/20 bg-accent/5 p-3.5 transition hover:-translate-y-0.5"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-sm">
-            <Clock3 size={16} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-2xs font-bold uppercase tracking-[.12em] text-accent">
-              {tr("Sedang berlangsung")}
-            </span>
-            <span className="mt-0.5 block break-words text-xs font-semibold text-text">{currentAgenda.title}</span>
-            <span className="mt-0.5 block text-2xs text-textMuted">
-              {time(currentAgenda.start_time)}–{time(currentAgenda.end_time)}
-              {currentAgenda.location ? tr(" · {location}", { location: currentAgenda.location }) : ""}
-            </span>
-          </span>
-          <ArrowRight size={14} className="shrink-0 text-accent" />
-        </Link>
-      )}
-      <section className="grid gap-3 lg:grid-cols-[1.25fr_.75fr]">
-        <Card className="p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-2xs font-bold uppercase tracking-[.14em] text-accent">{tr("Ritme hari")}</p>
-              <h2 className="mt-1 font-display text-xl text-text">{tr("Agenda yang perlu kamu lihat")}</h2>
-            </div>
-            <Link href="/calendar" className="text-textMuted hover:text-accent">
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-          <div className="mt-4 space-y-2.5">
-            {agendaRows.slice(0, 8).map((a: any, i: number) => (
-              <Link
-                key={a.id}
-                href="/calendar"
-                className="today-timeline-item group grid grid-cols-[64px_minmax(0,1fr)] gap-3 rounded-2xl border border-border bg-bg p-3 transition hover:border-accent/25"
-              >
-                <div className="text-right">
-                  <p className="text-xs font-bold tabular-nums text-accent">{time(a.start_time)}</p>
-                  <p className="mt-0.5 text-2xs text-textMuted">{time(a.end_time)}</p>
-                </div>
-                <div className="relative min-w-0 border-l border-border pl-3">
-                  <span className="absolute -left-[5px] top-2 h-2 w-2 rounded-full bg-accent ring-4 ring-bg" />
-                  <p className="break-words text-sm font-semibold text-text">{a.title}</p>
-                  <p className="mt-0.5 break-words text-2xs text-textMuted">
-                    {a.location || "Tanpa lokasi"}
-                    {a.task_id ? tr(" · sudah terhubung task") : ""}
-                  </p>
-                </div>
-              </Link>
-            ))}
-            {!agendaRows.length && (
-              <div className="rounded-2xl border border-dashed border-border p-7 text-center">
-                <CalendarDays size={20} className="mx-auto text-textMuted" />
-                <p className="mt-2 text-sm font-semibold text-text">{tr("Hari ini masih kosong")}</p>
-                <p className="mt-1 text-xs text-textMuted">{tr("Tambahkan agenda atau gunakan Planner.")}</p>
-              </div>
-            )}
-          </div>
-        </Card>
-        <Card className="p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-2xs font-bold uppercase tracking-[.14em] text-success">{tr("Langkah berikutnya")}</p>
-              <h2 className="mt-1 font-display text-xl text-text">{tr("Sedikit, tapi jelas")}</h2>
-            </div>
-            <Timer size={17} className="text-success" />
-          </div>
-          <div className="mt-4 space-y-2">
-            {(dueSoon.length ? dueSoon : openTasks).slice(0, 4).map((t: any) => (
-              <Link
-                key={t.id}
-                href={`/focus?task=${t.id}`}
-                className="group block rounded-2xl border border-border bg-bg p-3.5 transition hover:-translate-y-0.5 hover:border-accent/25"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span
-                    className={`h-2 w-2 mt-1.5 rounded-full shrink-0 ${t.priority === "high" ? "bg-danger" : t.priority === "medium" ? "bg-accentSoft" : "bg-accent"}`}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <b className="block break-words text-xs text-text">{t.title}</b>
-                    <span className="mt-1 block text-2xs text-textMuted">
-                      {t.due_at
-                        ? new Date(t.due_at).toLocaleString(locale, {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : tr("Tanpa tenggat")}
-                    </span>
-                  </span>
-                  <ArrowRight
-                    size={11}
-                    className="mt-1 text-textMuted transition group-hover:translate-x-1 group-hover:text-accent"
-                  />
-                </div>
-              </Link>
-            ))}
-            {!openTasks.length && (
-              <p className="py-3 text-xs text-textMuted">{tr("Tidak ada tugas terbuka. Tangkap sesuatu yang baru?")}</p>
-            )}
-          </div>
-          <Link
-            href="/focus"
-            className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"
-          >
-            <Timer size={13} /> {tr("Buka Fokus")}
-          </Link>
-        </Card>
-      </section>
-      <section className="grid gap-3 sm:grid-cols-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-accent">
-            <CheckCircle2 size={15} />
-            <span className="text-2xs font-bold uppercase tracking-[.12em]">{tr("Inbox")}</span>
-          </div>
-          <p className="mt-2 font-display text-2xl text-text">{inboxRows.length}</p>
-          <p className="text-2xs text-textMuted">{tr("item menunggu dipilah")}</p>
-          <Link href="/inbox" className="mt-3 inline-flex items-center gap-1 text-2xs font-semibold text-accent">
-            {tr("Pilah")} <ArrowRight size={11} />
-          </Link>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-accentSoft">
-            <Zap size={15} />
-            <span className="text-2xs font-bold uppercase tracking-[.12em]">{tr("Rutinitas")}</span>
-          </div>
-          <p className="mt-2 font-display text-2xl text-text">{(habits || []).length}</p>
-          <p className="text-2xs text-textMuted">{tr("check-in hari ini")}</p>
-          <Link href="/habits" className="mt-3 inline-flex items-center gap-1 text-2xs font-semibold text-accent">
-            {tr("Buka")} <ArrowRight size={11} />
-          </Link>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-accent">
-            <Droplets size={15} />
-            <span className="text-2xs font-bold uppercase tracking-[.12em]">{tr("Sinyal hari")}</span>
-          </div>
-          <p className="mt-2 break-words text-sm font-semibold text-text">
-            {overdue.length
-              ? tr("{overdue_length} hal perlu perhatian.", { overdue_length: overdue.length })
-              : focusMinutes
-                ? tr("Kamu sudah fokus {focusMinutes} menit.", { focusMinutes })
-                : tr("Hari ini belum punya sinyal kuat.")}
-          </p>
-          <Link href="/pulse" className="mt-3 inline-flex items-center gap-1 text-2xs font-semibold text-accent">
-            {tr("Life Pulse")} <ArrowRight size={11} />
-          </Link>
-        </Card>
-      </section>
-      <section className="rounded-2xl border border-border bg-surface px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2 text-2xs text-textMuted">
-          <Clock3 size={13} className="text-accent" />
-          <span>{tr("Semua yang muncul di sini adalah ringkasan. Tekan kartu untuk masuk ke sumber aslinya.")}</span>
-          <span className="ml-auto">{previewPlainText("Life OS", 20)}</span>
-        </div>
-      </section>
+      </div>
+    </section>
+
+    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" aria-label={tr("Aksi cepat")}>
+      <Link href="/tasks" className="shrink-0 rounded-xl border border-border bg-surface px-3 py-2.5 text-xs font-semibold text-text">+ {tr("Tugas")}</Link>
+      <Link href="/capture" className="shrink-0 rounded-xl border border-border bg-surface px-3 py-2.5 text-xs font-semibold text-text">+ {tr("Catatan")}</Link>
+      <Link href="/finance" className="shrink-0 rounded-xl border border-border bg-surface px-3 py-2.5 text-xs font-semibold text-text">+ {tr("Pengeluaran")}</Link>
+      <Link href="/search" className="shrink-0 rounded-xl border border-border bg-surface px-3 py-2.5 text-xs font-semibold text-text">{tr("Cari")}</Link>
     </div>
-  );
+
+    {currentAgenda&&<Link href="/calendar" className="flex items-center gap-3 rounded-2xl border border-accent/20 bg-accent/5 p-3.5 transition-colors duration-150 hover:border-accent/30">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-white"><Clock3 size={16}/></span>
+      <span className="min-w-0 flex-1"><span className="block text-2xs font-semibold text-accent">{tr("Sedang berlangsung")}</span>
+        <span className="mt-0.5 block truncate text-sm font-semibold text-text">{currentAgenda.title}</span>
+        <span className="mt-0.5 block text-2xs text-textMuted">{tr("Mulai {time}",{time:time(currentAgenda.start_time)})} · {tr("Selesai {time}",{time:time(currentAgenda.end_time)})}</span>
+      </span><ArrowRight size={14} className="shrink-0 text-accent"/>
+    </Link>}
+
+    <section className="grid gap-3 lg:grid-cols-[1.1fr_.9fr]">
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2"><div><p className="text-2xs font-semibold text-accent">{tr("Prioritas sekarang")}</p><h2 className="mt-0.5 font-display text-xl text-text">{tr("Tiga hal berikutnya")}</h2></div><Link href="/tasks" className="text-2xs font-semibold text-accent">{tr("Semua tugas")}</Link></div>
+        <div className="mt-3 space-y-2">{priorities.length?priorities.map((task:any)=><Link key={task.id} href="/tasks" className="flex items-start gap-3 rounded-xl border border-border bg-bg p-3 transition-colors duration-150 hover:border-accent/25">
+          <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${task.priority==="high"?"bg-danger":task.priority==="medium"?"bg-accentSoft":"bg-accent"}`}/>
+          <span className="min-w-0 flex-1"><span className="block line-clamp-2 text-sm font-semibold text-text">{task.title}</span>
+            <span className={`mt-1 block text-2xs ${task.due_at&&new Date(task.due_at).getTime()<now.getTime()?"text-danger":"text-textMuted"}`}>{task.due_at?tr("Tenggat {time}",{time:formatTimeInTimezone(task.due_at,timezone)}):tr("Tanpa tenggat")}</span>
+          </span><ArrowRight size={13} className="mt-1 shrink-0 text-textMuted"/>
+        </Link>):<div className="rounded-xl border border-dashed border-border p-4 text-sm text-textMuted">{tr("Belum ada tugas prioritas.")}
+        </div>}</div>
+      </Card>
+
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2"><div><p className="text-2xs font-semibold text-accent">{tr("Jadwal hari ini")}</p><h2 className="mt-0.5 font-display text-xl text-text">{tr("Agenda terdekat")}</h2></div><CalendarDays size={17} className="text-accent"/></div>
+        <div className="mt-3 space-y-2">{agendaRows.slice(0,5).map((a:any)=><Link key={a.id} href="/calendar" className="grid grid-cols-[48px_minmax(0,1fr)] gap-3 rounded-xl bg-bg p-3">
+          <span className="text-xs font-bold tabular-nums text-accent">{time(a.start_time)}</span><span className="min-w-0"><span className="block truncate text-xs font-semibold text-text">{a.title}</span><span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Mulai {time}",{time:time(a.start_time)})}{a.task_id?tr(" · terhubung tugas"):""}</span></span>
+        </Link>)}
+        {!agendaRows.length&&<div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-textMuted">{tr("Belum ada agenda hari ini.")}</div>}</div>
+      </Card>
+    </section>
+
+    <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Card className="p-4"><p className="text-xs text-textMuted">{tr("Tugas aktif")}</p><p className="mt-1 font-display text-2xl text-text">{openTasks.length}</p><p className="mt-1 text-2xs text-textMuted">{overdue.length?tr("{n} terlambat",{n:overdue.length}):tr("Tidak ada yang terlambat")}</p></Card>
+      <Card className="p-4"><p className="text-xs text-textMuted">{tr("Fokus")}</p><p className="mt-1 font-display text-2xl text-accent">{minutesLabel(focusMinutes)}</p><p className="mt-1 text-2xs text-textMuted">{tr("Fokus selesai hari ini")}</p></Card>
+      <Card className="p-4"><p className="text-xs text-textMuted">{tr("Hidrasi")}</p><p className="mt-1 font-display text-2xl text-accent">{water?tr("{water} ml",{water}):tr("0 / 2 L")}</p><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-accent" style={{width:`${hydrationPct}%`}}/></div><Link href="/health" className="mt-2 inline-flex text-2xs font-semibold text-accent">+250 ml <ArrowRight size={10} className="ml-1"/></Link></Card>
+      <Card className="p-4"><p className="text-xs text-textMuted">{tr("Rutinitas")}</p><p className="mt-1 font-display text-2xl text-text">{habits?.length||0}</p><p className="mt-1 text-2xs text-textMuted">{habits?.length?tr("check-in hari ini"):tr("Belum ada check-in hari ini")}</p><Link href="/habits" className="mt-2 inline-flex text-2xs font-semibold text-accent">{tr("Buka rutinitas")}</Link></Card>
+    </section>
+
+    <section className="rounded-2xl border border-accent/15 bg-accent/5 p-4">
+      <div className="flex items-start gap-3"><span className="rounded-xl bg-accent/10 p-2.5 text-accent"><Sparkles size={16}/></span><div className="min-w-0 flex-1">
+        <p className="text-2xs font-semibold text-accent">{tr("Saran Licia")}</p>
+        <p className="mt-1 line-clamp-2 text-sm font-semibold text-text">{overdue.length?tr("Ada {n} tugas yang sudah lewat tenggat.",{n:overdue.length}):priorities[0]?tr("Mulai dari “{title}” agar langkah berikutnya jelas.",{title:priorities[0].title}):tr("Hari masih longgar. Kamu bisa merapikan rencana atau menangkap hal baru.")}</p>
+        <Link href={overdue.length?"/tasks":"/plan"} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-2xs font-semibold text-white">{overdue.length?tr("Buka tugas"):tr("Buka rencana")}<ArrowRight size={11}/></Link>
+      </div></div>
+    </section>
+  </div>;
 }

@@ -102,7 +102,7 @@ const DEFAULTS: SettingsState = {
   language: "id",
   name: "",
   timezone: "Asia/Jakarta",
-  startPage: "dashboard",
+  startPage: "today",
   density: "comfortable",
   textScale: "normal",
   defaultAiMode: "assistant",
@@ -155,6 +155,8 @@ function Toggle({
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={checked}
       onClick={onChange}
       className={clsx(
         "flex min-w-0 items-center justify-between gap-3 rounded-2xl border p-3 text-left",
@@ -189,10 +191,11 @@ const sections = [
 type SectionId = (typeof sections)[number]["id"];
 
 function normalizeStartPage(value: unknown) {
-  const v = String(value || "dashboard");
+  const v = String(value || "today");
   const map: Record<string, string> = {
-    goals: "dashboard",
-    projects: "dashboard",
+    goals: "today",
+    projects: "today",
+    dashboard: "today",
     health: "wellbeing",
     habits: "wellbeing",
     learning: "knowledge",
@@ -215,7 +218,7 @@ function normalizeStartPage(value: unknown) {
   };
   return (
     map[v] ||
-    (v === "dashboard" || v === "plan" || v === "chat" || v === "capture" || v === "insights" ? v : "dashboard")
+    (v === "today" || v === "plan" || v === "chat" || v === "capture" || v === "insights" ? v : "today")
   );
 }
 
@@ -744,11 +747,11 @@ export default function SettingsPage() {
           </Card>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {[
-              ["Beranda", tr("Agenda hari ini, keuangan, target & proyek, dan sinyal penting."), "/dashboard"],
+              ["Beranda", tr("Prioritas, jadwal, dan langkah yang perlu kamu lihat hari ini."), "/today"],
               ["Rencana", tr("Tugas, Kalender, Fokus, Perencana, Inbox, dan Pengingat."), "/plan"],
               ["Chat Licia", tr("Percakapan, pertanyaan, analisis, dan aksi berbasis konteks."), "/chat"],
               ["Tangkap", tr("Simpan teks atau gambar dengan cepat tanpa berpindah-pindah menu."), "/capture"],
-              ["Insights", tr("Review, pola, relasi, aktivitas, dan otomasi."), "/insights"],
+              ["Insight", tr("Review, pola, relasi, aktivitas, dan otomasi."), "/insights"],
               [
                 "Target & Proyek",
                 tr("Kelola target dan proyek dari satu ruang yang saling terhubung."),
@@ -1063,7 +1066,7 @@ export default function SettingsPage() {
                   onChange={(e) => update("startPage", e.target.value)}
                   className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text"
                 >
-                  <option value="dashboard">{tr("Beranda")}</option>
+                  <option value="today">{tr("Beranda")}</option>
                   <option value="plan">{tr("Rencana")}</option>
                   <option value="chat">{tr("Chat Licia")}</option>
                   <option value="capture">{tr("Tangkap")}</option>
@@ -1293,7 +1296,7 @@ export default function SettingsPage() {
                 "Rencana",
                 "Chat Licia",
                 "Tangkap",
-                "Insights",
+                "Insight",
                 "Target & Proyek",
                 "Knowledge & Belajar",
                 "Keuangan",

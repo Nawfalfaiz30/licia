@@ -1,53 +1,36 @@
 "use client";
-
-import { Sparkles } from "lucide-react";
-import Link from "next/link";
-import { NotificationCenter } from "@/components/intelligence/NotificationCenter";
+import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
+import { NotificationCenter } from "@/components/intelligence/NotificationCenter";
 import { PALETTE_OPEN_EVENT } from "@/lib/shortcuts";
 import { useLanguage } from "@/components/LanguageProvider";
 import { SyncStatusBadge } from "@/components/layout/SyncStatusBadge";
+import { clsx } from "clsx";
 
 export function TopBar() {
-  const { t: tr } = useLanguage();
-  const { t } = useLanguage();
-  return (
-    <header className="relative z-header licia-topbar px-3 pt-[max(.65rem,env(safe-area-inset-top))] sm:px-6 sm:pt-4 md:ml-auto md:max-w-6xl md:px-8">
-      <div className="flex min-h-11 items-center justify-between gap-2 rounded-2xl border border-border/80 bg-surface/95 px-2 py-1.5 shadow-sm backdrop-blur-xl sm:px-2.5 md:border-transparent md:bg-transparent md:px-0 md:py-0 md:shadow-none md:backdrop-blur-0">
-        <Link
-          href="/chat"
-          className="topbar-licia licia-v32-interactive licia-v32-ripple group inline-flex min-h-10 min-w-0 items-center gap-2 rounded-xl border border-accent/20 bg-accent/5 px-2.5 py-2 text-xs font-semibold text-text transition hover:-translate-y-0.5 hover:border-accent/40 hover:bg-accent/10 md:hidden"
-        >
-          <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent/10 ring-1 ring-accent/15">
-            <Sparkles size={14} className="text-accent transition group-hover:scale-110" />
-          </span>
-          <span className="truncate">{tr("Tanya Licia")}</span>
-        </Link>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Link
-            href="/chat"
-            className="licia-v32-interactive hidden min-h-9 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent hover:text-accent md:flex"
-          >
-            <Sparkles size={14} />
-            <span>{tr("Tanya Licia")}</span>
-          </Link>
-          <div className="flex items-center gap-1.5">
-            <SyncStatusBadge />
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent(PALETTE_OPEN_EVENT))}
-              className="quick-search-control touch-target flex items-center justify-center rounded-xl border border-border bg-surface text-textMuted shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:text-accent"
-              aria-label={t("Cari seluruh Life OS")}
-              title={t("Cari seluruh Life OS") + " (Ctrl K)"}
-            >
-              <Search size={17} aria-hidden="true" />
-            </button>
-          </div>
-          <div className="topbar-notification relative">
-            <NotificationCenter />
-          </div>
-        </div>
+  const { t } = useLanguage(); const pathname = usePathname();
+  if (pathname === "/chat" || pathname?.startsWith("/chat/")) return null;
+  const labels: Array<[string,string]> = [
+    ["/today","Beranda"],["/tasks","Tugas"],["/calendar","Kalender"],["/finance","Keuangan"],["/plan","Rencana"],["/focus","Fokus"],
+    ["/goals-projects","Target & Proyek"],["/knowledge","Catatan & Belajar"],["/wellbeing","Kesehatan & Rutinitas"],["/automations","Otomasi"],
+    ["/life-map","Peta Hidup"],["/insights","Insight"],["/guide","Panduan"],["/settings","Pengaturan"],
+  ];
+  const title = labels.find(([href]) => pathname === href || pathname?.startsWith(href + "/"))?.[1] || "Licia";
+  return <header className="licia-topbar sticky top-0 z-header px-3 pt-[max(.5rem,env(safe-area-inset-top))] sm:px-6 md:px-8">
+    <div className="flex h-14 items-center justify-between gap-3 border-b border-border/80 bg-bg/92 backdrop-blur-xl">
+      <div className="min-w-0"><p className="hidden text-2xs font-semibold text-textMuted md:block">{t("Licia")}</p><h1 className="truncate font-display text-lg text-text">{t(title)}</h1></div>
+      <div className="ml-auto flex items-center gap-1.5">
+        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent(PALETTE_OPEN_EVENT))}
+          className={clsx("hidden min-h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-textMuted transition-colors duration-150 hover:border-accent hover:text-accent md:flex")}
+          aria-label={t("Cari seluruh Life OS")} title={t("Cari seluruh Life OS") + " (Ctrl K)"}>
+          <Search size={15} aria-hidden="true" /><span>{t("Cari")}</span><kbd className="rounded-md border border-border bg-bg px-1.5 py-0.5 font-mono text-[10px]">Ctrl K</kbd>
+        </button>
+        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent(PALETTE_OPEN_EVENT))}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface text-textMuted md:hidden" aria-label={t("Cari")}>
+          <Search size={16} aria-hidden="true" />
+        </button>
+        <SyncStatusBadge /><NotificationCenter />
       </div>
-    </header>
-  );
+    </div>
+  </header>;
 }

@@ -25,7 +25,8 @@ export default async function Home() {
   const { data: profile } = await supabase.from("users").select("preferences").eq("id", user.id).single();
   const startPage = (profile?.preferences as any)?.startPage;
   const startRoutes: Record<string, string> = {
-    dashboard: "/dashboard",
+    today: "/today",
+    dashboard: "/today",
     today: "/today",
     brief: "/brief",
     focus: "/focus",

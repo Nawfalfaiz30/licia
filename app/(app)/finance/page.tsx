@@ -29,6 +29,7 @@ import { mutateEntity } from "@/lib/sync/client";
 
 import { useLanguage } from "@/components/LanguageProvider";
 import { documentLocale } from "@/lib/format";
+import { formatDateTimeInTimezone } from "@/lib/date";
 type Expense = {
   id: string;
   amount: number;
@@ -142,6 +143,7 @@ export default function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [range, setRange] = useState(6);
+  const [timezone, setTimezone] = useState("Asia/Jakarta");
   async function load() {
     setLoading(true);
     setLoadError(false);
@@ -153,6 +155,8 @@ export default function FinancePage() {
         setLoading(false);
         return;
       }
+      const { data: profile } = await supabase.from("users").select("timezone").eq("id", user.id).single();
+      setTimezone(profile?.timezone || "Asia/Jakarta");
       const [e, i, b, a, s, tr, summaryResponse] = await Promise.all([
         supabase
           .from("expenses")
@@ -476,31 +480,10 @@ export default function FinancePage() {
         : "Stabil";
   return (
     <div className="finance-page space-y-7 pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">
-      <header className="relative overflow-hidden rounded-3xl border border-border bg-surface p-5 sm:p-7">
-        <div className="absolute -right-14 -top-14 h-48 w-48 rounded-full bg-accent/10 blur-3xl animate-licia-float" />
-        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-              <CircleDollarSign size={14} /> {trn("UANG PRIBADI")}
-            </p>
-            <h1 className="font-display text-3xl text-text">{trn("Keuangan")}</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-textMuted">
-              {trn(
-                "Kelola arus uang tanpa tampilan seperti spreadsheet. Ringkasan dibuat bertingkat agar nyaman di laptop maupun ponsel.",
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-xl border border-border bg-bg px-3 py-2 text-xs text-textMuted">
-              {monthLabel(now)}
-            </span>
-            <button
-              onClick={() => setRange((v) => (v === 6 ? 12 : 6))}
-              className="min-h-11 rounded-xl border border-border bg-bg px-3 py-2 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"
-            >
-              {trn("Tren {range} bulan", { range })}
-            </button>
-          </div>
+      <header className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h1 className="font-display text-2xl text-text">{trn("Keuangan")}</h1><p className="mt-0.5 text-xs text-textMuted">{trn("Ringkasan arus kas bulan ini.")}</p></div>
+          <div className="flex items-center gap-2"><span className="rounded-xl border border-border bg-bg px-3 py-2 text-xs text-textMuted">{monthLabel(now)}</span><button type="button" onClick={()=>setRange(v=>v===6?12:6)} className="hidden min-h-10 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-textMuted sm:inline-flex">{trn("Tren {range} bulan",{range})}</button><button type="button" onClick={()=>setTab("transactions")} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white"><Plus size={14}/>{trn("Transaksi")}</button></div>
         </div>
       </header>
       <div
@@ -554,7 +537,84 @@ export default function FinancePage() {
         </div>
       ) : tab === "overview" ? (
         <div className="space-y-5">
-          <Card className="border-accent/15 bg-gradient-to-br from-accent/10 via-surface to-surface">
+          <div className="finance-summary-row grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                    <WalletCards size={16} />
+                  </span>
+                  <span className="truncate text-xs text-textMuted">{trn("Total saldo")}</span>
+                </div>
+                <span
+                  className={clsx(
+                    "shrink-0 rounded-full px-2 py-1 text-2xs font-bold",
+                    net < 0 ? "bg-danger/10 text-danger" : "bg-accent/10 text-accent",
+                  )}
+                >
+                  {net < 0 ? trn("Minus") : trn("Tersedia")}
+                </span>
+              </div>
+              <p
+                className={clsx(
+                  "mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.65rem,7vw,2.25rem)] leading-none tabular-nums",
+                  net < 0 ? "text-danger" : "text-text",
+                )}
+              >
+                {rupiah(net)}
+              </p>
+              <p className="mt-2 text-2xs leading-relaxed text-textMuted">
+                {trn("Gabungan saldo semua dompet yang terhubung ke transaksi.")}
+              </p>
+            </Card>
+            <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+                  <TrendingUp size={15} />
+                </span>
+                <span className="min-w-0 text-xs leading-tight text-textMuted">{trn("Pemasukan bulan ini")}</span>
+              </div>
+              <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.25rem,5.8vw,1.75rem)] leading-none text-success tabular-nums">
+                {rupiah(monthIncome)}
+              </p>
+              <p className="mt-2 text-2xs text-textMuted">{previousMonth ? trn("{delta}% vs bulan lalu",{delta:Math.round(((monthIncome-(previousMonth.income||0))/Math.max(1,Math.abs(previousMonth.income||0)))*100)}) : trn("Uang masuk")}</p>
+            </Card>
+            <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-danger/10 text-danger">
+                  <TrendingDown size={15} />
+                </span>
+                <span className="min-w-0 text-xs leading-tight text-textMuted">{trn("Pengeluaran bulan ini")}</span>
+              </div>
+              <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.25rem,5.8vw,1.75rem)] leading-none text-danger tabular-nums">
+                {rupiah(monthExpense)}
+              </p>
+              <p className="mt-2 text-2xs text-textMuted">{expenseDelta === null ? trn("Uang keluar") : trn("{delta}% vs bulan lalu",{delta:expenseDelta})}</p>
+            </Card>
+            <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                  <PiggyBank size={15} />
+                </span>
+                <span className="text-xs text-textMuted">{trn("Rasio tabungan")}</span>
+              </div>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <p
+                  className={clsx(
+                    "font-display text-[clamp(1.5rem,6vw,2rem)] leading-none tabular-nums",
+                    savingRate < 0 ? "text-danger" : "text-text",
+                  )}
+                >
+                  {savingRate}%
+                </p>
+                <span className="text-right text-2xs leading-tight text-textMuted">{trn("dari pemasukan")}</span>
+              </div>
+              <p className="mt-2 text-2xs text-textMuted">{previousMonth ? trn("vs bulan lalu {delta} poin",{delta:Math.round(savingRate-(previousMonth.income>0?((previousMonth.income-previousMonth.expense)/previousMonth.income)*100:0))}) : trn("Dari pemasukan bulan ini.")}</p>
+            </Card>
+          </div>
+
+          {upcomingSubscriptions.length > 0 ? (
+<Card className="border-accent/15 bg-gradient-to-br from-accent/10 via-surface to-surface">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <span className="rounded-2xl bg-accent/10 p-3 text-accent">
@@ -627,80 +687,15 @@ export default function FinancePage() {
               </div>
             )}
           </Card>
-          <div className="finance-summary-row grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="col-span-2 overflow-hidden p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
-                    <WalletCards size={16} />
-                  </span>
-                  <span className="truncate text-xs text-textMuted">{trn("Total saldo dompet")}</span>
-                </div>
-                <span
-                  className={clsx(
-                    "shrink-0 rounded-full px-2 py-1 text-2xs font-bold",
-                    net < 0 ? "bg-danger/10 text-danger" : "bg-accent/10 text-accent",
-                  )}
-                >
-                  {net < 0 ? trn("Minus") : trn("Tersedia")}
-                </span>
-              </div>
-              <p
-                className={clsx(
-                  "mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.65rem,7vw,2.25rem)] leading-none tabular-nums",
-                  net < 0 ? "text-danger" : "text-text",
-                )}
-              >
-                {rupiah(net)}
-              </p>
-              <p className="mt-2 text-2xs leading-relaxed text-textMuted">
-                {trn("Gabungan saldo semua dompet yang terhubung ke transaksi.")}
-              </p>
-            </Card>
-            <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
-                  <TrendingUp size={15} />
-                </span>
-                <span className="min-w-0 text-xs leading-tight text-textMuted">{trn("Pemasukan bulan ini")}</span>
-              </div>
-              <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.25rem,5.8vw,1.75rem)] leading-none text-success tabular-nums">
-                {rupiah(monthIncome)}
-              </p>
-              <p className="mt-2 text-2xs text-textMuted">{trn("Uang masuk")}</p>
-            </Card>
-            <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-danger/10 text-danger">
-                  <TrendingDown size={15} />
-                </span>
-                <span className="min-w-0 text-xs leading-tight text-textMuted">{trn("Pengeluaran bulan ini")}</span>
-              </div>
-              <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.25rem,5.8vw,1.75rem)] leading-none text-danger tabular-nums">
-                {rupiah(monthExpense)}
-              </p>
-              <p className="mt-2 text-2xs text-textMuted">{trn("Uang keluar")}</p>
-            </Card>
-            <Card className="col-span-2 min-w-0 overflow-hidden p-4 sm:col-span-2 sm:p-5 lg:col-span-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
-                  <PiggyBank size={15} />
-                </span>
-                <span className="text-xs text-textMuted">{trn("Ruang simpan")}</span>
-              </div>
-              <div className="mt-3 flex items-end justify-between gap-3">
-                <p
-                  className={clsx(
-                    "font-display text-[clamp(1.5rem,6vw,2rem)] leading-none tabular-nums",
-                    savingRate < 0 ? "text-danger" : "text-text",
-                  )}
-                >
-                  {savingRate}%
-                </p>
-                <span className="text-right text-2xs leading-tight text-textMuted">{trn("rasio bersih")}</span>
-              </div>
-              <p className="mt-2 text-2xs text-textMuted">{trn("Dari pemasukan bulan ini.")}</p>
-            </Card>
+          ) : (
+            <div className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3.5">
+              <div className="flex min-w-0 items-center gap-2"><CalendarClock size={15} className="shrink-0 text-accent"/><span className="truncate text-xs font-semibold text-text">{trn("Belum ada langganan")}</span></div>
+              <button type="button" onClick={() => void openSubscriptions()} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-2xs font-semibold text-white"><Plus size={13}/>{trn("Tambah")}</button>
+            </div>
+          )}
+          <div className="rounded-xl border border-border bg-bg px-3 py-2.5">
+            {upcomingSubscriptions.length ? <div className="flex min-w-0 flex-wrap items-center gap-2"><span className="text-2xs font-semibold text-textMuted">{trn("Komitmen berikutnya")}</span>{upcomingSubscriptions.slice(0,2).map((s)=><button key={s.id} type="button" onClick={()=>setTab("subscriptions")} className="rounded-full border border-border bg-surface px-2.5 py-1.5 text-2xs font-semibold text-text">{s.name} · {rupiah(Number(s.amount))}</button>)}<button type="button" onClick={()=>setTab("subscriptions")} className="text-2xs font-semibold text-accent">{trn("Lihat semua")}</button></div> :
+              <div className="flex items-center justify-between gap-3"><span className="text-2xs text-textMuted">{trn("Belum ada langganan aktif.")}</span><button type="button" onClick={()=>setTab("subscriptions")} className="text-2xs font-semibold text-accent">+ {trn("Tambah")}</button></div>}
           </div>
           <Card className="border-accent/15 bg-gradient-to-br from-accent/5 via-surface to-surface p-4 sm:p-5 animate-licia-action-burst">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -952,10 +947,7 @@ export default function FinancePage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-semibold text-text">{x.label}</p>
                         <p className="text-2xs text-textMuted">
-                          {new Date(x.occurred_at).toLocaleDateString(documentLocale(), {
-                            day: "numeric",
-                            month: "short",
-                          })}
+                          {formatDateTimeInTimezone(x.occurred_at, timezone).split(" pukul ")[0]}
                         </p>
                       </div>
                       <span
@@ -1107,13 +1099,7 @@ export default function FinancePage() {
                     <div className="min-w-0 flex-1 basis-[calc(100%-3.5rem)] sm:basis-auto">
                       <p className="break-words text-sm font-semibold text-text">{x.label}</p>
                       <p className="mt-0.5 break-words text-2xs text-textMuted">
-                        {new Date(x.occurred_at).toLocaleString(documentLocale(), {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatDateTimeInTimezone(x.occurred_at, timezone)}
                         {x.note
                           ? trn(" · {previewPlainText}", { previewPlainText: previewPlainText(x.note, 120) })
                           : ""}
@@ -1504,6 +1490,7 @@ export default function FinancePage() {
           )}
         </div>
       )}
+      <button type="button" onClick={()=>setTab("transactions")} className="fixed bottom-[calc(var(--nav-h)+env(safe-area-inset-bottom)+12px)] right-4 z-[45] flex h-12 w-12 items-center justify-center rounded-full bg-accent text-white shadow-lg md:hidden" aria-label={trn("Tambah transaksi")}><Plus size={20}/></button>
     </div>
   );
 }

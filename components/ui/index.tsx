@@ -16,7 +16,7 @@ export function Card({
     <div
       id={id}
       className={clsx(
-        "licia-card-motion rounded-2xl border border-border shadow-sm transition-[transform,box-shadow,border-color] duration-300 animate-licia-card-in",
+        "licia-card rounded-[var(--radius-lg)] border border-border shadow-sm transition-[box-shadow,border-color] duration-180",
         raised ? "bg-surfaceRaised" : "bg-surface",
         "hover:shadow-md",
         className,
@@ -77,7 +77,7 @@ export function PrimaryButton({ children, className, ...props }: React.ButtonHTM
     <button
       {...props}
       className={clsx(
-        "licia-v33-ripple licia-v33-interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 font-medium text-white shadow-sm transition hover:-translate-y-1 active:translate-y-0 active:scale-[0.985] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:pointer-events-none disabled:opacity-60",
+        "licia-v33-ripple inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 font-medium text-white shadow-sm transition-[box-shadow,opacity] duration-180 hover:opacity-90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:pointer-events-none disabled:opacity-60",
         className,
       )}
     >
@@ -103,7 +103,7 @@ export function SoftButton({ children, className, ...props }: React.ButtonHTMLAt
     <button
       {...props}
       className={clsx(
-        "licia-v33-ripple licia-v33-interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm font-medium text-textMuted transition hover:-translate-y-1 active:scale-[0.985] hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:pointer-events-none disabled:opacity-50",
+        "licia-v33-ripple inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm font-medium text-textMuted transition-[box-shadow,border-color,color] duration-180 hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
     >
@@ -116,3 +116,6 @@ export { ActionDialog, TextPromptDialog } from "./dialog";
 export { ToastProvider, notifyToast } from "./toast";
 
 export { AnimatedNumber } from "./AnimatedNumber";
+
+export function Chip({children,active=false,tone="default",onClick,className}:{children:React.ReactNode;active?:boolean;tone?:"default"|"accent"|"danger"|"success";onClick?:()=>void;className?:string}){const body=<span className={clsx("inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border px-3 text-2xs font-semibold transition-colors duration-180",active?"border-accent bg-accent text-white":tone==="danger"?"border-danger/20 bg-danger/5 text-danger":tone==="success"?"border-success/20 bg-success/5 text-success":tone==="accent"?"border-accent/20 bg-accent/5 text-accent":"border-border bg-surface text-textMuted",className)}>{children}</span>;return onClick?<button type="button" onClick={onClick} className="shrink-0">{body}</button>:body;}
+export function Skeleton({className}:{className?:string}){return <div aria-hidden="true" className={clsx("animate-pulse rounded-[var(--radius-md)] bg-bg",className)}/>;}
