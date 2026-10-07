@@ -31,11 +31,11 @@ const domainKeywords: Record<AiDomain, string[]> = {
 
 const readTools: Partial<Record<AiDomain, string[]>> = {
   overview: ["get_today_overview", "get_life_snapshot", "get_daily_brain", "get_life_graph", "search_life_os", "resolve_calendar_date"], tasks: ["get_tasks", "get_task_dependencies", "get_life_graph"], calendar: ["get_schedule", "resolve_calendar_date", "get_life_graph"], focus: ["get_pomodoro_sessions", "get_tasks"],
-  finance: ["get_expense_summary", "get_incomes", "get_budgets", "get_accounts", "get_net_worth", "get_subscriptions"], health: ["get_health_summary", "get_life_module_data"], goals: ["get_goals", "get_life_graph"], notes: ["get_notes", "get_life_module_data"],
-  inbox: ["get_today_overview", "get_life_module_data"], decisions: ["get_decisions"], learning: ["get_skills"], reading: ["get_reading_list", "get_life_module_data"], habits: ["get_habits", "get_life_module_data"], subscriptions: ["get_subscriptions"], memory: ["get_memories"], vault: ["get_vault_items"], automations: ["get_automation_rules", "get_ai_watchers"], reminders: ["get_reminders"], projects: ["get_projects", "get_life_module_data", "get_life_graph"],
+  finance: ["get_expense_summary", "get_incomes", "get_budgets", "get_accounts", "get_net_worth", "get_subscriptions"], health: ["get_health_summary", "get_life_module_data"], goals: ["get_goals", "get_life_graph"], notes: ["get_notes", "get_life_module_data", "search_ai_knowledge"],
+  inbox: ["get_today_overview", "get_life_module_data"], decisions: ["get_decisions", "search_ai_knowledge"], learning: ["get_skills"], reading: ["get_reading_list", "get_life_module_data", "search_ai_knowledge"], habits: ["get_habits", "get_life_module_data"], subscriptions: ["get_subscriptions"], memory: ["get_memories", "search_ai_knowledge"], vault: ["get_vault_items", "search_ai_knowledge"], automations: ["get_automation_rules", "get_ai_watchers"], reminders: ["get_reminders"], projects: ["get_projects", "get_life_module_data", "get_life_graph"],
   notifications: ["get_notifications"],
   journal: ["get_life_module_data"], relations: ["get_life_module_data"],
-  all: ["get_unified_life_snapshot", "get_life_module_data", "get_daily_brain", "get_ai_watchers", "search_life_os", "get_notifications"],
+  all: ["get_unified_life_snapshot", "get_life_module_data", "get_daily_brain", "get_ai_watchers", "search_life_os", "search_ai_knowledge", "get_notifications"],
 };
 
 const writeTools: Partial<Record<AiDomain, string[]>> = {
