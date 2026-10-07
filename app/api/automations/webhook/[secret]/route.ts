@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertJsonSize, rateLimit } from "@/lib/security";
 import { sha256Hex } from "@/lib/integrations/secretBox";
-import { rateLimit } from "@/lib/security";
+import { assertJsonSize, rateLimit } from "@/lib/security";
 
 type Params={params:Promise<{secret:string}>};
 
