@@ -56,7 +56,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
     related = copilot.evidence
       .filter((x: any) => `${x.label} ${x.detail} ${x.sourceType}`.toLowerCase().includes(q.toLowerCase()))
       .slice(0, 6);
-    const like = `%${q.replace(/[\\%_]/g, "\\q.replace(/[%_]/g, "\\$&")")}%`;
+    const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
     const [tasks, projects, goals, notes, inbox, agenda, decisions, habits, subs, memory, vault, automations] =
       await Promise.all([
         supabase.from("tasks").select("id,title,status,due_at").eq("user_id", user.id).ilike("title", like).limit(20),
