@@ -57,16 +57,33 @@ export async function hybridSearch(
 
 export async function upsertKnowledgeDocument(
   supabase: SupabaseClient,
-  input: { userId: string; sourceType: string; sourceId: string; title?: string; content?: string; sourceHash?: string },
+  input: { userId: string; sourceType: string; sourceId: string; title?: string; content?: string; sourceHash?: string; embed?: boolean },
 ) {
-  const body = {
+  const title = String(input.title || "").slice(0, 500);
+  const content = String(input.content || "").slice(0, 20000);
+  const body: Record<string, unknown> = {
     user_id: input.userId,
     source_type: input.sourceType,
     source_id: input.sourceId,
-    title: String(input.title || "").slice(0, 500),
-    content: String(input.content || "").slice(0, 20000),
+    title,
+    content,
     source_hash: input.sourceHash ?? null,
     updated_at: new Date().toISOString(),
   };
+  if (input.embed !== false) {
+    const embedding = await embedQuery((title + "\n" + content).slice(0, 8000));
+    if (embedding) body.embedding = embedding;
+  }
   return supabase.from("ai_knowledge_index").upsert(body, { onConflict: "user_id,source_type,source_id" });
+}
+
+export async function removeKnowledgeDocument(
+  supabase: SupabaseClient,
+  input: { userId: string; sourceType: string; sourceId: string },
+) {
+  return supabase.from("ai_knowledge_index")
+    .delete()
+    .eq("user_id", input.userId)
+    .eq("source_type", input.sourceType)
+    .eq("source_id", input.sourceId);
 }
