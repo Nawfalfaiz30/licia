@@ -3430,16 +3430,19 @@ export const enPhrases: Record<string, string> = {
   "Telemetry gagal disimpan.": "Failed to save telemetry.",
   "Faktor keamanan tidak dapat dimuat.": "Security factors could not be loaded.",
   "Authenticator tidak dapat dibuat.": "Authenticator could not be created.",
-  "Authenticator dibuat. Tambahkan ke aplikasi authenticator lalu masukkan kode 6 digit.": "Authenticator created. Add it to your authenticator app, then enter the 6-digit code.",
+  "Authenticator dibuat. Tambahkan ke aplikasi authenticator lalu masukkan kode 6 digit.":
+    "Authenticator created. Add it to your authenticator app, then enter the 6-digit code.",
   "Masukkan kode 6 digit dari authenticator.": "Enter the 6-digit code from your authenticator.",
   "Challenge MFA gagal dibuat.": "MFA challenge could not be created.",
   "Kode verifikasi tidak valid.": "Invalid verification code.",
   "Memeriksa keamanan sesi…": "Checking session security…",
   "Step-up security": "Step-up security",
   "Verifikasi sebelum aksi sensitif": "Verify before sensitive actions",
-  "Licia meminta faktor kedua sebelum ekspor data penuh, pemulihan backup, operasi Vault, transfer uang, atau penghapusan massal.": "Licia requests a second factor before full data export, backup restore, Vault operations, money transfers, or bulk deletion.",
+  "Licia meminta faktor kedua sebelum ekspor data penuh, pemulihan backup, operasi Vault, transfer uang, atau penghapusan massal.":
+    "Licia requests a second factor before full data export, backup restore, Vault operations, money transfers, or bulk deletion.",
   "Aktifkan Authenticator": "Enable Authenticator",
-  "Licia menggunakan TOTP seperti Google Authenticator, Microsoft Authenticator, atau 1Password. Setelah verifikasi pertama selesai, sesi Licia lain dapat diminta login ulang oleh Supabase.": "Licia uses TOTP such as Google Authenticator, Microsoft Authenticator, or 1Password. After the first verification, other Licia sessions may be asked to sign in again by Supabase.",
+  "Licia menggunakan TOTP seperti Google Authenticator, Microsoft Authenticator, atau 1Password. Setelah verifikasi pertama selesai, sesi Licia lain dapat diminta login ulang oleh Supabase.":
+    "Licia uses TOTP such as Google Authenticator, Microsoft Authenticator, or 1Password. After the first verification, other Licia sessions may be asked to sign in again by Supabase.",
   "Pindai QR code": "Scan QR code",
   "QR code untuk Authenticator": "QR code for Authenticator",
   "Secret manual": "Manual secret",
@@ -3447,6 +3450,7 @@ export const enPhrases: Record<string, string> = {
   "Memverifikasi…": "Verifying…",
   "Verifikasi & lanjutkan": "Verify & continue",
   "Faktor aktif": "Factor active",
-  "Authenticator": "Authenticator",
-  "Verifikasi step-up berlaku sekitar 10 menit. Untuk keamanan, jangan berikan kode authenticator kepada siapa pun.": "Step-up verification is valid for about 10 minutes. For security, never share your authenticator code with anyone.",
+  Authenticator: "Authenticator",
+  "Verifikasi step-up berlaku sekitar 10 menit. Untuk keamanan, jangan berikan kode authenticator kepada siapa pun.":
+    "Step-up verification is valid for about 10 minutes. For security, never share your authenticator code with anyone.",
 };
