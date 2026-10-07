@@ -8,8 +8,8 @@ val liciaHost = java.net.URI(liciaUrl).host ?: "licia.site"
 val liciaVersionFile = rootProject.file("../../config/licia-version.json")
 val liciaVersion = if (liciaVersionFile.exists()) {
     val versionText = liciaVersionFile.readText()
-    Regex("""\"appVersion\"\s*:\s*\"([^\"]+)\"""").find(versionText)?.groupValues?.getOrNull(1) ?: "0.57.0"
-} else "0.57.0"
+    Regex("""\"appVersion\"\s*:\s*\"([^\"]+)\"""").find(versionText)?.groupValues?.getOrNull(1) ?: "0.58.0"
+} else "0.58.0"
 
 android {
     namespace = "com.licia.lifeos"
@@ -63,5 +63,8 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-ktx:1.10.1")
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
+    implementation("androidx.health.connect:connect-client:1.1.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 }
