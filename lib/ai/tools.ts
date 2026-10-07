@@ -1563,17 +1563,15 @@ async function createScheduleReminder(ctx: HandlerCtx, args: any) {
       .eq("id", existingRule[0].id)
       .eq("user_id", ctx.userId);
   } else {
-    await ctx.supabase
-      .from("automations")
-      .insert({
-        user_id: ctx.userId,
-        name,
-        trigger_type: "schedule_soon",
-        trigger_config: { schedule_block_id: block.id, minutes },
-        action_type: "notify",
-        action_config: {},
-        enabled: args.enabled !== false,
-      });
+    await ctx.supabase.from("automations").insert({
+      user_id: ctx.userId,
+      name,
+      trigger_type: "schedule_soon",
+      trigger_config: { schedule_block_id: block.id, minutes },
+      action_type: "notify",
+      action_config: {},
+      enabled: args.enabled !== false,
+    });
   }
   return {
     ok: true,
@@ -2827,14 +2825,12 @@ async function getLifeSnapshot(ctx: HandlerCtx) {
       active_subscriptions: (subsRes.data ?? []).length,
       decisions_needing_review: (decisionsRes.data ?? []).length,
     },
-    today_agenda: (agendaRes.data ?? [])
-      .slice(0, 6)
-      .map((x: any) => ({
-        title: x.title,
-        date: x.block_date,
-        start: String(x.start_time).slice(0, 5),
-        end: String(x.end_time).slice(0, 5),
-      })),
+    today_agenda: (agendaRes.data ?? []).slice(0, 6).map((x: any) => ({
+      title: x.title,
+      date: x.block_date,
+      start: String(x.start_time).slice(0, 5),
+      end: String(x.end_time).slice(0, 5),
+    })),
     tasks: tasks
       .slice(0, 8)
       .map((x: any) => ({ title: x.title, status: x.status, priority: x.priority, due_at: x.due_at })),
@@ -2854,14 +2850,12 @@ async function getLifeSnapshot(ctx: HandlerCtx) {
     inbox: (inboxRes.data ?? [])
       .slice(0, 5)
       .map((x: any) => ({ content: String(x.content || "").slice(0, 160), kind: x.kind })),
-    subscriptions: (subsRes.data ?? [])
-      .slice(0, 5)
-      .map((x: any) => ({
-        name: x.name,
-        amount: x.amount,
-        next_billing_date: x.next_billing_date,
-        billing_cycle: x.billing_cycle,
-      })),
+    subscriptions: (subsRes.data ?? []).slice(0, 5).map((x: any) => ({
+      name: x.name,
+      amount: x.amount,
+      next_billing_date: x.next_billing_date,
+      billing_cycle: x.billing_cycle,
+    })),
     routine_checkins_this_month: (habitsRes.data ?? []).length,
     decisions_due: (decisionsRes.data ?? [])
       .slice(0, 5)

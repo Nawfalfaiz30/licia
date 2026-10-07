@@ -193,15 +193,13 @@ export async function POST(req: Request) {
         if (!saved.error && saved.data?.id) undoIds.push(saved.data.id);
       }
     }
-    await supabase
-      .from("ai_function_call_logs")
-      .insert({
-        user_id: user.id,
-        raw_user_text: String(pending.user_text || ""),
-        function_name: tool,
-        arguments: args,
-        status: result?.ok ? "success" : "error",
-      });
+    await supabase.from("ai_function_call_logs").insert({
+      user_id: user.id,
+      raw_user_text: String(pending.user_text || ""),
+      function_name: tool,
+      arguments: args,
+      status: result?.ok ? "success" : "error",
+    });
   }
 
   const failedItems = performed.filter((x) => !x.ok);

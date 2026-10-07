@@ -107,33 +107,27 @@ export async function GET(req: Request) {
           href: "/tasks",
           tone: "danger",
         })),
-      ...((subsRes.data ?? []) as any[])
-        .slice(0, 5)
-        .map((s) => ({
-          id: `sub-${s.id}`,
-          title: "Langganan mendekati tagihan",
-          detail: s.name,
-          href: "/finance?tab=subscriptions",
-          tone: "accent",
-        })),
-      ...((decisionsRes.data ?? []) as any[])
-        .slice(0, 5)
-        .map((d) => ({
-          id: `decision-${d.id}`,
-          title: "Keputusan perlu ditinjau",
-          detail: d.title,
-          href: "/decisions",
-          tone: "accentSoft",
-        })),
-      ...((projectsRes.data ?? []) as any[])
-        .slice(0, 5)
-        .map((p) => ({
-          id: `project-${p.id}`,
-          title: "Project mendekati deadline",
-          detail: p.name,
-          href: "/goals-projects",
-          tone: "accent",
-        })),
+      ...((subsRes.data ?? []) as any[]).slice(0, 5).map((s) => ({
+        id: `sub-${s.id}`,
+        title: "Langganan mendekati tagihan",
+        detail: s.name,
+        href: "/finance?tab=subscriptions",
+        tone: "accent",
+      })),
+      ...((decisionsRes.data ?? []) as any[]).slice(0, 5).map((d) => ({
+        id: `decision-${d.id}`,
+        title: "Keputusan perlu ditinjau",
+        detail: d.title,
+        href: "/decisions",
+        tone: "accentSoft",
+      })),
+      ...((projectsRes.data ?? []) as any[]).slice(0, 5).map((p) => ({
+        id: `project-${p.id}`,
+        title: "Project mendekati deadline",
+        detail: p.name,
+        href: "/goals-projects",
+        tone: "accent",
+      })),
     ].slice(0, 15);
     for (const item of notifications) {
       await upsertNotificationEvent(supabase, {
@@ -407,42 +401,34 @@ export async function GET(req: Request) {
     });
 
   const notifications = [
-    ...overdue
-      .slice(0, 5)
-      .map((t: any) => ({
-        id: `task-${t.id}`,
-        title: "Tugas melewati tenggat",
-        detail: t.title,
-        href: "/tasks",
-        tone: "danger",
-      })),
-    ...dueSubs
-      .slice(0, 5)
-      .map((s: any) => ({
-        id: `sub-${s.id}`,
-        title: "Langganan mendekati tagihan",
-        detail: s.name,
-        href: "/finance?tab=subscriptions",
-        tone: "accent",
-      })),
-    ...(decisionsRes.data ?? [])
-      .slice(0, 5)
-      .map((d: any) => ({
-        id: `decision-${d.id}`,
-        title: "Keputusan perlu ditinjau",
-        detail: d.title,
-        href: "/decisions",
-        tone: "accentSoft",
-      })),
-    ...nearProjects
-      .slice(0, 5)
-      .map((p: any) => ({
-        id: `project-${p.id}`,
-        title: "Project mendekati deadline",
-        detail: p.name,
-        href: "/goals-projects",
-        tone: "accent",
-      })),
+    ...overdue.slice(0, 5).map((t: any) => ({
+      id: `task-${t.id}`,
+      title: "Tugas melewati tenggat",
+      detail: t.title,
+      href: "/tasks",
+      tone: "danger",
+    })),
+    ...dueSubs.slice(0, 5).map((s: any) => ({
+      id: `sub-${s.id}`,
+      title: "Langganan mendekati tagihan",
+      detail: s.name,
+      href: "/finance?tab=subscriptions",
+      tone: "accent",
+    })),
+    ...(decisionsRes.data ?? []).slice(0, 5).map((d: any) => ({
+      id: `decision-${d.id}`,
+      title: "Keputusan perlu ditinjau",
+      detail: d.title,
+      href: "/decisions",
+      tone: "accentSoft",
+    })),
+    ...nearProjects.slice(0, 5).map((p: any) => ({
+      id: `project-${p.id}`,
+      title: "Project mendekati deadline",
+      detail: p.name,
+      href: "/goals-projects",
+      tone: "accent",
+    })),
   ].slice(0, 12);
 
   for (const item of notifications) {

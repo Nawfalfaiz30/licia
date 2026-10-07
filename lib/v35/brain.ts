@@ -178,15 +178,13 @@ export async function buildDailyBrain(supabase: SupabaseClient, userId: string, 
         ...overdue
           .slice(0, 3)
           .map((x: any) => ({ type: "task", title: x.title, reason: "Terlambat", href: "/tasks", id: x.id })),
-        ...nearGoals
-          .slice(0, 2)
-          .map((x: any) => ({
-            type: "goal",
-            title: x.title,
-            reason: `${Number(x.progress || 0)}% · tenggat dekat`,
-            href: "/goals",
-            id: x.id,
-          })),
+        ...nearGoals.slice(0, 2).map((x: any) => ({
+          type: "goal",
+          title: x.title,
+          reason: `${Number(x.progress || 0)}% · tenggat dekat`,
+          href: "/goals",
+          id: x.id,
+        })),
         ...urgent
           .slice(0, 2)
           .map((x: any) => ({ type: "task", title: x.title, reason: "Prioritas tinggi", href: "/tasks", id: x.id })),

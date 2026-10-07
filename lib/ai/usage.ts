@@ -14,16 +14,14 @@ export async function recordAiUsage(
   const total = Number(input.usage?.total_tokens || prompt + completion);
   if (!Number.isFinite(total) || total <= 0) return;
   try {
-    await supabase
-      .from("ai_usage_events")
-      .insert({
-        user_id: userId,
-        model: input.model,
-        endpoint: input.endpoint || "chat",
-        input_tokens: prompt,
-        output_tokens: completion,
-        total_tokens: total,
-      });
+    await supabase.from("ai_usage_events").insert({
+      user_id: userId,
+      model: input.model,
+      endpoint: input.endpoint || "chat",
+      input_tokens: prompt,
+      output_tokens: completion,
+      total_tokens: total,
+    });
   } catch (error) {
     console.warn("Licia AI usage record failed", error);
   }

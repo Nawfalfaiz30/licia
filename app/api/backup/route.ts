@@ -109,14 +109,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Format backup Licia tidak dikenali." }, { status: 400 });
   const profile = body.profile && typeof body.profile === "object" ? body.profile : {};
   if (profile.display_name !== undefined || profile.timezone !== undefined || profile.preferences !== undefined) {
-    const { error } = await supabase
-      .from("users")
-      .upsert({
-        id: user.id,
-        display_name: String(profile.display_name || "").trim(),
-        timezone: String(profile.timezone || "Asia/Jakarta"),
-        preferences: profile.preferences ?? {},
-      });
+    const { error } = await supabase.from("users").upsert({
+      id: user.id,
+      display_name: String(profile.display_name || "").trim(),
+      timezone: String(profile.timezone || "Asia/Jakarta"),
+      preferences: profile.preferences ?? {},
+    });
     if (error) return NextResponse.json({ error: `Profil gagal dipulihkan: ${error.message}` }, { status: 400 });
   }
   const restored: Record<string, number> = {};

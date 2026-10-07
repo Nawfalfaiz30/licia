@@ -113,18 +113,16 @@ export async function GET(req: Request) {
   const ranked = tasks
     .map((task: any) => ({ ...task, _score: scoreTask(task, now) }))
     .sort((a, b) => b._score - a._score);
-  const priorities = ranked
-    .slice(0, 3)
-    .map((task: any, index) => ({
-      id: String(task.id),
-      title: task.title,
-      reason: task.due_at
-        ? `Deadline ${new Intl.DateTimeFormat("id-ID", { timeZone: timezone, dateStyle: "medium", timeStyle: "short" }).format(new Date(task.due_at))}.`
-        : index === 0
-          ? "Prioritas tertinggi dari tugas terbuka hari ini."
-          : "Masih terbuka dan cocok dijadikan fokus berikutnya.",
-      href: "/tasks",
-    }));
+  const priorities = ranked.slice(0, 3).map((task: any, index) => ({
+    id: String(task.id),
+    title: task.title,
+    reason: task.due_at
+      ? `Deadline ${new Intl.DateTimeFormat("id-ID", { timeZone: timezone, dateStyle: "medium", timeStyle: "short" }).format(new Date(task.due_at))}.`
+      : index === 0
+        ? "Prioritas tertinggi dari tugas terbuka hari ini."
+        : "Masih terbuka dan cocok dijadikan fokus berikutnya.",
+    href: "/tasks",
+  }));
   const conflicts = agenda
     .filter(
       (x: any, i: number) => i > 0 && String(x.start_time).slice(0, 8) < String(agenda[i - 1].end_time).slice(0, 8),
