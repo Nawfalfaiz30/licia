@@ -23,11 +23,11 @@ export async function POST(req:Request){
   const text=String(body?.text||body?.message||"").trim().slice(0,20000);
   if(!text)return NextResponse.json({error:"Pesan kosong."},{status:400});
   const kind=["task","note","idea","decision","learning"].includes(String(body?.kind))?String(body.kind):"inbox";
-  const {data,itemError}=await supabase.from("smart_inbox_items").insert({
+  const {data,error}=await supabase.from("smart_inbox_items").insert({
     user_id:tokenRow.user_id,content:text,kind,status:"open",
     ai_suggestion:{source:tokenRow.provider,external_id:String(body?.external_id||"").slice(0,200),has_attachment:Array.isArray(body?.attachments)&&body.attachments.length>0}
   }).select("id,content,kind,status,created_at").single();
   await supabase.from("inbound_capture_tokens").update({last_used_at:new Date().toISOString()}).eq("id",tokenRow.id);
-  if(itemError)return NextResponse.json({error:"Pesan gagal dimasukkan ke Inbox."},{status:500});
+  if(error)return NextResponse.json({error:"Pesan gagal dimasukkan ke Inbox."},{status:500});
   return NextResponse.json({ok:true,item:data});
 }
