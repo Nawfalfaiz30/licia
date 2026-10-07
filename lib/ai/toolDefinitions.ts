@@ -1771,7 +1771,6 @@ export const toolDefs: ToolDef[] = [
       parameters: { type: "object", properties: { watcher_id: { type: "string" }, confirm: { type: "boolean" } }, required: ["watcher_id", "confirm"] },
     },
   },
-,
   {
     type: "function",
     function: {
