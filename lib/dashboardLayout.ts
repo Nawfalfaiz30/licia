@@ -59,7 +59,7 @@ const ALL_IDS = DASHBOARD_WIDGETS.map((w) => w.id);
 const isId = (value: unknown): value is DashboardWidgetId =>
   typeof value === "string" && (ALL_IDS as string[]).includes(value);
 
-export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = { order: ["nextmove","now","overview","stats","insights","direction","body","review","control"], hidden: [], todayOnly: false };
+export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = { order: [...ALL_IDS], hidden: [], todayOnly: false };
 
 /**
  * Menormalkan data tersimpan: buang ID tak dikenal/duplikat, tambahkan widget baru (rilis mendatang) di
