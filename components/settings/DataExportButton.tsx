@@ -11,6 +11,13 @@ export function DataExportButton() {
     setBusy(true);
     try {
       const res = await fetch("/api/export-data", { cache: "no-store" });
+      if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        if (data?.code === "STEP_UP_REQUIRED" && typeof data.stepUpUrl === "string") {
+          window.location.assign(data.stepUpUrl);
+          return;
+        }
+      }
       if (!res.ok) throw new Error(tr("Ekspor belum bisa dibuat."));
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
