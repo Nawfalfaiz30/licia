@@ -5,6 +5,8 @@ import {
   isRecentStepUp,
   latestMfaTimestamp,
   safeStepUpNextPath,
+  syncMutationRequiresStepUp,
+  toolRequiresStepUp,
 } from "./step-up";
 
 describe("step-up security policy", () => {
@@ -30,6 +32,17 @@ describe("step-up security policy", () => {
     expect(safeStepUpNextPath("https://evil.example/steal")).toBe("/chat");
     expect(safeStepUpNextPath("//evil.example/steal")).toBe("/chat");
     expect(safeStepUpNextPath("/\\\\evil.example")).toBe("/chat");
+  });
+
+  it("marks only high-impact AI and sync mutations for step-up", () => {
+    expect(toolRequiresStepUp("transfer_money")).toBe(true);
+    expect(toolRequiresStepUp("delete_vault_item")).toBe(true);
+    expect(toolRequiresStepUp("update_task")).toBe(false);
+    expect(syncMutationRequiresStepUp("vault", "update")).toBe(true);
+    expect(syncMutationRequiresStepUp("accountTransfer", "create")).toBe(true);
+    expect(syncMutationRequiresStepUp("account", "delete")).toBe(true);
+    expect(syncMutationRequiresStepUp("account", "update")).toBe(false);
+    expect(syncMutationRequiresStepUp("task", "update")).toBe(false);
   });
 
   it("builds an encoded step-up URL", () => {
