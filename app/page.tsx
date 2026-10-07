@@ -27,7 +27,6 @@ export default async function Home() {
   const startRoutes: Record<string, string> = {
     today: "/today",
     dashboard: "/today",
-    today: "/today",
     brief: "/brief",
     focus: "/focus",
     inbox: "/inbox",
