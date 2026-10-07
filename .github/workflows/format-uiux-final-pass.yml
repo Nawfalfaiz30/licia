@@ -8,6 +8,8 @@ on:
 permissions:
   contents: write
 
+# staging formatter trigger
+
 jobs:
   format:
     runs-on: ubuntu-latest
