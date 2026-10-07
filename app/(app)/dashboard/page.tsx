@@ -31,6 +31,7 @@ import { DashboardLayoutProvider } from "@/components/dashboard/DashboardLayoutP
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 import { DashboardCustomizer } from "@/components/dashboard/DashboardCustomizer";
 import { TodayPriorityList } from "@/components/today/TodayPriorityList";
+import { TodayPriorityList } from "@/components/today/TodayPriorityList";
 import { OnboardingChecklist } from "@/components/intelligence/OnboardingChecklist";
 import { getServerT } from "@/lib/i18n-server";
 
@@ -619,7 +620,7 @@ export default async function DashboardPage() {
         </DashboardWidget>
 
         <DashboardWidget id="nextmove">
-          <section className="rounded-[1.5rem] border border-accent/15 bg-accent/5 p-4 sm:p-5">
+          <section className="rounded-2xl border border-accent/15 bg-accent/5 p-3.5 sm:p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
                 <p className="text-2xs font-bold uppercase tracking-[.14em] text-accent">{tr("LAPISAN PROAKTIF")}</p>
@@ -800,65 +801,72 @@ export default async function DashboardPage() {
         </DashboardWidget>
 
         <DashboardWidget id="now">
-  <section className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-    <Card className="p-4 sm:p-5">
-      <SectionTitle action={<Link href="/tasks" className="text-xs font-semibold text-accent">{tr("Semua tugas")} <ArrowRight size={12} className="inline" /></Link>}>
-        {tr("Prioritas sekarang")}
-      </SectionTitle>
-      <TodayPriorityList
-        tasks={briefPriorities.map((task) => ({
-          id: task.id,
-          title: task.title,
-          due_at: task.due_at,
-          priority: task.priority === "high" || task.priority === "medium" || task.priority === "low" ? task.priority : "medium",
-          timezone,
-        }))}
-      />
-    </Card>
-    <Card className="p-4 sm:p-5">
-      <SectionTitle action={<Link href="/calendar" className="text-xs font-semibold text-accent">{tr("Buka Kalender")} <ArrowRight size={12} className="inline" /></Link>}>
-        {tr("Jadwal hari ini")}
-      </SectionTitle>
-      <div className="space-y-2">
-        {todayAgenda.slice(0, 3).map((a) => (
-          <Link href="/calendar" key={a.id} className="flex items-start gap-3 rounded-xl border border-border bg-bg p-3 transition hover:border-accent/25">
-            <div className="w-12 shrink-0 text-center">
-              <p className="text-xs font-semibold text-accent">{time(a.start_time)}</p>
-              <p className="text-2xs text-textMuted">{time(a.end_time)}</p>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-xs font-semibold text-text">{a.title}</p>
-              <p className="mt-1 line-clamp-1 text-2xs text-textMuted">{tr("Mulai {time}", { time: time(a.start_time) })}{a.location ? ` · ${a.location}` : ""}</p>
-            </div>
-            <ArrowRight size={12} className="mt-1 shrink-0 text-textMuted" />
-          </Link>
-        ))}
-        {!todayAgenda.length && (
-          <div className="rounded-xl bg-bg p-4">
-            <p className="text-sm font-semibold text-text">{tr("Belum ada agenda")}</p>
-            <Link href="/calendar" className="mt-2 inline-flex text-xs font-semibold text-accent">{tr("Tambah agenda")} <ArrowRight size={11} className="ml-1 mt-0.5" /></Link>
-          </div>
-        )}
-      </div>
-      {upcomingAgenda.length > 0 && (
-        <div className="mt-3 border-t border-border pt-3">
-          <p className="mb-2 text-2xs font-semibold text-textMuted">{tr("Agenda mendatang")}</p>
-          <div className="space-y-1.5">
-            {upcomingAgenda.slice(0, 3).map((a) => (
-              <Link href="/calendar" key={a.id} className="flex items-center justify-between gap-2">
-                <span className="truncate text-2xs text-text">{a.title}</span>
-                <span className="shrink-0 text-2xs text-textMuted">{dateLabel(a.block_date, timezone)} · {time(a.start_time)}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-    </Card>
-  </section>
-</DashboardWidget>
-
-        <DashboardWidget id="insights">
-          <LifeInsights />
+          <section className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
+            <Card className="min-w-0 p-4 sm:p-5">
+              <SectionTitle
+                action={
+                  <Link href="/tasks" className="text-xs font-semibold text-accent">
+                    {tr("Semua tugas")} <ArrowRight size={12} className="inline" />
+                  </Link>
+                }
+              >
+                {tr("Prioritas sekarang")}
+              </SectionTitle>
+              <TodayPriorityList
+                tasks={briefPriorities.map((task) => ({
+                  id: task.id,
+                  title: task.title,
+                  due_at: task.due_at,
+                  priority:
+                    task.priority === "high" || task.priority === "medium" || task.priority === "low"
+                      ? task.priority
+                      : "medium",
+                  timezone,
+                }))}
+              />
+            </Card>
+            <Card className="min-w-0 p-4 sm:p-5">
+              <SectionTitle
+                action={
+                  <Link href="/calendar" className="text-xs font-semibold text-accent">
+                    {tr("Buka Kalender")} <ArrowRight size={12} className="inline" />
+                  </Link>
+                }
+              >
+                {tr("Jadwal hari ini")}
+              </SectionTitle>
+              <div className="space-y-2">
+                {todayAgenda.slice(0, 3).map((a) => (
+                  <Link
+                    href="/calendar"
+                    key={a.id}
+                    className="flex items-start gap-3 rounded-xl border border-border bg-bg p-3 transition hover:border-accent/25"
+                  >
+                    <div className="w-12 shrink-0 text-center">
+                      <p className="text-xs font-semibold text-accent">{time(a.start_time)}</p>
+                      <p className="text-2xs text-textMuted">{time(a.end_time)}</p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-xs font-semibold text-text">{a.title}</p>
+                      <p className="mt-1 line-clamp-1 text-2xs text-textMuted">
+                        {tr("Mulai {time}", { time: time(a.start_time) })}
+                        {a.location ? ` · ${a.location}` : ""}
+                      </p>
+                    </div>
+                    <ArrowRight size={12} className="mt-1 shrink-0 text-textMuted" />
+                  </Link>
+                ))}
+                {!todayAgenda.length && (
+                  <div className="rounded-xl bg-bg p-4">
+                    <p className="text-sm font-semibold text-text">{tr("Belum ada agenda")}</p>
+                    <Link href="/calendar" className="mt-2 inline-flex text-xs font-semibold text-accent">
+                      {tr("Tambah agenda")} <ArrowRight size={11} className="ml-1 mt-0.5" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </section>
         </DashboardWidget>
 
         <DashboardWidget id="direction">

@@ -384,10 +384,22 @@ export default function FinancePage() {
   const selectedMonthKey = monthKey(selectedMonth);
   const currentMonth = selectedMonthKey === monthKey(now);
   const start = selectedMonth.toISOString();
-  const monthExpenses = expenses.filter((x) => { const d = new Date(x.occurred_at); return d >= selectedMonth && d < selectedMonthEnd; });
-  const monthIncomes = incomes.filter((x) => { const d = new Date(x.occurred_at); return d >= selectedMonth && d < selectedMonthEnd; });
-  const monthIncome = currentMonth && financeSummary ? Number(financeSummary.month_income) : monthIncomes.reduce((s, x) => s + Number(x.amount), 0);
-  const monthExpense = currentMonth && financeSummary ? Number(financeSummary.month_expense) : monthExpenses.reduce((s, x) => s + Number(x.amount), 0);
+  const monthExpenses = expenses.filter((x) => {
+    const d = new Date(x.occurred_at);
+    return d >= selectedMonth && d < selectedMonthEnd;
+  });
+  const monthIncomes = incomes.filter((x) => {
+    const d = new Date(x.occurred_at);
+    return d >= selectedMonth && d < selectedMonthEnd;
+  });
+  const monthIncome =
+    currentMonth && financeSummary
+      ? Number(financeSummary.month_income)
+      : monthIncomes.reduce((s, x) => s + Number(x.amount), 0);
+  const monthExpense =
+    currentMonth && financeSummary
+      ? Number(financeSummary.month_expense)
+      : monthExpenses.reduce((s, x) => s + Number(x.amount), 0);
   const monthNet = currentMonth && financeSummary ? Number(financeSummary.month_net) : monthIncome - monthExpense;
   const net = financeSummary
     ? Number(financeSummary.total_balance)
@@ -437,11 +449,16 @@ export default function FinancePage() {
     [expenses, incomes, range, financeSummary],
   );
   const cats = useMemo(() => {
-    if (currentMonth && financeSummary?.categories?.length) return financeSummary.categories.map((x) => [x.category, Number(x.amount)] as [string, number]);
+    if (currentMonth && financeSummary?.categories?.length)
+      return financeSummary.categories.map((x) => [x.category, Number(x.amount)] as [string, number]);
     const map: Record<string, number> = {};
-    monthExpenses.forEach((x) => { const key = x.category || trn("Lainnya"); map[key] = (map[key] || 0) + Number(x.amount); });
+    monthExpenses.forEach((x) => {
+      const key = x.category || trn("Lainnya");
+      map[key] = (map[key] || 0) + Number(x.amount);
+    });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [currentMonth, financeSummary, monthExpenses, trn]);  const txs = useMemo(
+  }, [currentMonth, financeSummary, monthExpenses, trn]);
+  const txs = useMemo(
     () =>
       [
         ...expenses.map((x) => ({ ...x, type: "expense" as const, label: x.category })),
@@ -454,13 +471,20 @@ export default function FinancePage() {
   const maxBar = Math.max(1, ...monthBuckets.flatMap((x) => [x.income, x.expense]));
   const previousMonthDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1);
   const previousMonthKey = monthKey(previousMonthDate);
-  const previousMonth = currentMonth && monthBuckets.length > 1 ? monthBuckets[monthBuckets.length - 2] : {
-    k: previousMonthKey,
-    label: previousMonthDate.toLocaleDateString(documentLocale(), { month: "short" }),
-    income: incomes.filter((x) => monthKey(new Date(x.occurred_at)) === previousMonthKey).reduce((s, x) => s + Number(x.amount), 0),
-    expense: expenses.filter((x) => monthKey(new Date(x.occurred_at)) === previousMonthKey).reduce((s, x) => s + Number(x.amount), 0),
-    net: 0,
-  };
+  const previousMonth =
+    currentMonth && monthBuckets.length > 1
+      ? monthBuckets[monthBuckets.length - 2]
+      : {
+          k: previousMonthKey,
+          label: previousMonthDate.toLocaleDateString(documentLocale(), { month: "short" }),
+          income: incomes
+            .filter((x) => monthKey(new Date(x.occurred_at)) === previousMonthKey)
+            .reduce((s, x) => s + Number(x.amount), 0),
+          expense: expenses
+            .filter((x) => monthKey(new Date(x.occurred_at)) === previousMonthKey)
+            .reduce((s, x) => s + Number(x.amount), 0),
+          net: 0,
+        };
   const expenseDelta =
     previousMonth && previousMonth.expense > 0
       ? Math.round(((monthExpense - previousMonth.expense) / previousMonth.expense) * 100)
@@ -492,11 +516,32 @@ export default function FinancePage() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <div className="flex items-center rounded-xl border border-border bg-bg">
-              <button type="button" onClick={() => setMonthOffset((v) => v - 1)} aria-label={trn("Bulan sebelumnya")} className="touch-target text-textMuted hover:text-accent">‹</button>
-              <span className="hidden min-w-[92px] text-center text-xs font-semibold text-text sm:inline">{monthLabel(selectedMonth)}</span>
-              <button type="button" onClick={() => setMonthOffset((v) => Math.min(0, v + 1))} disabled={monthOffset === 0} aria-label={trn("Bulan berikutnya")} className="touch-target text-textMuted hover:text-accent disabled:opacity-30">›</button>
+              <button
+                type="button"
+                onClick={() => setMonthOffset((v) => v - 1)}
+                aria-label={trn("Bulan sebelumnya")}
+                className="touch-target text-textMuted hover:text-accent"
+              >
+                ‹
+              </button>
+              <span className="hidden min-w-[92px] text-center text-xs font-semibold text-text sm:inline">
+                {monthLabel(selectedMonth)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMonthOffset((v) => Math.min(0, v + 1))}
+                disabled={monthOffset === 0}
+                aria-label={trn("Bulan berikutnya")}
+                className="touch-target text-textMuted hover:text-accent disabled:opacity-30"
+              >
+                ›
+              </button>
             </div>
-            <button type="button" onClick={() => setTab("transactions")} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white">
+            <button
+              type="button"
+              onClick={() => setTab("transactions")}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white"
+            >
               <Plus size={14} /> {trn("Transaksi")}
             </button>
           </div>
@@ -554,41 +599,239 @@ export default function FinancePage() {
       ) : tab === "overview" ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-            <Card className="min-w-0 p-4 sm:p-5"><p className="text-xs font-semibold text-textMuted">{trn("Total saldo")}</p><p className="mt-2 truncate font-display text-2xl tabular-nums text-text">{rupiah(net)}</p><p className="mt-1 text-2xs text-textMuted">{trn("Saldo semua dompet")}</p></Card>
-            <Card className="min-w-0 p-4 sm:p-5"><p className="text-xs font-semibold text-textMuted">{trn("Pemasukan")}</p><p className="mt-2 truncate font-display text-2xl tabular-nums text-success">{rupiah(monthIncome)}</p><p className="mt-1 text-2xs text-textMuted">{previousMonth ? trn("{delta}% vs bulan lalu", { delta: Math.round(((monthIncome - previousMonth.income) / Math.max(1, Math.abs(previousMonth.income))) * 100) }) : "—"}</p></Card>
-            <Card className="min-w-0 p-4 sm:p-5"><p className="text-xs font-semibold text-textMuted">{trn("Pengeluaran")}</p><p className="mt-2 truncate font-display text-2xl tabular-nums text-danger">{rupiah(monthExpense)}</p><p className="mt-1 text-2xs text-textMuted">{previousMonth ? trn("{delta}% vs bulan lalu", { delta: expenseDelta ?? 0 }) : "—"}</p></Card>
-            <Card className="min-w-0 p-4 sm:p-5"><p className="text-xs font-semibold text-textMuted">{trn("Rasio tabungan")}</p><p className={clsx("mt-2 font-display text-2xl tabular-nums", savingRate < 0 ? "text-danger" : "text-text")}>{savingRate}%</p><p className="mt-1 text-2xs text-textMuted">{trn("dari pemasukan")}</p></Card>
+            <Card className="min-w-0 p-4 sm:p-5">
+              <p className="text-xs font-semibold text-textMuted">{trn("Total saldo")}</p>
+              <p className="mt-2 truncate font-display text-2xl tabular-nums text-text">{rupiah(net)}</p>
+              <p className="mt-1 text-2xs text-textMuted">{trn("Saldo semua dompet")}</p>
+            </Card>
+            <Card className="min-w-0 p-4 sm:p-5">
+              <p className="text-xs font-semibold text-textMuted">{trn("Pemasukan")}</p>
+              <p className="mt-2 truncate font-display text-2xl tabular-nums text-success">{rupiah(monthIncome)}</p>
+              <p className="mt-1 text-2xs text-textMuted">
+                {previousMonth
+                  ? trn("{delta}% vs bulan lalu", {
+                      delta: Math.round(
+                        ((monthIncome - previousMonth.income) / Math.max(1, Math.abs(previousMonth.income))) * 100,
+                      ),
+                    })
+                  : "—"}
+              </p>
+            </Card>
+            <Card className="min-w-0 p-4 sm:p-5">
+              <p className="text-xs font-semibold text-textMuted">{trn("Pengeluaran")}</p>
+              <p className="mt-2 truncate font-display text-2xl tabular-nums text-danger">{rupiah(monthExpense)}</p>
+              <p className="mt-1 text-2xs text-textMuted">
+                {previousMonth ? trn("{delta}% vs bulan lalu", { delta: expenseDelta ?? 0 }) : "—"}
+              </p>
+            </Card>
+            <Card className="min-w-0 p-4 sm:p-5">
+              <p className="text-xs font-semibold text-textMuted">{trn("Rasio tabungan")}</p>
+              <p
+                className={clsx(
+                  "mt-2 font-display text-2xl tabular-nums",
+                  savingRate < 0 ? "text-danger" : "text-text",
+                )}
+              >
+                {savingRate}%
+              </p>
+              <p className="mt-1 text-2xs text-textMuted">{trn("dari pemasukan")}</p>
+            </Card>
           </div>
           <div className="grid min-w-0 gap-4 xl:grid-cols-12">
             <Card className="min-w-0 overflow-hidden p-4 sm:p-5 xl:col-span-8">
-              <SectionTitle action={<button type="button" onClick={() => setRange((v) => (v === 6 ? 12 : 6))} className="text-2xs font-semibold text-textMuted hover:text-accent">{trn("Tren {range} bulan", { range })}</button>}>{trn("Tren 6 bulan")}</SectionTitle>
+              <SectionTitle
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setRange((v) => (v === 6 ? 12 : 6))}
+                    className="text-2xs font-semibold text-textMuted hover:text-accent"
+                  >
+                    {trn("Tren {range} bulan", { range })}
+                  </button>
+                }
+              >
+                {trn("Tren 6 bulan")}
+              </SectionTitle>
               <div className="mt-3 space-y-3">
                 {monthBuckets.slice(-6).map((m) => (
-                  <div key={m.k} className="grid grid-cols-[44px_1fr_92px] items-center gap-2.5"><span className="text-2xs font-semibold text-textMuted">{m.label}</span><div className="space-y-1"><div className="h-2 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-success" style={{ width: Math.round((m.income / maxBar) * 100) + "%" }} /></div><div className="h-2 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-danger/80" style={{ width: Math.round((m.expense / maxBar) * 100) + "%" }} /></div></div><span className={clsx("text-right text-2xs font-semibold", m.net < 0 ? "text-danger" : "text-text")}>{rupiah(m.net)}</span></div>
+                  <div key={m.k} className="grid grid-cols-[44px_1fr_92px] items-center gap-2.5">
+                    <span className="text-2xs font-semibold text-textMuted">{m.label}</span>
+                    <div className="space-y-1">
+                      <div className="h-2 overflow-hidden rounded-full bg-bg">
+                        <div
+                          className="h-full rounded-full bg-success"
+                          style={{ width: Math.round((m.income / maxBar) * 100) + "%" }}
+                        />
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-bg">
+                        <div
+                          className="h-full rounded-full bg-danger/80"
+                          style={{ width: Math.round((m.expense / maxBar) * 100) + "%" }}
+                        />
+                      </div>
+                    </div>
+                    <span
+                      className={clsx("text-right text-2xs font-semibold", m.net < 0 ? "text-danger" : "text-text")}
+                    >
+                      {rupiah(m.net)}
+                    </span>
+                  </div>
                 ))}
               </div>
-              <div className="mt-3 flex gap-4 text-2xs text-textMuted"><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-success" />{trn("Pemasukan")}</span><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-danger" />{trn("Pengeluaran")}</span></div>
+              <div className="mt-3 flex gap-4 text-2xs text-textMuted">
+                <span>
+                  <i className="mr-1 inline-block h-2 w-2 rounded-full bg-success" />
+                  {trn("Pemasukan")}
+                </span>
+                <span>
+                  <i className="mr-1 inline-block h-2 w-2 rounded-full bg-danger" />
+                  {trn("Pengeluaran")}
+                </span>
+              </div>
             </Card>
             <Card className="min-w-0 p-4 sm:p-5 xl:col-span-4">
               <SectionTitle>{trn("Transaksi terbaru")}</SectionTitle>
-              <div className="mt-2 space-y-2">{txs.slice(0, 5).map((item) => (
-                <button type="button" key={"recent-" + item.type + "-" + item.id} onClick={() => setTab("transactions")} className="flex w-full items-center gap-2.5 rounded-xl bg-bg p-3 text-left">
-                  <span className={clsx("grid h-8 w-8 shrink-0 place-items-center rounded-lg", item.type === "income" ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>{item.type === "income" ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}</span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-text">{item.label}</span><span className="block truncate text-2xs text-textMuted">{formatDateTimeInTimezone(item.occurred_at, timezone)}</span></span>
-                  <span className={clsx("shrink-0 text-2xs font-semibold", item.type === "income" ? "text-success" : "text-danger")}>{item.type === "income" ? "+" : "-"}{rupiah(Number(item.amount))}</span>
-                </button>
-              ))}{!txs.length && <p className="py-5 text-center text-xs text-textMuted">{trn("Belum ada transaksi")}</p>}</div>
-              <button type="button" onClick={() => setTab("transactions")} className="mt-3 min-h-10 w-full rounded-xl border border-border bg-bg text-xs font-semibold text-textMuted hover:text-accent">{trn("Lihat semua transaksi")}</button>
+              <div className="mt-2 space-y-2">
+                {txs.slice(0, 5).map((item) => (
+                  <button
+                    type="button"
+                    key={"recent-" + item.type + "-" + item.id}
+                    onClick={() => setTab("transactions")}
+                    className="flex w-full items-center gap-2.5 rounded-xl bg-bg p-3 text-left"
+                  >
+                    <span
+                      className={clsx(
+                        "grid h-8 w-8 shrink-0 place-items-center rounded-lg",
+                        item.type === "income" ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
+                      )}
+                    >
+                      {item.type === "income" ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold text-text">{item.label}</span>
+                      <span className="block truncate text-2xs text-textMuted">
+                        {formatDateTimeInTimezone(item.occurred_at, timezone)}
+                      </span>
+                    </span>
+                    <span
+                      className={clsx(
+                        "shrink-0 text-2xs font-semibold",
+                        item.type === "income" ? "text-success" : "text-danger",
+                      )}
+                    >
+                      {item.type === "income" ? "+" : "-"}
+                      {rupiah(Number(item.amount))}
+                    </span>
+                  </button>
+                ))}
+                {!txs.length && <p className="py-5 text-center text-xs text-textMuted">{trn("Belum ada transaksi")}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => setTab("transactions")}
+                className="mt-3 min-h-10 w-full rounded-xl border border-border bg-bg text-xs font-semibold text-textMuted hover:text-accent"
+              >
+                {trn("Lihat semua transaksi")}
+              </button>
             </Card>
           </div>
           <div className="grid min-w-0 gap-4 xl:grid-cols-12">
             <Card className="min-w-0 p-4 sm:p-5 xl:col-span-8">
-              <SectionTitle action={<button type="button" onClick={() => setTab("budgets")} className="text-xs font-semibold text-accent">{trn("Atur anggaran")}</button>}>{trn("Anggaran per kategori")}</SectionTitle>
-              {budgets.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{budgets.slice(0, 6).map((b) => { const pct = b.limit_amount ? Math.round((b.spent / Number(b.limit_amount)) * 100) : 0; return <div key={b.id} className="rounded-xl bg-bg p-3"><div className="flex items-center justify-between gap-2"><span className="truncate text-xs font-semibold text-text">{b.category}</span><span className="text-2xs text-textMuted">{pct}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface"><div className={clsx("h-full rounded-full", pct >= 100 ? "bg-danger" : "bg-accent")} style={{ width: Math.min(100, pct) + "%" }} /></div><p className="mt-1 text-2xs text-textMuted">{rupiah(b.spent)} / {rupiah(Number(b.limit_amount))}</p></div>; })}</div> : <EmptyState title={trn("Belum ada anggaran")} description={trn("Buat anggaran agar pengeluaran punya batas yang jelas.")} /> }
+              <SectionTitle
+                action={
+                  <button type="button" onClick={() => setTab("budgets")} className="text-xs font-semibold text-accent">
+                    {trn("Atur anggaran")}
+                  </button>
+                }
+              >
+                {trn("Anggaran per kategori")}
+              </SectionTitle>
+              {budgets.length ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {budgets.slice(0, 6).map((b) => {
+                    const pct = b.limit_amount ? Math.round((b.spent / Number(b.limit_amount)) * 100) : 0;
+                    return (
+                      <div key={b.id} className="rounded-xl bg-bg p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-xs font-semibold text-text">{b.category}</span>
+                          <span className="text-2xs text-textMuted">{pct}%</span>
+                        </div>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface">
+                          <div
+                            className={clsx("h-full rounded-full", pct >= 100 ? "bg-danger" : "bg-accent")}
+                            style={{ width: Math.min(100, pct) + "%" }}
+                          />
+                        </div>
+                        <p className="mt-1 text-2xs text-textMuted">
+                          {rupiah(b.spent)} / {rupiah(Number(b.limit_amount))}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyState
+                  title={trn("Belum ada anggaran")}
+                  description={trn("Buat anggaran agar pengeluaran punya batas yang jelas.")}
+                />
+              )}
             </Card>
-            <div className="xl:col-span-4">{upcomingSubscriptions.length ? <Card className="min-w-0 p-4 sm:p-5"><SectionTitle action={<button type="button" onClick={() => void openSubscriptions()} className="text-xs font-semibold text-accent">{trn("Kelola langganan")}</button>}>{trn("Komitmen berikutnya")}</SectionTitle><div className="mt-2 space-y-2">{upcomingSubscriptions.slice(0, 3).map((s) => <div key={s.id} className="flex items-center gap-2.5 rounded-xl bg-bg p-3"><CalendarClock size={14} className="shrink-0 text-accent" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-text">{s.name}</p><p className="text-2xs text-textMuted">{s.next_billing_date ? new Date(s.next_billing_date + "T12:00:00").toLocaleDateString(documentLocale(), { day: "numeric", month: "short" }) : trn("Tanggal belum diatur")}</p></div><span className="shrink-0 text-xs font-semibold text-text">{rupiah(Number(s.amount))}</span></div>)}</div></Card> : <div className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3.5"><span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-text"><CalendarClock size={15} className="shrink-0 text-accent" />{trn("Belum ada langganan")}</span><button type="button" onClick={() => void openSubscriptions()} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-2xs font-semibold text-white"><Plus size={13} />{trn("Tambah langganan")}</button></div>}</div>
+            <div className="xl:col-span-4">
+              {upcomingSubscriptions.length ? (
+                <Card className="min-w-0 p-4 sm:p-5">
+                  <SectionTitle
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => void openSubscriptions()}
+                        className="text-xs font-semibold text-accent"
+                      >
+                        {trn("Kelola langganan")}
+                      </button>
+                    }
+                  >
+                    {trn("Komitmen berikutnya")}
+                  </SectionTitle>
+                  <div className="mt-2 space-y-2">
+                    {upcomingSubscriptions.slice(0, 3).map((s) => (
+                      <div key={s.id} className="flex items-center gap-2.5 rounded-xl bg-bg p-3">
+                        <CalendarClock size={14} className="shrink-0 text-accent" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-text">{s.name}</p>
+                          <p className="text-2xs text-textMuted">
+                            {s.next_billing_date
+                              ? new Date(s.next_billing_date + "T12:00:00").toLocaleDateString(documentLocale(), {
+                                  day: "numeric",
+                                  month: "short",
+                                })
+                              : trn("Tanggal belum diatur")}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-xs font-semibold text-text">{rupiah(Number(s.amount))}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ) : (
+                <div className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3.5">
+                  <span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-text">
+                    <CalendarClock size={15} className="shrink-0 text-accent" />
+                    {trn("Belum ada langganan")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void openSubscriptions()}
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-2xs font-semibold text-white"
+                  >
+                    <Plus size={13} />
+                    {trn("Tambah langganan")}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>      ) : tab === "transactions" ? (
+        </div>
+      ) : tab === "transactions" ? (
         <div className="space-y-5">
           <Card>
             <SectionTitle>{trn("Catat transaksi")}</SectionTitle>

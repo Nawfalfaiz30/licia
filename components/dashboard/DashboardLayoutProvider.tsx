@@ -14,10 +14,24 @@ import {
 
 type Ctx = { layout: DashboardLayout; ready: boolean; update: (next: DashboardLayout) => void };
 const DashboardLayoutContext = createContext<Ctx>({ layout: resetLayout(), ready: false, update: () => undefined });
-const LEGACY_DASHBOARD_ORDER = ["overview", "nextmove", "stats", "now", "insights", "direction", "body", "review", "control"] as const;
+const LEGACY_DASHBOARD_ORDER = [
+  "overview",
+  "nextmove",
+  "stats",
+  "now",
+  "insights",
+  "direction",
+  "body",
+  "review",
+  "control",
+] as const;
 
 function migrateLegacyDefault(layout: DashboardLayout): DashboardLayout {
-  const legacy = layout.hidden.length === 0 && !layout.todayOnly && layout.order.length === LEGACY_DASHBOARD_ORDER.length && layout.order.every((id, index) => id === LEGACY_DASHBOARD_ORDER[index]);
+  const legacy =
+    layout.hidden.length === 0 &&
+    !layout.todayOnly &&
+    layout.order.length === LEGACY_DASHBOARD_ORDER.length &&
+    layout.order.every((id, index) => id === LEGACY_DASHBOARD_ORDER[index]);
   return legacy ? { ...DEFAULT_DASHBOARD_LAYOUT, order: [...DEFAULT_DASHBOARD_LAYOUT.order] } : layout;
 }
 
@@ -27,7 +41,10 @@ function migrateLegacyDefault(layout: DashboardLayout): DashboardLayout {
  * Perubahan dari perangkat lain tiba lewat event "licia:preferences-change" (lib/preferences.ts).
  */
 export function DashboardLayoutProvider({ children }: { children: React.ReactNode }) {
-  const [layout, setLayout] = useState<DashboardLayout>(() => resetLayout());
+  const [layout, setLayout] = useState<DashboardLayout>(() => ({
+    ...DEFAULT_DASHBOARD_LAYOUT,
+    order: [...DEFAULT_DASHBOARD_LAYOUT.order],
+  }));
   const [ready, setReady] = useState(false);
   const saveTimer = useRef<number | null>(null);
 

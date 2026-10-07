@@ -60,7 +60,7 @@ const isId = (value: unknown): value is DashboardWidgetId =>
   typeof value === "string" && (ALL_IDS as string[]).includes(value);
 
 export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = {
-  order: ["now", "overview", "stats", "nextmove", "direction", "body", "insights", "review", "control"],
+  order: ["now", "stats", "overview", "direction", "body", "nextmove", "insights", "review", "control"],
   hidden: [],
   todayOnly: false,
 };

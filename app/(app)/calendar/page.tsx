@@ -479,32 +479,34 @@ export default function CalendarPage() {
           </Card>
         </div>
       ) : (
-        <Card className="min-w-0 overflow-hidden">
-          <div className="mb-4 flex items-center justify-between gap-2">
+        <Card className="min-w-0 overflow-hidden p-3 sm:p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
             <button
               onClick={() => move(-1)}
               className="touch-target rounded-xl border border-border text-textMuted hover:text-accent"
+              aria-label={tr("Bulan sebelumnya")}
             >
               <ChevronLeft size={17} />
             </button>
             <div className="text-center">
-              <p className="font-display text-2xl text-text">
+              <p className="font-display text-xl text-text sm:text-2xl">
                 {selected.toLocaleDateString(locale, { month: "long", year: "numeric" })}
               </p>
-              <p className="text-xs text-textMuted">
+              <p className="text-2xs text-textMuted sm:text-xs">
                 {tr("{blocks_length} agenda bulan ini", { blocks_length: blocks.length })}
               </p>
             </div>
             <button
               onClick={() => move(1)}
               className="touch-target rounded-xl border border-border text-textMuted hover:text-accent"
+              aria-label={tr("Bulan berikutnya")}
             >
               <ChevronRight size={17} />
             </button>
           </div>
-          <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
             {weekLabels.map((x) => (
-              <div key={x} className="py-1 text-center text-2xs font-semibold text-textMuted">
+              <div key={x} className="py-1 text-center text-2xs font-semibold text-textMuted sm:text-xs">
                 {x}
               </div>
             ))}
@@ -512,71 +514,88 @@ export default function CalendarPage() {
               const key = dateKey(d);
               const ev = blocks.filter((b) => b.block_date === key);
               const inMonth = d.getMonth() === selected.getMonth();
+              const isToday = key === dateKey(today);
+              const isSelected = key === selectedKey;
               return (
                 <button
                   key={`${key}-${i}`}
-                  onClick={() => {
-                    setSelected(d);
-                    setView("day");
-                  }}
+                  onClick={() => setSelected(d)}
+                  aria-label={`${d.getDate()} ${d.toLocaleDateString(locale, { month: "long" })}${ev.length ? `, ${ev.length} agenda` : ""}`}
                   className={clsx(
-                    "min-w-0 rounded-xl border p-2 text-left transition sm:min-h-24",
+                    "min-w-0 min-h-[58px] rounded-xl border p-1.5 text-center transition sm:min-h-[72px] sm:p-2",
                     inMonth
                       ? "border-border bg-surface hover:border-accent/40"
                       : "border-transparent bg-bg/40 opacity-45",
-                    key === selectedKey && "ring-2 ring-accent/30",
+                    isSelected && "border-accent/40 bg-accent/5 ring-1 ring-accent/30",
                   )}
                 >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={clsx(
-                        "text-xs font-semibold",
-                        key === dateKey(today) ? "rounded-full bg-accent px-1.5 py-0.5 text-white" : "text-text",
-                      )}
-                    >
-                      {d.getDate()}
-                    </span>
-                    {ev.length > 0 && <span className="text-2xs text-accent">{ev.length}</span>}
-                  </div>
-                  <div className="mt-2 space-y-1">
-                    {ev.slice(0, 3).map((b) => (
-                      <span
-                        key={b.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedBlock(b);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedBlock(b);
-                          }
-                        }}
-                        className="block cursor-pointer truncate rounded-md bg-bg px-1.5 py-1 text-2xs text-text transition hover:bg-accent/10 hover:text-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
-                        title={tr("Klik untuk melihat detail")}
-                      >
-                        {b.start_time.slice(0, 5)} {b.title}
-                      </span>
-                    ))}
-                    {ev.length > 3 && (
-                      <div className="text-2xs text-textMuted">
-                        +{ev.length - 3} {tr("lagi")}
-                      </div>
+                  <span
+                    className={clsx(
+                      "mx-auto grid h-7 w-7 place-items-center rounded-full text-xs font-semibold sm:h-8 sm:w-8 sm:text-sm",
+                      isToday ? "bg-accent text-white" : isSelected ? "bg-accent/15 text-accent" : "text-text",
                     )}
-                  </div>
+                  >
+                    {d.getDate()}
+                  </span>
+                  <span className="mt-1.5 flex min-h-2 justify-center gap-1 overflow-hidden">
+                    {ev.slice(0, 4).map((b) => (
+                      <span key={b.id} className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+                    ))}
+                  </span>
+                  {ev.length > 4 && (
+                    <span className="mt-0.5 block text-[9px] leading-none text-textMuted">+{ev.length - 4}</span>
+                  )}
                 </button>
               );
             })}
           </div>
-          <p className="mt-4 flex items-center gap-2 text-2xs text-textMuted">
-            <Clock3 size={12} /> {tr("Tap tanggal untuk membuka tampilan harian.")}
-          </p>
+          <div className="mt-4 border-t border-border pt-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-accent">{tr("Hari terpilih")}</p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-text">
+                  {selected.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setForm((f) => ({ ...f, date: selectedKey }));
+                  setOpen(true);
+                }}
+                className="min-h-10 shrink-0 rounded-xl bg-accent px-3 text-2xs font-semibold text-white"
+              >
+                <Plus size={13} className="mr-1 inline" /> {tr("Jadwal")}
+              </button>
+            </div>
+            {selectedBlocks.length ? (
+              <div className="space-y-1.5">
+                {selectedBlocks.slice(0, 4).map((b) => (
+                  <button
+                    type="button"
+                    key={b.id}
+                    onClick={() => setSelectedBlock(b)}
+                    className="flex w-full items-center gap-2.5 rounded-xl bg-bg p-2.5 text-left hover:bg-accent/5"
+                  >
+                    <span className="w-16 shrink-0 text-xs font-semibold text-accent">
+                      {b.start_time.slice(0, 5)}–{b.end_time.slice(0, 5)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-text">{b.title}</span>
+                    <ChevronRight size={12} className="shrink-0 text-textMuted" />
+                  </button>
+                ))}
+                {selectedBlocks.length > 4 && (
+                  <p className="pt-1 text-2xs text-textMuted">
+                    +{selectedBlocks.length - 4} {tr("agenda lainnya")}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="rounded-xl bg-bg p-3 text-xs text-textMuted">{tr("Hari masih lapang")}</p>
+            )}
+          </div>
         </Card>
       )}
-
       {selectedBlock && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
