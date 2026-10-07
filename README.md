@@ -10,9 +10,9 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Licia-2.0-6d5dfc?style=for-the-badge" alt="Licia 2.0" />
-  <img src="https://img.shields.io/badge/Next.js-16.3.6-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/Next.js-16.4.0-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/React-19.2.8-149eca?style=for-the-badge&logo=react&logoColor=white" alt="React" />
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ecf8e?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
 </p>
 
@@ -127,10 +127,10 @@ Untuk mengganti model melalui environment, gunakan `LICIA_AI_MODEL`. Jalur kompl
 
 ### Migrasi database terbaru
 
-Untuk mengaktifkan riwayat chat lintas perangkat, jalankan sekali:
+Untuk mengaktifkan riwayat chat lintas perangkat, jalankan migration database berikut sekali:
 
 ```text
-supabase/schema_ai_chat_history.sql
+supabase/migrations/0015_ai_chat_history.sql
 ```
 
 Migration ini aman terhadap data lama karena tabel dibuat dengan `create table if not exists`. Bila belum dijalankan, chat tetap bekerja menggunakan cache riwayat lokal dan fitur pending action lama tetap kompatibel.
@@ -485,13 +485,13 @@ Migration schema kini menggunakan canonical migration chain di supabase/migratio
 
 | Teknologi    | Versi / Peran |
 | ------------ | ------------- |
-| Next.js      | 16.3.6        |
+| Next.js      | 16.4.0        |
 | React        | 19.2.8        |
 | TypeScript   | 5.9.x         |
 | Supabase JS  | 2.117.1       |
 | Supabase SSR | 0.12.7        |
 | OpenAI SDK   | 4.67.3        |
-| Tailwind CSS | 3.4.17        |
+| Tailwind CSS | 4.3.3         |
 | Web Push     | 3.6.7         |
 | Lucide React | UI icons      |
 | ESLint       | 9.35.0        |
@@ -524,6 +524,10 @@ npm run preflight:dev
 ## 3. Verification
 
 ```bash
+npm run typecheck
+npm run lint
+npm run i18n:check
+npm run db:verify
 npm run verify
 npm run audit
 npm run test
@@ -621,7 +625,6 @@ pastikan `SUPABASE_SERVICE_ROLE_KEY` ada di environment server dan restart aplik
 Schema utama:
 
 ```text
-supabase/migrations/
 supabase/migrations/
 ```
 
@@ -1053,7 +1056,7 @@ npm run verify:native
 npm run build
 ```
 
-CI GitHub menjalankan quality gates tersebut sebagai automated verification untuk:
+CI GitHub menjalankan quality gates tersebut sebagai automated verification. Sebelum membuka perubahan untuk production, jalankan setidaknya `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run test`, dan `npm run build`. CI kemudian memeriksa:
 
 - type safety,
 - lint,
