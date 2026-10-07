@@ -1552,10 +1552,12 @@ end $$;
 do $$
 begin
   begin
-    alter publication supabase_realtime add table public.life_os_sync_events;
-  exception when duplicate_object then
-    null;
-  exception when undefined_object then
-    null;
+    alter publication supabase_realtime
+      add table public.life_os_sync_events;
+  exception
+    when duplicate_object then
+      null;
+    when undefined_object then
+      null;
   end;
 end $$;
