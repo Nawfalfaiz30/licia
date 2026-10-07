@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     const now = new Date();
     const { data: proactivePrefs } = await supabase
       .from("ai_proactive_preferences")
-      .select("enabled,max_suggestions_per_day,quiet_start,quiet_end")
+      .select("enabled,max_suggestions_per_day,quiet_start,quiet_end,allow_tasks,allow_schedule")
       .eq("user_id", user.id)
       .maybeSingle();
     const dayStart = new Date(now);
