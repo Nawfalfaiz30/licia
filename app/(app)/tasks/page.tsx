@@ -36,7 +36,7 @@ import {
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { mutateEntity } from "@/lib/sync/client";
-import { Card, EmptyState, PrimaryButton, TextInput, notifyToast } from "@/components/ui";
+import { Card, EmptyState, PrimaryButton, TextInput, notifyToast, Chip } from "@/components/ui";
 import { dateStrInTimezone, localDateTimeToIso } from "@/lib/date";
 import { TaskKanban, TaskMatrix, TaskWeek } from "@/components/tasks/TaskViews";
 import { inversePatch, stepFocus, taskKeyAction, type TaskPatch, type ViewTask } from "@/lib/tasks/views";
@@ -168,7 +168,8 @@ export default function TasksPage() {
   const [focusIndex, setFocusIndex] = useState(-1);
   const tasksRef = useRef<Task[]>([]);
   const [showDone, setShowDone] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(true);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [customDueDate, setCustomDueDate] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newSub, setNewSub] = useState<Record<string, string>>({});
@@ -1228,8 +1229,8 @@ export default function TasksPage() {
         aria-current={focused ? "true" : undefined}
         className={clsx(
           focused && "ring-2 ring-accent/60 ring-offset-2 ring-offset-bg",
-          "task-modern-card group relative overflow-hidden rounded-[1.35rem] border bg-surface p-4 shadow-sm sm:p-5",
-          "animate-licia-reveal",
+          "task-modern-card group relative overflow-hidden rounded-xl border bg-surface p-3 shadow-sm sm:p-3.5",
+          "transition-[box-shadow,border-color] duration-180",
           removingId === task.id && "animate-licia-delete-out",
           completedId === task.id && "animate-licia-check-burst border-success/25",
           createdId === task.id && "animate-licia-created-card border-accent/35",
@@ -1263,35 +1264,12 @@ export default function TasksPage() {
                     {task.title}
                   </p>
                 </div>
-                <div className="mt-2 flex min-w-0 flex-wrap gap-1.5 text-2xs text-textMuted">
-                  {task.due_at ? (
-                    <span
-                      className={clsx(
-                        "rounded-lg border px-2 py-1",
-                        overdue ? "border-danger/15 bg-danger/5 font-semibold text-danger" : "border-border bg-bg",
-                      )}
-                    >
-                      {formatDue(task.due_at, timezone, locale)} · {relativeDue(task.due_at, tr)}
-                    </span>
-                  ) : (
-                    <span className="rounded-lg border border-border bg-bg px-2 py-1">{tr("Tanpa deadline")}</span>
-                  )}
-                  {task.estimated_minutes && (
-                    <span className="rounded-lg border border-border bg-bg px-2 py-1">
-                      {tr("{estimated_minutes} mnt", { estimated_minutes: task.estimated_minutes })}
-                    </span>
-                  )}
-                  {projectName(task.project_id) && (
-                    <span className="rounded-lg border border-border bg-bg px-2 py-1">
-                      {projectName(task.project_id)}
-                    </span>
-                  )}
-                  {areaName(task.area_id) && (
-                    <span className="rounded-lg border border-border bg-bg px-2 py-1">{areaName(task.area_id)}</span>
-                  )}
+                <div className={clsx("mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs", overdue ? "text-danger" : "text-textMuted")}>
+                  <span>{task.due_at ? formatDue(task.due_at, timezone, locale) : tr("Tanpa tenggat")}</span>
+                  {task.estimated_minutes ? <><span>·</span><span>{tr("{estimated_minutes} mnt",{estimated_minutes:task.estimated_minutes})}</span></> : null}
+                  <span>·</span><span className={clsx("font-semibold",task.priority==="high"?"text-danger":task.priority==="medium"?"text-accent":"text-textMuted")}>● {priorityLabel[task.priority]}</span>
                 </div>
-              </button>
-              <span
+                            <span
                 className={clsx(
                   "w-fit shrink-0 rounded-full border px-2.5 py-1 text-2xs font-bold",
                   priorityClass[task.priority],
@@ -1301,9 +1279,6 @@ export default function TasksPage() {
               </span>
             </div>
 
-            {task.description && !expanded && (
-              <p className="mt-3 line-clamp-2 break-words text-xs leading-relaxed text-textMuted">{task.description}</p>
-            )}
             {task.subtasks.length > 0 && (
               <div className="mt-3">
                 <div className="mb-1.5 flex items-center justify-between text-2xs text-textMuted">
@@ -1558,103 +1533,18 @@ export default function TasksPage() {
 
   return (
     <div className="task-page mx-auto min-w-0 max-w-7xl space-y-5 pb-8 animate-licia-page-in">
-      <header className="task-hero relative overflow-hidden rounded-[2rem] border border-accent/15 p-4 shadow-sm sm:p-6 lg:p-7">
-        <div
-          className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full bg-accent/10 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -bottom-24 left-1/3 h-52 w-52 rounded-full bg-accent/5 blur-3xl"
-          aria-hidden
-        />
-        <div className="relative grid gap-5 xl:grid-cols-[1fr_390px] xl:items-stretch">
-          <div className="min-w-0 rounded-[1.6rem] border border-border/80 bg-surface/60 p-4 backdrop-blur-sm sm:p-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-3 py-1 text-2xs font-bold uppercase tracking-[0.15em] text-accent">
-                <ListChecks size={12} /> {tr("Execution OS")}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-success/15 bg-success/5 px-2.5 py-1 text-2xs font-semibold text-success">
-                <span className="h-1.5 w-1.5 rounded-full bg-success animate-licia-spark" /> {tr("Fokus ke eksekusi")}
-              </span>
-            </div>
-            <h1 className="mt-4 max-w-3xl font-display text-[1.85rem] leading-[1.08] text-text sm:text-4xl">
-              {tr("Tugas bukan lagi daftar panjang. Jadikan ia jalur kerja.")}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-textMuted">
-              {tr(
-                "Tangkap, pecah, jadwalkan, fokus, lalu biarkan Licia menghubungkan tugas dengan agenda, project, target, Inbox, dan konteks lain.",
-              )}
-            </p>
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              <button
-                onClick={() => void runPriorityPlan()}
-                disabled={Boolean(quickAction)}
-                className="group inline-flex min-h-11 items-center justify-between gap-3 rounded-2xl bg-accent px-3.5 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  {quickAction === "priority" ? (
-                    <Loader2 size={15} className="shrink-0 animate-spin" />
-                  ) : (
-                    <Sparkles size={15} className="shrink-0" />
-                  )}{" "}
-                  {tr("Prioritas langsung dengan Licia")}
-                </span>
-                <ArrowRight size={14} className="shrink-0 transition group-hover:translate-x-1" />
-              </button>
-              <button
-                onClick={() => setComposerOpen((value) => !value)}
-                className="inline-flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-border bg-surface/90 px-3.5 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent/30 hover:text-accent"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <Plus size={15} className="shrink-0" /> {composerOpen ? tr("Tutup tambah cepat") : tr("Tambah tugas")}
-                </span>
-                <span className="text-2xs">{tr("⌘K / Ctrl+K")}</span>
-              </button>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-2xs text-textMuted">
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2">
-                <BrainCircuit size={11} className="text-accent" /> {tr("AI lintas modul")}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2">
-                <CalendarDays size={11} className="text-accent" /> {tr("Kalender terhubung")}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-bg px-2.5 py-2">
-                <Link2 size={11} className="text-accent" /> {tr("Project & target")}
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
-            {[
-              { label: "Aktif", value: stats.active },
-              { label: tr("Hari ini"), value: stats.today },
-              { label: "Terlambat", value: stats.overdue },
-              { label: "Menit", value: stats.effort },
-            ].map((item, index) => (
-              <div
-                key={item.label}
-                style={{ animationDelay: `${index * 70}ms` }}
-                className="rounded-[1.4rem] border border-border bg-surface/85 p-3.5 backdrop-blur-sm animate-licia-card-in"
-              >
-                <p className="text-2xs font-bold uppercase tracking-[0.12em] text-textMuted">{item.label}</p>
-                <p
-                  className={clsx(
-                    "mt-1 font-display text-2xl text-text sm:text-3xl",
-                    item.label === "Terlambat" && stats.overdue > 0 && "text-danger",
-                  )}
-                >
-                  {item.value}
-                </p>
-                <p className="mt-1 text-2xs text-textMuted">
-                  {item.label === "Menit" ? tr("beban estimasi") : tr("snapshot sekarang")}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+      <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="min-w-0"><p className="text-2xs font-semibold text-accent">{tr("Execution")}</p><h1 className="font-display text-2xl text-text">{tr("Tugas")}</h1><p className="text-2xs text-textMuted">{tr("{active} tugas aktif",{active:stats.active})}</p></div>
+        <PrimaryButton onClick={()=>setComposerOpen(true)} className="min-h-11 shrink-0 px-3.5 text-xs"><Plus size={15}/>{tr("Tugas")}</PrimaryButton>
       </header>
-
+      <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        <Chip active>{tr("Aktif")} {stats.active}</Chip>
+        <Chip tone={stats.overdue>0?"danger":"default"}>{tr("Terlambat")} {stats.overdue}</Chip>
+        <Chip>{tr("Hari ini")} {stats.today}</Chip>
+        <Chip>{tr("{minutes} mnt",{minutes:stats.effort})}</Chip>
+      </div>
       {composerOpen && (
-        <Card className="task-capture border-accent/15 bg-surface p-4 sm:p-5">
+        <Card className="task-capture border-accent/15 bg-surface p-4 shadow-2xl sm:p-5 rounded-t-[1.5rem] lg:rounded-2xl lg:shadow-sm fixed inset-x-0 bottom-0 z-modal max-h-[88dvh] overflow-y-auto lg:static lg:inset-auto lg:z-auto lg:max-h-none">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
             <div className="min-w-0 flex-1">
               <p className="text-2xs font-bold uppercase tracking-[0.13em] text-accent">{tr("Tambah cepat")}</p>
@@ -1667,28 +1557,15 @@ export default function TasksPage() {
                 className="mt-2 h-12 rounded-2xl bg-bg text-[15px]"
               />
             </div>
-            <div className="grid gap-2 sm:grid-cols-3 xl:w-[440px]">
-              <input
-                type="date"
-                value={form.due_date}
-                onChange={(event) => setForm({ ...form, due_date: event.target.value })}
-                className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text"
-              />
-              <input
-                type="time"
-                value={form.due_time}
-                onChange={(event) => setForm({ ...form, due_time: event.target.value })}
-                className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text"
-              />
-              <select
-                value={form.priority}
-                onChange={(event) => setForm({ ...form, priority: event.target.value as Task["priority"] })}
-                className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"
-              >
-                <option value="low">{tr("Prioritas rendah")}</option>
-                <option value="medium">{tr("Prioritas sedang")}</option>
-                <option value="high">{tr("Prioritas tinggi")}</option>
-              </select>
+            <div className="grid gap-2 sm:grid-cols-3 xl:w-[520px]">
+              <div className="flex gap-1.5 sm:col-span-2">
+                <button type="button" onClick={()=>{setCustomDueDate(false);setForm({...form,due_date:dateStrInTimezone(new Date(),timezone)});}} className={clsx("min-h-11 flex-1 rounded-xl border px-3 text-2xs font-semibold",!customDueDate&&form.due_date?"border-accent bg-accent/10 text-accent":"border-border bg-bg text-textMuted")}>{tr("Hari ini")}</button>
+                <button type="button" onClick={()=>{setCustomDueDate(false);setForm({...form,due_date:dateStrInTimezone(new Date(Date.now()+86400000),timezone)});}} className="min-h-11 flex-1 rounded-xl border border-border bg-bg px-3 text-2xs font-semibold text-textMuted">{tr("Besok")}</button>
+                <button type="button" onClick={()=>setCustomDueDate(true)} className={clsx("min-h-11 flex-1 rounded-xl border px-3 text-2xs font-semibold",customDueDate?"border-accent bg-accent/10 text-accent":"border-border bg-bg text-textMuted")}>{tr("Pilih…")}</button>
+              </div>
+              {customDueDate ? <input type="date" value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text"/> : <input type="time" value={form.due_time} onChange={e=>setForm({...form,due_time:e.target.value})} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text" aria-label={tr("Waktu tenggat (opsional)")}/>}
+              <select value={form.priority} onChange={e=>setForm({...form,priority:e.target.value as Task["priority"]})} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"><option value="low">{tr("Rendah")}</option><option value="medium">{tr("Sedang")}</option><option value="high">{tr("Tinggi")}</option></select>
+              <select value={form.estimated_minutes} onChange={e=>setForm({...form,estimated_minutes:e.target.value})} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"><option value="">{tr("Durasi")}</option><option value="15">15 mnt</option><option value="30">30 mnt</option><option value="60">1 jam</option><option value="90">1,5 jam</option></select>
             </div>
             <PrimaryButton onClick={addTask} disabled={saving} className="h-12 shrink-0 rounded-2xl px-5">
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}{" "}
@@ -1856,7 +1733,7 @@ export default function TasksPage() {
           </Card>
         )
       )}
-      <section className="task-bridge-grid grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <details className="rounded-2xl border border-border bg-surface"><summary className="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-textMuted">{tr("Impor dari… dan aksi lanjutan")}</summary><section className="task-bridge-grid grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             icon: CalendarDays,
@@ -1911,8 +1788,7 @@ export default function TasksPage() {
             </button>
           );
         })}
-      </section>
-
+      </section></details>
       <section className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
         <Card className="overflow-hidden p-0">
           <div className="border-b border-border p-4 sm:p-5">

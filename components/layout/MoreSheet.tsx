@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Grid2X2, LogOut, Search, X, ArrowRight } from "lucide-react";
-import { moreNavGroups } from "./nav-items";
+import { moreNavGroups,isNavPathActive } from "./nav-items";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/components/LanguageProvider";
 import { Overlay } from "@/components/ui/Overlay";
@@ -106,10 +106,10 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                   {tr("{items_length} pilihan", { items_length: group.items.length })}
                 </span>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 grid-cols-3">
                 {group.items.map((item) => {
                   const targetPath = item.href.split("#")[0];
-                  const active = Boolean(pathname?.startsWith(targetPath));
+                  const active = isNavPathActive(pathname, targetPath);
                   const Icon = item.icon;
                   return (
                     <Link

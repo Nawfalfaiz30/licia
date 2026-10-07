@@ -1,66 +1,12 @@
 "use client";
-
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { clsx } from "clsx";
-import { CalendarDays, MoreHorizontal } from "lucide-react";
-import { allNavItems, moreNavGroups } from "./nav-items";
-import { MoreSheet } from "./MoreSheet";
-import { useLanguage } from "@/components/LanguageProvider";
-import { haptic } from "@/lib/interaction";
-
-export function BottomNav() {
-  const { t: tr } = useLanguage();
-  const pathname = usePathname();
-  const { t } = useLanguage();
-  const [moreOpen, setMoreOpen] = useState(false);
-
-  const coreNav = ["/today", "/chat", "/tasks", "/calendar", "/finance"];
-  const visiblePrimary = [
-    { href: "/today", label: "Hari Ini", i18nKey: "today", icon: CalendarDays },
-    ...coreNav.filter((href) => href !== "/today").map((href) => allNavItems.find((item) => item.href === href)),
-  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
-  const isPrimary = visiblePrimary.some((i) => pathname?.startsWith(i.href));
-  const isInMore = !isPrimary && moreNavGroups.some((g) => g.items.some((i) => pathname?.startsWith(i.href)));
-
-  return (
-    <>
-      <nav className="licia-bottom-nav md:hidden fixed bottom-0 inset-x-0 z-nav bg-surface/98 border-t border-border backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
-        <div className="grid grid-cols-5">
-          {visiblePrimary.map((item) => {
-            const active = pathname?.startsWith(item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onPointerDown={() => haptic("selection")}
-                className={clsx(
-                  "licia-v32-interactive licia-v32-ripple mx-0.5 my-1 flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-2xs font-medium transition",
-                  active ? "bg-accent/10 text-accent" : "text-textMuted hover:bg-bg hover:text-text",
-                )}
-              >
-                <Icon size={20} />
-                {item.href === "/today" ? tr("Hari Ini") : t(item.i18nKey)}
-              </Link>
-            );
-          })}
-          <button
-            onPointerDown={() => haptic("selection")}
-            onClick={() => setMoreOpen(true)}
-            className={clsx(
-              "licia-v32-interactive licia-v32-ripple flex flex-col items-center gap-1 py-2.5 text-2xs font-medium transition",
-              isInMore ? "text-accent" : "text-textMuted",
-            )}
-            aria-label={tr("Buka semua fitur di Lainnya")}
-          >
-            <MoreHorizontal size={20} />
-            {tr("Lainnya")}
-          </button>
-        </div>
-      </nav>
-      <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
-    </>
-  );
-}
+import {useState} from "react";import Link from "next/link";import {usePathname} from "next/navigation";import {clsx} from "clsx";import {MoreHorizontal} from "lucide-react";
+import {mobilePrimaryNavItems,isNavPathActive} from "./nav-items";import {MoreSheet} from "./MoreSheet";import {useLanguage} from "@/components/LanguageProvider";import {haptic} from "@/lib/interaction";
+export function BottomNav(){const {t}=useLanguage();const pathname=usePathname();const [moreOpen,setMoreOpen]=useState(false);const isPrimary=mobilePrimaryNavItems.some(i=>isNavPathActive(pathname,i.href));const isInMore=Boolean(pathname)&&!isPrimary;
+return <><nav aria-label={t("Navigasi utama")} className="licia-bottom-nav md:hidden fixed bottom-0 inset-x-0 z-nav border-t border-border bg-surface/98 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+<div className="grid h-16 grid-cols-5 px-1">{mobilePrimaryNavItems.map((item,index)=>{const Icon=item.icon;const active=isNavPathActive(pathname,item.href);const emphasis=index===2;
+return <Link key={item.href} href={item.href} onPointerDown={()=>haptic("selection")} aria-current={active?"page":undefined} className={clsx("licia-nav-item flex min-w-0 min-h-12 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[11px] font-semibold leading-none",active?"text-accent":"text-textMuted hover:bg-bg hover:text-text",emphasis&&"my-1.5 border border-accent/20 bg-accent/5 text-accent")}>
+<span className={clsx("grid h-7 w-7 place-items-center rounded-xl",active&&"bg-accent/10",emphasis&&"h-8 w-8 rounded-2xl bg-accent text-white shadow-sm")}><Icon size={18} strokeWidth={active||emphasis?2.4:2}/></span>
+<span className="max-w-full truncate">{index===0?t("Beranda"):t(item.i18nKey)}</span></Link>})}
+<button type="button" onPointerDown={()=>haptic("selection")} onClick={()=>setMoreOpen(true)} aria-expanded={moreOpen} aria-controls="licia-more-sheet" aria-label={t("Buka semua fitur di Lainnya")} className={clsx("licia-nav-item flex min-w-0 min-h-12 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[11px] font-semibold leading-none",isInMore||moreOpen?"text-accent":"text-textMuted hover:bg-bg hover:text-text")}>
+<span className={clsx("grid h-7 w-7 place-items-center rounded-xl",(isInMore||moreOpen)&&"bg-accent/10")}><MoreHorizontal size={18}/></span><span className="max-w-full truncate">{t("Lainnya")}</span></button></div></nav>
+<MoreSheet open={moreOpen} onClose={()=>setMoreOpen(false)}/></>}

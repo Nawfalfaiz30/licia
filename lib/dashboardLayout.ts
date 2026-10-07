@@ -59,7 +59,7 @@ const ALL_IDS = DASHBOARD_WIDGETS.map((w) => w.id);
 const isId = (value: unknown): value is DashboardWidgetId =>
   typeof value === "string" && (ALL_IDS as string[]).includes(value);
 
-export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = { order: [...ALL_IDS], hidden: [], todayOnly: false };
+export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = { order: ["nextmove","now","overview","stats","insights","direction","body","review","control"], hidden: [], todayOnly: false };
 
 /**
  * Menormalkan data tersimpan: buang ID tak dikenal/duplikat, tambahkan widget baru (rilis mendatang) di
@@ -137,5 +137,5 @@ export const setTodayOnly = (layout: DashboardLayout, value: boolean): Dashboard
 export const resetLayout = (): DashboardLayout => normalizeLayout(null);
 
 export function isCustomized(layout: DashboardLayout): boolean {
-  return layout.todayOnly || layout.hidden.length > 0 || layout.order.some((id, i) => id !== ALL_IDS[i]);
+  return layout.todayOnly || layout.hidden.length > 0 || layout.order.some((id, i) => id !== DEFAULT_DASHBOARD_LAYOUT.order[i]);
 }

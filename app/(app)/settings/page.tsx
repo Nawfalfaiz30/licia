@@ -102,7 +102,7 @@ const DEFAULTS: SettingsState = {
   language: "id",
   name: "",
   timezone: "Asia/Jakarta",
-  startPage: "dashboard",
+  startPage: "today",
   density: "comfortable",
   textScale: "normal",
   defaultAiMode: "assistant",
@@ -155,6 +155,8 @@ function Toggle({
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={checked}
       onClick={onChange}
       className={clsx(
         "flex min-w-0 items-center justify-between gap-3 rounded-2xl border p-3 text-left",
@@ -215,7 +217,7 @@ function normalizeStartPage(value: unknown) {
   };
   return (
     map[v] ||
-    (v === "dashboard" || v === "plan" || v === "chat" || v === "capture" || v === "insights" ? v : "dashboard")
+    (v === "today" || v === "dashboard" || v === "plan" || v === "chat" || v === "capture" || v === "insights" ? v : "today")
   );
 }
 
@@ -744,11 +746,11 @@ export default function SettingsPage() {
           </Card>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {[
-              ["Beranda", tr("Agenda hari ini, keuangan, target & proyek, dan sinyal penting."), "/dashboard"],
+              ["Beranda", tr("Prioritas, jadwal, dan langkah yang perlu kamu lihat hari ini."), "/today"],
               ["Rencana", tr("Tugas, Kalender, Fokus, Perencana, Inbox, dan Pengingat."), "/plan"],
               ["Chat Licia", tr("Percakapan, pertanyaan, analisis, dan aksi berbasis konteks."), "/chat"],
               ["Tangkap", tr("Simpan teks atau gambar dengan cepat tanpa berpindah-pindah menu."), "/capture"],
-              ["Insights", tr("Review, pola, relasi, aktivitas, dan otomasi."), "/insights"],
+              ["Insight", tr("Review, pola, relasi, aktivitas, dan otomasi."), "/insights"],
               [
                 "Target & Proyek",
                 tr("Kelola target dan proyek dari satu ruang yang saling terhubung."),
@@ -1293,7 +1295,7 @@ export default function SettingsPage() {
                 "Rencana",
                 "Chat Licia",
                 "Tangkap",
-                "Insights",
+                "Insight",
                 "Target & Proyek",
                 "Knowledge & Belajar",
                 "Keuangan",

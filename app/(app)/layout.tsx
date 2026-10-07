@@ -25,10 +25,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main
         id="main-content"
         tabIndex={-1}
-        className="licia-main min-w-0 max-w-full overflow-x-clip pb-20 md:pl-64 md:pb-0"
+        className="licia-main min-w-0 max-w-full overflow-x-clip pb-[calc(64px+env(safe-area-inset-bottom)+16px)] md:pl-[72px] md:pb-0 xl:pl-64"
       >
         <TopBar />
-        <div className="licia-v33-page-in mx-auto w-full max-w-6xl min-w-0 px-4 py-2 sm:px-6 sm:py-6 lg:px-8 lg:py-10">
+        <div className="licia-v33-page-in mx-auto w-full max-w-[1280px] min-w-0 px-4 py-2 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           {children}
         </div>
       </main>

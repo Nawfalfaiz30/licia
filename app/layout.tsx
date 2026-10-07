@@ -22,6 +22,7 @@ export const viewport: Viewport = {
   themeColor: "#3d5fd9",
   colorScheme: "light dark",
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata: Metadata = {

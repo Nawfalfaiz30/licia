@@ -27,7 +27,7 @@ export function EmptyState({
       <p className="mb-4 text-sm text-textMuted">{t(description)}</p>
       {examples && examples.length > 0 && (
         <div className="mb-4">
-          <p className="mb-2 text-2xs font-bold uppercase tracking-[.14em] text-textMuted">{t("Coba salah satu")}</p>
+          <p className="mb-2 text-xs font-semibold text-textMuted">{t("Coba salah satu")}</p>
           <ul className="flex flex-wrap justify-center gap-2">
             {examples.map((example) => (
               <li key={example}>

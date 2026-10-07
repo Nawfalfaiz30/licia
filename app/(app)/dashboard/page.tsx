@@ -18,6 +18,7 @@ import {
   Inbox,
   ListChecks,
   MessageCircle,
+  Plus,
   Search,
   Settings2,
   Target,
@@ -466,107 +467,22 @@ export default async function DashboardPage() {
   return (
     <DashboardLayoutProvider>
       <div className="dashboard-v29 flex flex-col gap-5 animate-licia-page-in">
-        <header className="relative overflow-hidden rounded-[1.75rem] border border-accent/15 bg-gradient-to-br from-surface via-surface to-accent/5 p-4 shadow-sm sm:p-5">
-          <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-accent/10 blur-3xl animate-licia-float" />
-          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-accent/15 bg-bg shadow-sm sm:h-16 sm:w-16">
-                <img src="/licia-avatar.png" alt={tr("Licia")} className="h-full w-full object-cover" />
-              </div>
-              <div className="min-w-0">
-                <p className="flex items-center gap-2 text-2xs font-bold uppercase tracking-[.18em] text-accent">
-                  {tr("LICIA · PERSONAL OS")}
-                </p>
-                <h1 className="mt-1 break-words font-display text-2xl leading-tight text-text sm:text-3xl">
-                  {greeting}, {profile?.display_name || "kamu"}.
-                </h1>
-                <p className="mt-1 text-xs text-textMuted">
-                  {tr(
-                    "Mari lihat apa yang penting, apa yang perlu dikerjakan, dan apa yang bisa Licia bantu sekarang.",
-                  )}
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-2xs text-textMuted">
-                  <span>
-                    {new Intl.DateTimeFormat(locale, {
-                      timeZone: timezone,
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    }).format(now)}
-                  </span>
-                  <span className="rounded-full bg-bg px-2 py-1 text-accent">{tr("{nowClock} WIB", { nowClock })}</span>
-                </div>
-              </div>
+        <header className="rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3 sm:px-5">
+          <div className="flex min-h-[76px] items-center gap-3">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl ring-1 ring-accent/15"><img src="/licia-avatar.png" alt={tr("Licia")} className="h-full w-full object-cover"/></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-2xs font-semibold text-accent">{tr("LIFE OS")}</p>
+              <h1 className="truncate font-display text-2xl text-text">{greeting}, {profile?.display_name || tr("kamu")}.</h1>
+              <p className="truncate text-2xs text-textMuted">{tr("{agenda} jadwal · {tasks} tugas aktif",{agenda:todayAgenda.length,tasks:openTasks.length})}{proactiveRisk ? tr(" · Perlu perhatian") : ""}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/chat"
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <MessageCircle size={14} /> {tr("Tanya Licia")}
-              </Link>
-              <Link
-                href="/capture"
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-bg px-3.5 text-xs font-semibold text-textMuted transition hover:-translate-y-0.5 hover:border-accent/25 hover:text-accent"
-              >
-                <Zap size={14} /> {tr("Tangkap cepat")}
-              </Link>
-              <DashboardCustomizer />
-            </div>
+            <DashboardCustomizer/>
           </div>
         </header>
-        <OnboardingChecklist />
-
-        <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Link
-            href="/today"
-            className="group flex min-h-[72px] items-center gap-2.5 rounded-2xl border border-accent/15 bg-accent/5 p-3 transition hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-sm"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
-              <CalendarDays size={16} />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-xs font-bold text-text">{tr("Hari Ini")}</span>
-              <span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Lihat ritme hari")}</span>
-            </span>
-          </Link>
-          <Link
-            href="/plan"
-            className="group flex min-h-[72px] items-center gap-2.5 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-sm"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bg text-accent">
-              <ListChecks size={16} />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-xs font-bold text-text">{tr("Rencana")}</span>
-              <span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Susun langkah")}</span>
-            </span>
-          </Link>
-          <Link
-            href="/capture"
-            className="group flex min-h-[72px] items-center gap-2.5 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-sm"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bg text-accent">
-              <Zap size={16} />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-xs font-bold text-text">{tr("Tangkap")}</span>
-              <span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Simpan cepat")}</span>
-            </span>
-          </Link>
-          <Link
-            href="/search"
-            className="group flex min-h-[72px] items-center gap-2.5 rounded-2xl border border-border bg-surface p-3 transition hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-sm"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bg text-accent">
-              <Search size={16} />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-xs font-bold text-text">{tr("Cari")}</span>
-              <span className="mt-0.5 block truncate text-2xs text-textMuted">{tr("Temukan data")}</span>
-            </span>
-          </Link>
+        <section className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" aria-label={tr("Aksi cepat")}>
+          <Link href="/tasks" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white"><Plus size={15}/>{tr("Tugas")}</Link>
+          <Link href="/capture" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"><Plus size={15}/>{tr("Catatan")}</Link>
+          <Link href="/finance?tab=transactions" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"><Wallet size={15}/>{tr("Pengeluaran")}</Link>
+          <Link href="/search" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"><Search size={15}/>{tr("Cari")}</Link>
         </section>
 
         <DashboardWidget id="overview">
