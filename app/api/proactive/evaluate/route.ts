@@ -44,11 +44,19 @@ export async function GET(req: Request) {
     const today = dateStrInTimezone(now, timezone);
     const horizon = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
+    const allowTasks = proactivePrefs?.allow_tasks !== false;
+    const allowSchedule = proactivePrefs?.allow_schedule !== false;
     const [overdue, agenda, goals, inbox, watchersRes] = await Promise.all([
-      supabase.from("tasks").select("id,title,due_at,priority").eq("user_id", user.id).neq("status", "done").lt("due_at", now.toISOString()).order("due_at", { ascending: true }).limit(4),
-      supabase.from("schedule_blocks").select("id,title,block_date,start_time,end_time").eq("user_id", user.id).gte("block_date", today).lte("block_date", dateStrInTimezone(horizon, timezone)).order("block_date").order("start_time").limit(10),
+      allowTasks
+        ? supabase.from("tasks").select("id,title,due_at,priority").eq("user_id", user.id).neq("status", "done").lt("due_at", now.toISOString()).order("due_at", { ascending: true }).limit(4)
+        : Promise.resolve({ data: [] as any[] }),
+      allowSchedule
+        ? supabase.from("schedule_blocks").select("id,title,block_date,start_time,end_time").eq("user_id", user.id).gte("block_date", today).lte("block_date", dateStrInTimezone(horizon, timezone)).order("block_date").order("start_time").limit(10)
+        : Promise.resolve({ data: [] as any[] }),
       supabase.from("goals").select("id,title,progress,target_date").eq("user_id", user.id).eq("status", "active").order("target_date", { ascending: true, nullsFirst: false }).limit(8),
-      supabase.from("smart_inbox_items").select("id,content,created_at").eq("user_id", user.id).eq("status", "open").order("created_at", { ascending: true }).limit(3),
+      allowTasks
+        ? supabase.from("smart_inbox_items").select("id,content,created_at").eq("user_id", user.id).eq("status", "open").order("created_at", { ascending: true }).limit(3)
+        : Promise.resolve({ data: [] as any[] }),
       supabase.from("ai_watchers").select("id,name,description,condition,action,cooldown_minutes,last_triggered_at,entity_type").eq("user_id", user.id).eq("enabled", true).limit(50),
     ]);
 
