@@ -39,7 +39,7 @@ describe("normalizeLayout", () => {
   it("widget baru disisipkan setelah tetangga bawaannya", () => {
     const old = ids.filter((id) => id !== "insights");
     const l = normalizeLayout({ order: old });
-    expect(l.order.indexOf("insights")).toBe(l.order.indexOf("body") + 1);
+    expect(l.order.indexOf("insights")).toBe(l.order.indexOf("nextmove") + 1);
   });
   it("todayOnly hanya true bila persis true", () => {
     expect(normalizeLayout({ todayOnly: "true" }).todayOnly).toBe(false);
