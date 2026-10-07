@@ -13,6 +13,13 @@ export function DataBackupButton() {
     setBusy(true);
     try {
       const res = await fetch("/api/backup", { cache: "no-store" });
+      if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        if (data?.code === "STEP_UP_REQUIRED" && typeof data.stepUpUrl === "string") {
+          window.location.assign(data.stepUpUrl);
+          return;
+        }
+      }
       if (!res.ok) throw new Error(tr("Backup belum bisa dibuat."));
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -65,6 +72,10 @@ export function DataBackupButton() {
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && data?.code === "STEP_UP_REQUIRED" && typeof data.stepUpUrl === "string") {
+        window.location.assign(data.stepUpUrl);
+        return;
+      }
       if (!res.ok && res.status !== 207) throw new Error(data.error || tr("Restore gagal."));
       notifyToast({
         title: res.status === 207 ? tr("Restore sebagian") : tr("Restore selesai"),
