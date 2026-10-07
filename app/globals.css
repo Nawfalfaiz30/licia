@@ -1305,7 +1305,7 @@ html[data-motion="off"] .licia-v35-interactive, html[data-reduced-motion="true"]
 .chat-v48-prompt { min-height: 2.75rem; line-height: 1.45; transition: border-color .18s ease, background-color .18s ease; }
 .chat-v48-prompt:hover { transform: translateY(-1px); }
 .chat-v48-header { box-shadow: 0 1px 0 rgb(255 255 255 / .02); }
-.chat-v48-pane { scrollbar-gutter: stable both-edges; overscroll-behavior: contain; background: radial-gradient(circle at 90% 4%, rgb(var(--accent-rgb) / .04), transparent 22%), var(--surface); }
+.chat-v48-pane { scrollbar-gutter: stable; overscroll-behavior: contain; background: radial-gradient(circle at 90% 4%, rgb(var(--accent-rgb) / .04), transparent 22%), var(--surface); }
 .chat-v48 .chat-bubble { overflow-wrap: anywhere; word-break: break-word; }
 .chat-v48 .chat-message-ai { max-width: min(100%, 46rem); }
 .chat-v48 .chat-message-user { max-width: min(100%, 42rem); }
@@ -1387,7 +1387,7 @@ html[data-motion="off"] .licia-v35-interactive, html[data-reduced-motion="true"]
 html.kb-open .licia-bottom-nav{display:none!important;}
 .licia-sidebar nav{scrollbar-gutter:stable;}
 .licia-card{border-radius:var(--radius-lg);}
-.chat-page-shell{width:100%;max-width:none;}
+.chat-page-shell{max-width:none;width:calc(100% + 3rem);margin-inline:-1.5rem;}
 .chat-page-shell .chat-v48{height:100%;min-height:0;max-height:none;border-radius:0;border-inline:0;}
 .chat-v48-composer textarea{font-size:16px!important;}
 :is(.today-page,.task-page,.finance-page) :is(h1,h2,h3){text-wrap:balance;}
@@ -1401,4 +1401,36 @@ html.kb-open .licia-bottom-nav{display:none!important;}
 }
 @media (forced-colors:active){
   .licia-bottom-nav,.licia-sidebar,.chat-v48,.licia-card{border-color:CanvasText;}
+}
+
+
+/* v51 — dashboard information-first layout from UI/UX roadmap. */
+.dashboard-v29{min-width:0;}
+@media (min-width:1280px){
+  .dashboard-v29{
+    display:grid;
+    grid-template-columns:repeat(12,minmax(0,1fr));
+    align-items:start;
+    gap:1rem;
+  }
+  .dashboard-v29 > [data-widget]{min-width:0;}
+  .dashboard-v29 > [data-widget="now"]{grid-column:span 8;}
+  .dashboard-v29 > [data-widget="overview"]{grid-column:span 4;}
+  .dashboard-v29 > [data-widget="stats"]{grid-column:span 4;}
+  .dashboard-v29 > [data-widget="nextmove"]{grid-column:span 8;}
+  .dashboard-v29 > [data-widget="direction"]{grid-column:span 8;}
+  .dashboard-v29 > [data-widget="body"]{grid-column:span 4;}
+  .dashboard-v29 > [data-widget="insights"],
+  .dashboard-v29 > [data-widget="review"],
+  .dashboard-v29 > [data-widget="control"]{grid-column:1 / -1;}
+}
+@media (max-width:767px){
+  .dashboard-v29{gap:.75rem;}
+  .dashboard-v29 .dashboard-overview-card{min-height:104px;}
+  .dashboard-v29 .dashboard-overview-card > div:first-child{
+    text-transform:none;
+    letter-spacing:normal;
+    line-height:1.2;
+    font-size:.75rem;
+  }
 }

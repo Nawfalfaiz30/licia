@@ -57,11 +57,11 @@ describe("serialisasi", () => {
 describe("operasi tata letak", () => {
   it("moveWidget menukar tetangga dan berhenti di ujung", () => {
     const base = resetLayout();
-    expect(moveWidget(base, "overview", -1)).toBe(base);
+    expect(moveWidget(base, "now", -1)).toBe(base);
     expect(moveWidget(base, "control", 1)).toBe(base);
-    const moved = moveWidget(base, "nextmove", -1);
-    expect(moved.order.slice(0, 2)).toEqual(["nextmove", "overview"]);
-    expect(widgetOrder(moved, "nextmove")).toBe(0);
+    const moved = moveWidget(base, "overview", -1);
+    expect(moved.order.slice(0, 2)).toEqual(["overview", "now"]);
+    expect(widgetOrder(moved, "overview")).toBe(0);
   });
   it("toggleWidget menyembunyikan lalu menampilkan kembali", () => {
     const hidden = toggleWidget(resetLayout(), "insights");

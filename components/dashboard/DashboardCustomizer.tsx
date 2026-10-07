@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, CalendarCheck, Eye, EyeOff, RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarCheck, Eye, EyeOff, RotateCcw, Settings2, X } from "lucide-react";
 import { clsx } from "clsx";
 import { Overlay } from "@/components/ui/Overlay";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -43,11 +43,14 @@ export function DashboardCustomizer() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-bg px-3.5 text-xs font-semibold text-textMuted transition hover:text-text"
+          aria-label={t("Atur beranda")}
+          title={t("Atur beranda")}
+          className="touch-target relative rounded-xl border border-border bg-bg text-textMuted transition hover:border-accent/25 hover:text-accent"
         >
-          <SlidersHorizontal size={14} aria-hidden="true" />
-          {t("Atur beranda")}
-          {customized && <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />}
+          <Settings2 size={16} aria-hidden="true" />
+          {customized && (
+            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+          )}
         </button>
       </div>
 

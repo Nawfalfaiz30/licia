@@ -517,76 +517,101 @@ export default async function DashboardPage() {
         </section>
 
         <DashboardWidget id="overview">
-          <section className="dashboard-top-overview grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="dashboard-top-overview grid gap-3 sm:grid-cols-2">
             <Link
-              href="/today"
+              href="/calendar"
               className="dashboard-overview-card rounded-2xl border border-accent/15 bg-accent/5 p-4 transition hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-[.14em] text-accent">
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold text-accent">
+                <span className="flex min-w-0 items-center gap-2">
                   <CalendarDays size={13} /> {tr("Jadwal hari ini")}
-                </div>
-                <ArrowRight size={13} className="text-accent" />
+                </span>
+                <ArrowRight size={13} className="shrink-0 text-accent" />
               </div>
               <p className="mt-3 font-display text-2xl text-text">{todayAgenda.length}</p>
               <p className="mt-1 line-clamp-2 text-2xs text-textMuted">
-                {todayAgenda.length
-                  ? nextAgenda
-                    ? tr("{time} · {nextAgenda_title}", {
-                        time: time(nextAgenda.start_time),
-                        nextAgenda_title: nextAgenda.title,
-                      })
-                    : tr("Agenda hari ini sudah tersusun.")
+                {nextAgenda
+                  ? tr("Mulai {time} · {nextAgenda_title}", {
+                      time: time(nextAgenda.start_time),
+                      nextAgenda_title: nextAgenda.title,
+                    })
                   : tr("Belum ada agenda untuk hari ini.")}
               </p>
             </Link>
+
             <Link
               href="/finance"
               className="dashboard-overview-card rounded-2xl border border-border bg-surface p-4 transition hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-[.14em] text-success">
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold text-success">
+                <span className="flex min-w-0 items-center gap-2">
                   <Wallet size={13} /> {tr("Keuangan")}
-                </div>
-                <ArrowRight size={13} className="text-textMuted" />
+                </span>
+                <ArrowRight size={13} className="shrink-0 text-textMuted" />
               </div>
-              <p className="mt-3 text-base font-semibold text-text">{rupiah(balance)}</p>
+              <p className={clsx("mt-3 text-base font-semibold", signedNet < 0 ? "text-danger" : "text-success")}>
+                {rupiah(signedNet)}
+              </p>
+              <p className="mt-1 text-2xs font-semibold text-textMuted">{tr("Selisih bulan ini")}</p>
               <p className="mt-1 text-2xs text-textMuted">
-                {tr("Net bulan ini {rupiah}", { rupiah: rupiah(signedNet) })}
+                {tr("Pemasukan")} <span className="font-semibold text-success">{rupiah(monthIncome)}</span> ·{" "}
+                {tr("Pengeluaran")} <span className="font-semibold text-danger">{rupiah(monthExpense)}</span>
               </p>
             </Link>
+
             <Link
               href="/goals-projects"
               className="dashboard-overview-card rounded-2xl border border-border bg-surface p-4 transition hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-[.14em] text-accent">
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold text-accent">
+                <span className="flex min-w-0 items-center gap-2">
                   <Target size={13} /> {tr("Target & proyek")}
-                </div>
-                <ArrowRight size={13} className="text-textMuted" />
+                </span>
+                <ArrowRight size={13} className="shrink-0 text-textMuted" />
               </div>
-              <p className="mt-3 text-base font-semibold text-text">{tr("{avgGoal}% rata-rata target", { avgGoal })}</p>
-              <p className="mt-1 text-2xs text-textMuted">
-                {tr("{activeGoals_length} target aktif ·", { activeGoals_length: activeGoals.length })}{" "}
-                {(projects.data ?? []).length} {tr("proyek aktif")}
-              </p>
+              {activeGoals.length ? (
+                <>
+                  <p className="mt-3 text-base font-semibold text-text">
+                    {tr("{avgGoal}% rata-rata target", { avgGoal })}
+                  </p>
+                  <p className="mt-1 text-2xs text-textMuted">
+                    {tr("{activeGoals_length} target aktif ·", { activeGoals_length: activeGoals.length })}{" "}
+                    {(projects.data ?? []).length} {tr("proyek aktif")}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-base font-semibold text-text">{tr("Belum ada target")}</p>
+                  <p className="mt-1 inline-flex rounded-lg bg-accent/10 px-2 py-1 text-2xs font-semibold text-accent">
+                    {tr("Buat target pertama")}
+                  </p>
+                </>
+              )}
             </Link>
+
             <Link
               href="/wellbeing"
               className="dashboard-overview-card rounded-2xl border border-border bg-surface p-4 transition hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-[.14em] text-accent">
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold text-accent">
+                <span className="flex min-w-0 items-center gap-2">
                   <HeartPulse size={13} /> {tr("Kondisi hari ini")}
-                </div>
-                <ArrowRight size={13} className="text-textMuted" />
+                </span>
+                <ArrowRight size={13} className="shrink-0 text-textMuted" />
               </div>
-              <p className="mt-3 text-base font-semibold text-text">
-                {tr("{toFixed} L hidrasi", { toFixed: (water / 1000).toFixed(1) })}
-              </p>
-              <p className="mt-1 text-2xs text-textMuted">
-                {tr("{movement} menit gerak", { movement })}
-                {fatigue ? tr(" · kelelahan {fatigue}/5", { fatigue }) : ""}
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <p className="text-base font-semibold text-text">{Math.min(2, water / 1000).toFixed(1)} / 2 L</p>
+                <span className="text-2xs text-textMuted">{Math.min(100, Math.round((water / 2000) * 100))}%</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg">
+                <div
+                  className="h-full rounded-full bg-accent/70"
+                  style={{ width: `${Math.min(100, Math.round((water / 2000) * 100))}%` }}
+                />
+              </div>
+              <p className="mt-2 text-2xs text-textMuted">
+                {movement > 0 ? tr("{movement} menit gerak", { movement }) : tr("Belum bergerak hari ini")}
+                {water < 2000 && <span className="text-accent"> · +250 ml</span>}
               </p>
             </Link>
           </section>

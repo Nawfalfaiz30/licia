@@ -4,6 +4,11 @@
  * Placeholder {nama} harus sama persis di kedua sisi.
  */
 export const enPhrases: Record<string, string> = {
+  "Selisih bulan ini": "Monthly difference",
+  "Belum ada target": "No goals yet",
+  "Buat target pertama": "Create your first goal",
+  "Belum bergerak hari ini": "No movement yet today",
+  "Mulai {time} · {nextAgenda_title}": "Starts {time} · {nextAgenda_title}",
   " (buka kunci dulu)": " (unlock first)",
   " · kelelahan {fatigue}/5": " · fatigue {fatigue}/5",
   " · keyakinan {round}%": " · confidence {round}%",
