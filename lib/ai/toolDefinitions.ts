@@ -1771,7 +1771,22 @@ export const toolDefs: ToolDef[] = [
       parameters: { type: "object", properties: { watcher_id: { type: "string" }, confirm: { type: "boolean" } }, required: ["watcher_id", "confirm"] },
     },
   },
-
+,
+  {
+    type: "function",
+    function: {
+      name: "search_ai_knowledge",
+      description: "Cari catatan, memory, keputusan, bacaan, dan dokumen Life OS yang sudah diindeks. Gunakan saat pengguna meminta sesuatu yang pernah ia tulis atau ingin mencari secara semantik. Vault terenkripsi tidak boleh diindeks di server.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Kalimat/kata kunci yang ingin dicari." },
+          limit: { type: "number", description: "1-20, default 8." },
+        },
+        required: ["query"],
+      },
+    },
+  }
 ];
 
 // ---- Handlers --------------------------------------------------------------------
