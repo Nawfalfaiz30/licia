@@ -1173,8 +1173,8 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
     <div
       data-chat-style={chatStyle}
       className={clsx(
-        "chat-v48 flex min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-border bg-surface",
-        compact ? "h-[500px]" : "h-full min-h-0 sm:rounded-[1.5rem]",
+        "chat-v48 flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface md:rounded-[1.5rem] md:border md:border-border",
+        compact ? "h-[500px] rounded-[1.25rem] border" : "rounded-none border-0 md:max-h-[900px] md:border",
       )}
     >
       <header className="chat-v48-header relative z-30 flex shrink-0 items-center gap-2.5 border-b border-border/80 bg-surface px-3 py-3 sm:px-4">
@@ -1457,92 +1457,68 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
       <div className="chat-v48-composer shrink-0 border-t border-border/80 bg-surface/95 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-4 sm:pb-3">
         <div className="mx-auto max-w-2xl">
           <div className="mb-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
-            {["Tugas hari ini","Jadwal besok","Catat pengeluaran","Ringkas hari ini"].map((prompt) => (
-              <button key={prompt} type="button" onClick={() => setInput(tr(prompt))} className="shrink-0 rounded-full border border-border bg-bg px-3 py-1.5 text-2xs font-semibold text-textMuted hover:border-accent/25 hover:text-accent">
-                {tr(prompt)}
-              </button>
-            ))}
-          </div>
-          {conversationState?.activeDomain && conversationState.activeDomain !== "overview" && (
-            <div className="mb-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <button type="button" onClick={resetConversationContext} className="shrink-0 rounded-full border border-accent/20 bg-accent/5 px-3 py-1.5 text-2xs font-semibold text-accent">
-                {tr("Konteks:")} {contextLabel} ×
-              </button>
-            </div>
-          )
-          <div className="mb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
             {[
               [tr("Tugas hari ini"), tr("Apa yang paling penting hari ini?")],
               [tr("Jadwal besok"), tr("Apa jadwal saya besok?")],
               [tr("Catat pengeluaran"), tr("Catat pengeluaran baru")],
               [tr("Ringkas hari ini"), tr("Ringkas hari saya")],
-            ].map(([label,prompt]) => <button key={label} type="button" onClick={() => { setInput(prompt); textareaRef.current?.focus(); }} className="shrink-0 rounded-full border border-border bg-bg px-3 py-2 text-2xs font-semibold text-textMuted hover:border-accent/25 hover:text-accent">{label}</button>)}
+            ].map(([label, prompt]) => (
+              <button key={label} type="button" onClick={() => { setInput(prompt); textareaRef.current?.focus(); }}
+                className="shrink-0 rounded-full border border-border bg-bg px-3 py-1.5 text-2xs font-semibold text-textMuted hover:border-accent/25 hover:text-accent">
+                {label}
+              </button>
+            ))}
           </div>
-          <div className="mb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
-            {latestAiMessage?.aiMeta && <span className="shrink-0 rounded-full border border-border bg-bg px-2.5 py-1.5 text-2xs font-semibold text-textMuted">{tr("Konteks: {contextLabel}", { contextLabel })}</span>}
-            {conversationState?.activeDomain && conversationState.activeDomain !== "overview" && <button type="button" onClick={resetConversationContext} className="shrink-0 rounded-full border border-accent/15 bg-accent/5 px-2.5 py-1.5 text-2xs font-semibold text-accent">{tr("Konteks:")} {conversationState.activeDomain.replaceAll("_"," ")} · ×</button>}
-          </div>
+          {(conversationState?.activeDomain && conversationState.activeDomain !== "overview") || latestAiMessage?.aiMeta ? (
+            <div className="mb-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button type="button" onClick={resetConversationContext}
+                className="shrink-0 rounded-full border border-accent/20 bg-accent/5 px-3 py-1.5 text-2xs font-semibold text-accent">
+                {tr("Konteks:")} {contextLabel} ×
+              </button>
+            </div>
+          ) : null}
           {pendingImage && (
             <div className="mb-1.5 flex items-center gap-2 rounded-xl border border-border bg-bg px-2.5 py-1.5">
               <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg">
                 <img src={pendingImage} alt={tr("Lampiran")} className="h-full w-full object-cover" />
               </div>
               <span className="min-w-0 flex-1 truncate text-2xs text-textMuted">{tr("Gambar siap dikirim")}</span>
-              <button
-                onClick={() => setPendingImage(null)}
-                className="touch-target text-textMuted hover:text-danger"
-                aria-label={tr("Hapus gambar")}
-              >
+              <button type="button" onClick={() => setPendingImage(null)} className="touch-target text-textMuted hover:text-danger" aria-label={tr("Hapus gambar")}>
                 <X size={13} />
               </button>
             </div>
           )}
-          <div className="chat-v48-composer-row flex items-end gap-1.5 rounded-[1.25rem] border border-border/80 bg-bg p-1.5 shadow-sm transition focus-within:border-accent/45 focus-within:ring-4 focus-within:ring-accent/5">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="touch-target shrink-0 rounded-xl text-textMuted transition hover:bg-surface hover:text-accent"
-              title={tr("Lampirkan gambar")}
-              aria-label={tr("Lampirkan gambar")}
-            >
+          <div className="chat-v48-composer-row flex items-end gap-1.5 rounded-[1.25rem] border border-border/80 bg-bg p-1.5 shadow-sm transition duration-150 focus-within:border-accent/45 focus-within:ring-4 focus-within:ring-accent/5">
+            <button type="button" onClick={() => fileInputRef.current?.click()}
+              className="touch-target flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-textMuted transition-colors duration-150 hover:bg-surface hover:text-accent"
+              title={tr("Tangkap atau lampirkan")} aria-label={tr("Tangkap atau lampirkan")}>
               <Plus size={18} />
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={handlePickImage}
-              className="hidden"
-            />
+            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePickImage} className="hidden" />
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              enterKeyHint={enterToSend ? "send" : "enter"}
+              enterKeyHint="enter"
               onPaste={handlePaste}
               disabled={loading}
               rows={1}
               placeholder={tr("Tulis ke Licia…")}
-              className="max-h-36 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-1.5 py-2.5 text-[16px] leading-relaxed text-text outline-none placeholder:text-textMuted"
+              className="max-h-[140px] min-h-11 min-w-0 flex-1 resize-none bg-transparent px-1.5 py-2.5 text-base leading-relaxed text-text outline-none placeholder:text-textMuted"
             />
-            <button
-              onClick={() => void handleSend()}
-              disabled={loading || compressingImage || (!input.trim() && !pendingImage)}
-              className="touch-target flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-md shadow-accent/15 transition hover:scale-[1.02] active:scale-95 disabled:opacity-40"
-              title={tr("Kirim")}
-              aria-label={tr("Kirim")}
-            >
+            <button type="button" onClick={() => void handleSend()} disabled={loading || compressingImage || (!input.trim() && !pendingImage)}
+              className="touch-target flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-md shadow-accent/15 transition-colors duration-150 disabled:opacity-40"
+              title={tr("Kirim")} aria-label={tr("Kirim")}>
               <Send size={16} />
             </button>
           </div>
           <div className="mt-1 flex items-center justify-between gap-2 px-1">
             <p className="hidden truncate text-2xs text-textMuted sm:block">
-              {enterToSend ? tr("Enter kirim · Shift+Enter baris baru") : tr("Enter baris baru · Ctrl/Cmd+Enter kirim")}
+              {tr("Desktop: Enter kirim · Shift+Enter baris baru · Ponsel: Enter baris baru")}
             </p>
             <p className="truncate text-2xs text-textMuted">
-              {compressingImage
-                ? tr("Menyiapkan gambar…")
-                : tr("Licia mengingat beberapa percakapan terakhir dan memilih konteks yang paling relevan")}
+              {compressingImage ? tr("Menyiapkan gambar…") : tr("Konteks tetap dipakai dari percakapan ini")}
             </p>
           </div>
         </div>
