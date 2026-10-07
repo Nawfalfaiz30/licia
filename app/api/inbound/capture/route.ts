@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sha256Hex } from "@/lib/integrations/secretBox";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertJsonSize, rateLimit } from "@/lib/security";
 
 export const dynamic="force-dynamic";
 
@@ -12,9 +13,11 @@ function tokenFrom(req:Request){
 }
 
 export async function POST(req:Request){
+  const sizeError=assertJsonSize(req,256*1024); if(sizeError)return sizeError;
   const token=tokenFrom(req);
   if(!token)return NextResponse.json({error:"Token inbound diperlukan."},{status:401});
   const supabase=createAdminClient();
+  const gate=rateLimit("inbound:"+sha256Hex(token),20,60_000); if(gate)return gate;
   const {data:tokenRow}=await supabase.from("inbound_capture_tokens")
     .select("id,user_id,provider,expires_at").eq("token_hash",sha256Hex(token)).maybeSingle();
   if(!tokenRow)return NextResponse.json({error:"Token inbound tidak valid."},{status:401});
