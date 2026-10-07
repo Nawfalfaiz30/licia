@@ -17,8 +17,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Use npm 11 for lockfile generation
+        run: npm install --global npm@11
       - name: Refresh lockfile
-        run: rm -f package-lock.json && npm install --package-lock-only --ignore-scripts --no-audit --no-fund --prefer-offline
+        run: rm -f package-lock.json && npm install --package-lock-only --ignore-scripts --no-audit --no-fund --prefer-offline --legacy-peer-deps
       - name: Commit lockfile when changed
         run: |
           if git diff --quiet -- package-lock.json; then
