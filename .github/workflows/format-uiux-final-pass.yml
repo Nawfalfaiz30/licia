@@ -1,0 +1,34 @@
+name: Format UI UX final pass
+
+on:
+  push:
+    branches:
+      - fix/uiux-final-pass
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/uiux-final-pass
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx prettier --write "app/(app)/chat/page.tsx" "app/(app)/dashboard/page.tsx" "app/(app)/finance/page.tsx" "app/(app)/calendar/page.tsx" "components/dashboard/DashboardLayoutProvider.tsx"
+      - name: Commit formatting
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "app/(app)/chat/page.tsx" "app/(app)/dashboard/page.tsx" "app/(app)/finance/page.tsx" "app/(app)/calendar/page.tsx" "components/dashboard/DashboardLayoutProvider.tsx"
+          if git diff --cached --quiet; then
+            echo "No formatting changes"
+          else
+            git commit -m "chore: format final ui ux pass"
+            git push origin fix/uiux-final-pass
+          fi

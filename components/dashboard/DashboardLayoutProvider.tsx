@@ -27,7 +27,7 @@ function migrateLegacyDefault(layout: DashboardLayout): DashboardLayout {
  * Perubahan dari perangkat lain tiba lewat event "licia:preferences-change" (lib/preferences.ts).
  */
 export function DashboardLayoutProvider({ children }: { children: React.ReactNode }) {
-  const [layout, setLayout] = useState<DashboardLayout>(() => resetLayout());
+  const [layout, setLayout] = useState<DashboardLayout>(() => ({ ...DEFAULT_DASHBOARD_LAYOUT, order: [...DEFAULT_DASHBOARD_LAYOUT.order] }));
   const [ready, setReady] = useState(false);
   const saveTimer = useRef<number | null>(null);
 
