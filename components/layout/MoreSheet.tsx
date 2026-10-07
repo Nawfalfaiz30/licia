@@ -106,7 +106,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                   {tr("{items_length} pilihan", { items_length: group.items.length })}
                 </span>
               </div>
-              <div className="grid grid-cols-1 gap-2 grid-cols-3">
+              <div className="grid grid-cols-3 gap-2">
                 {group.items.map((item) => {
                   const targetPath = item.href.split("#")[0];
                   const active = isNavPathActive(pathname, targetPath);
@@ -117,7 +117,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                       href={item.href}
                       onClick={onClose}
                       className={clsx(
-                        "group relative flex min-h-[62px] min-w-0 items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition active:scale-[.985]",
+                        "group relative flex min-h-[104px] min-w-0 flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition active:scale-[.985]",
                         active
                           ? "border-accent/25 bg-accent/10 text-accent shadow-[0_8px_24px_rgb(61_95_217_/_0.08)]"
                           : "border-border bg-bg text-text hover:border-accent/20",
@@ -131,8 +131,8 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                       >
                         <Icon size={17} />
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block break-words text-2xs font-semibold leading-tight">
+                      <span className="min-w-0 max-w-full">
+                        <span className="block whitespace-normal break-normal text-2xs font-semibold leading-snug">
                           {t(item.i18nKey)}
                         </span>
                         {item.sub && (
@@ -141,7 +141,7 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                       </span>
                       <ArrowRight
                         size={12}
-                        className="shrink-0 text-textMuted transition group-hover:translate-x-0.5 group-hover:text-accent"
+                        className="absolute right-2.5 top-2.5 shrink-0 text-textMuted transition group-hover:translate-x-0.5 group-hover:text-accent"
                       />
                     </Link>
                   );

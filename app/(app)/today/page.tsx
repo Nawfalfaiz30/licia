@@ -19,7 +19,7 @@ import { Card } from "@/components/ui";
 import { dateStrInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone } from "@/lib/date";
 import { previewPlainText } from "@/lib/text";
 import { getServerT } from "@/lib/i18n-server";
-import { PALETTE_OPEN_EVENT } from "@/lib/shortcuts";
+import { TodayQuickSearchButton } from "@/components/today/TodayQuickSearchButton";
 import { TodayPriorityList } from "@/components/today/TodayPriorityList";
 function minutesLabel(n: number) {
   if (n < 60) return `${n} m`;
@@ -139,14 +139,7 @@ export default async function TodayPage() {
           <Wallet size={15} />
           {tr("Pengeluaran")}
         </Link>
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent(PALETTE_OPEN_EVENT))}
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"
-        >
-          <Search size={15} />
-          {tr("Cari")}
-        </button>
+        <TodayQuickSearchButton label={tr("Cari")} />
       </section>
       {currentAgenda && (
         <section className="rounded-2xl border border-accent/20 bg-accent/5 p-3.5">
