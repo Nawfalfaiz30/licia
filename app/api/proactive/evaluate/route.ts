@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { enforceSameOrigin } from "@/lib/security";
 import { dateStrInTimezone } from "@/lib/date";
 import { memoizeUserContext } from "@/lib/ai/contextCache";
+import { shouldProactivelyNotify } from "@/lib/ai/proactivePolicy";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,18 @@ export async function GET(req: Request) {
     const { data: profile } = await supabase.from("users").select("timezone,preferences").eq("id", user.id).maybeSingle();
     const preferences = (profile?.preferences || {}) as Record<string, unknown>;
     if (preferences.proactiveAssistant === false) return [];
+    const { data: proactivePrefs } = await supabase
+      .from("ai_proactive_preferences")
+      .select("enabled,max_suggestions_per_day,quiet_start,quiet_end")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const policy = shouldProactivelyNotify({
+      now,
+      prefs: proactivePrefs || { enabled: true, max_suggestions_per_day: 3 },
+      suggestionsToday: Number((preferences as any).proactiveSuggestionsToday || 0),
+      candidateScore: 100,
+    });
+    if (!policy.allowed) return [];
 
     const timezone = String(profile?.timezone || "Asia/Jakarta");
     const now = new Date();
