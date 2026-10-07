@@ -19,23 +19,23 @@ const group = (label: string, i18nKey: string, items: NavItem[]): NavGroup => ({
  * as duplicate destinations.
  */
 export const navGroups: NavGroup[] = [
-  group("Workspace utama", "nav_workspace_main", [
-    item("/dashboard", "Beranda", "home", LayoutDashboard, true),
-    item("/plan", "Rencana", "plan", ListTodo, true),
+  group("Inti", "nav_core", [
+    item("/today", "Hari Ini", "today", CalendarDays, true),
     item("/chat", "Chat Licia", "chat", MessageCircle, true),
-    item("/capture", "Tangkap", "capture", Camera, true),
-    item("/insights", "Insights", "insights", Lightbulb, true),
+    item("/tasks", "Tugas", "tasks", ListTodo, true),
+    item("/calendar", "Kalender", "calendar", CalendarDays, true),
+    item("/knowledge", "Catatan", "knowledge", LibraryBig, true),
+    item("/finance", "Keuangan", "finance", Wallet, true),
   ]),
   group("Rencana", "nav_plan", [
-    item("/tasks", "Tugas", "tasks", ListTodo),
-    item("/calendar", "Kalender", "calendar", CalendarDays),
+    item("/plan", "Rencana", "plan", BrainCircuit),
     item("/focus", "Fokus", "focus", Timer),
+    item("/goals-projects", "Target & Proyek", "goals_projects", Target),
   ]),
   group("Ruang Hidup", "nav_personal_os", [
-    item("/goals-projects", "Target & Proyek", "goals_projects", Target),
-    item("/knowledge", "Knowledge & Belajar", "knowledge_learning", LibraryBig),
-    item("/finance", "Keuangan", "finance", Wallet),
     item("/wellbeing", "Kesehatan & Rutinitas", "health_habits", HeartPulse),
+    item("/automations", "Otomasi", "automations", Zap),
+    item("/life-map", "Peta", "life_map", Compass),
   ]),
   group("Bantuan", "nav_system_help", [
     item("/guide", "Panduan", "guide", CircleHelp),
