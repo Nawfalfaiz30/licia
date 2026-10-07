@@ -4,6 +4,7 @@ import { ToastProvider } from "@/components/ui";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { getServerLanguage } from "@/lib/i18n-server";
 import { ThemeSync } from "@/components/layout/ThemeSync";
+import { WebVitals } from "@/components/WebVitals";
 
 
 // Keep typography deterministic at build time. The app exposes the same
@@ -110,7 +111,7 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="font-body min-h-screen"><LanguageProvider initialLanguage={language}><ToastProvider /><ThemeSync />{children}</LanguageProvider></body>
+      <body className="font-body min-h-screen"><LanguageProvider initialLanguage={language}><ToastProvider /><ThemeSync /><WebVitals />{children}</LanguageProvider></body>
     </html>
   );
 }
