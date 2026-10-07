@@ -75,6 +75,12 @@ async function saveServerChatTurn(
   const text = String(content || "").trim();
   if (!text) return;
   try {
+    const privacy = await supabase
+      .from("ai_privacy_preferences")
+      .select("private_mode")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (privacy.data?.private_mode === true) return;
     const normalizedTurnId = typeof turnId === "string" && turnId.trim() ? turnId.trim().slice(0, 120) : null;
     if (normalizedTurnId) {
       const existing = await supabase.from("ai_chat_messages")
@@ -673,30 +679,41 @@ async function handleChatPost(req: Request) {
   if ((!message || typeof message !== "string") && !imageDataUrl) return NextResponse.json({ error: "Pesan kosong." }, { status: 400 });
   if (imageDataUrl && !isSupportedImageDataUrl(imageDataUrl)) return NextResponse.json({ error: "Format gambar tidak didukung atau ukurannya terlalu besar. Gunakan PNG, JPG, atau WEBP sampai sekitar 8 MB." }, { status: 400 });
 
-  await saveServerChatTurn(
-    supabase,
-    user.id,
-    "user",
-    String(message || (imageDataUrl ? "[Gambar]" : "")),
-    typeof turnId === "string" ? turnId.slice(0, 120) : null,
-    imageDataUrl ? { hasImage: true } : {},
-  );
-
   const { data: profile } = await supabase.from("users").select("display_name, timezone, preferences").eq("id", user.id).single();
   const resolvedProfile = profile ?? (await getOrCreateProfile(supabase, user.id, user.user_metadata?.display_name));
   const timezone = (resolvedProfile as any)?.timezone ?? "Asia/Jakarta";
   const profilePreferences = ((profile as any)?.preferences || {}) as Record<string, unknown>;
+  const { data: aiPrivacy } = await supabase
+    .from("ai_privacy_preferences")
+    .select("exclude_finance,exclude_health,private_mode")
+    .eq("user_id", user.id)
+    .maybeSingle();
   const confirmBulkActions = profilePreferences.confirmBulkActions !== false;
   const hasExplicitContextMode = typeof profilePreferences.aiContextMode === "string";
   const aiReadAllData = profilePreferences.aiContextMode === "all"
     || (!hasExplicitContextMode && profilePreferences.aiReadAllData === true);
   const aiAutoLink = profilePreferences.aiAutoLink !== false;
-  const aiProactive = profilePreferences.aiProactive !== false;
+  const aiProactive = profilePreferences.aiProactive !== false && aiPrivacy?.private_mode !== true;
   const aiSuggestActions = profilePreferences.aiSuggestActions !== false;
   const aiConfirmDestructive = profilePreferences.aiConfirmDestructive !== false;
   const aiConfirmMassive = profilePreferences.aiConfirmMassive !== false;
+  const permissionOverrides = { ...(profilePreferences.aiDomainPermissions && typeof profilePreferences.aiDomainPermissions === "object" ? profilePreferences.aiDomainPermissions : {}) } as Record<string, boolean>;
+  if (aiPrivacy?.exclude_finance) permissionOverrides.finance = false;
+  if (aiPrivacy?.exclude_health) permissionOverrides.health = false;
+  if (aiPrivacy?.private_mode) permissionOverrides.finance = false;
+  const privacyAwarePreferences = { ...profilePreferences, aiDomainPermissions: permissionOverrides };
   const clientReference = clientNowIso ? new Date(clientNowIso) : new Date();
   const continuityReference = Number.isFinite(clientReference.getTime()) ? clientReference : new Date();
+  if (aiPrivacy?.private_mode !== true) {
+    await saveServerChatTurn(
+      supabase,
+      user.id,
+      "user",
+      String(message || (imageDataUrl ? "[Gambar]" : "")),
+      typeof turnId === "string" ? turnId.slice(0, 120) : null,
+      imageDataUrl ? { hasImage: true } : {},
+    );
+  }
   let visionSummary = "";
   let visionFailed = false;
   let visionScheduleBlocks: VisionScheduleBlock[] = [];
