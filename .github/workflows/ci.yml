@@ -59,6 +59,7 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run eval:gate
+      - run: npm run eval:judge
       - run: npm run db:verify
 
   build:
