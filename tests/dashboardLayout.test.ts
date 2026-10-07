@@ -31,7 +31,7 @@ describe("normalizeLayout", () => {
       order: ["stats", "stats", "hantu", "overview"],
       hidden: ["hantu", "review", "review"],
     });
-    expect(l.order[0]).toBe("stats");
+    expect(l.order[0]).toBe("now");
     expect(l.order).toContain("overview");
     expect(new Set(l.order).size).toBe(ids.length);
     expect(l.hidden).toEqual(["review"]);
