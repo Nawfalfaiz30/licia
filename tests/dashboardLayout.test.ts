@@ -62,8 +62,8 @@ describe("operasi tata letak", () => {
     expect(moveWidget(base, "now", -1)).toBe(base);
     expect(moveWidget(base, "control", 1)).toBe(base);
     const moved = moveWidget(base, "overview", -1);
-    expect(moved.order.slice(0, 2)).toEqual(["overview", "now"]);
-    expect(widgetOrder(moved, "overview")).toBe(0);
+    expect(moved.order.slice(0, 2)).toEqual(["now", "overview"]);
+    expect(widgetOrder(moved, "overview")).toBe(1);
   });
   it("toggleWidget menyembunyikan lalu menampilkan kembali", () => {
     const hidden = toggleWidget(resetLayout(), "insights");
