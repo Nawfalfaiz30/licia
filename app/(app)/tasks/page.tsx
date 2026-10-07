@@ -1269,7 +1269,8 @@ export default function TasksPage() {
                   {task.estimated_minutes ? <><span>·</span><span>{tr("{estimated_minutes} mnt",{estimated_minutes:task.estimated_minutes})}</span></> : null}
                   <span>·</span><span className={clsx("font-semibold",task.priority==="high"?"text-danger":task.priority==="medium"?"text-accent":"text-textMuted")}>● {priorityLabel[task.priority]}</span>
                 </div>
-                            <span
+              </button>
+              <span
                 className={clsx(
                   "w-fit shrink-0 rounded-full border px-2.5 py-1 text-2xs font-bold",
                   priorityClass[task.priority],

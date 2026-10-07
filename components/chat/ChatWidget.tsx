@@ -18,7 +18,6 @@ import {
   ShieldCheck,
   Command,
   Layers3,
-  Paperclip,
   Plus,
   CircleHelp,
   Wand2,
@@ -1444,7 +1443,23 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
               )}
             </div>
           )}
-          {showJumpToLatest && <div className="sticky bottom-2 z-20 flex justify-center pt-2"><button type="button" onClick={() => { const el=scrollRef.current; if(!el)return; isNearBottomRef.current=true; setShowJumpToLatest(false); el.scrollTo({top:el.scrollHeight,behavior:"smooth"}); }} className="inline-flex min-h-9 items-center rounded-full border border-accent/20 bg-surface px-3 text-2xs font-semibold text-accent shadow-lg">{tr("Pesan terbaru")}</button></div>
+          {showJumpToLatest && (
+            <div className="sticky bottom-2 z-20 flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = scrollRef.current;
+                  if (!el) return;
+                  isNearBottomRef.current = true;
+                  setShowJumpToLatest(false);
+                  el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+                }}
+                className="inline-flex min-h-9 items-center rounded-full border border-accent/20 bg-surface px-3 text-2xs font-semibold text-accent shadow-lg"
+              >
+                {tr("Pesan terbaru")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
