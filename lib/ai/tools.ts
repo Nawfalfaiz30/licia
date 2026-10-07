@@ -2742,6 +2742,7 @@ async function saveMemory(ctx: HandlerCtx, args: any) {
     .select("id,category,memory_key,memory_value,enabled,source,confidence,importance,last_confirmed_at,expires_at,updated_at")
     .single();
   if (error) return { ok: false, error: error.message };
+  if (data?.id) void indexKnowledgeBestEffort(ctx, { sourceType: "memory", sourceId: data.id, title: String(data.memory_key || "Memory"), content: String(data.memory_value || "") });
   return { ok: true, memory: data };
 }
 
