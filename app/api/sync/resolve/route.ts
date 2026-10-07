@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { enforceSameOrigin } from "@/lib/security";
+import { requireRecentStepUp } from "@/lib/security/step-up";
 import { invalidateUserContext } from "@/lib/ai/contextCache";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,11 @@ export async function POST(req: Request) {
 
   const table = TABLES[String(conflict.entity_type)] || null;
   if (!table || !conflict.entity_id) return NextResponse.json({ error: "Konflik ini tidak dapat dipulihkan otomatis." }, { status: 400 });
+
+  if (String(conflict.entity_type) === "vault") {
+    const stepUpError = await requireRecentStepUp(authClient, "/sync");
+    if (stepUpError) return stepUpError;
+  }
   const clientPayload = (conflict.client_payload || {}) as Record<string, unknown>;
   const serverPayload = (conflict.server_payload || {}) as Record<string, unknown>;
   const conflictFields = new Set<string>(Array.isArray(conflict.conflicting_fields) ? conflict.conflicting_fields.map(String) : []);
