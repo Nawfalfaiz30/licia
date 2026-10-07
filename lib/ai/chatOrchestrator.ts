@@ -218,6 +218,42 @@ async function loadServerPendingAction(
   return query.data as PendingActionRecord;
 }
 
+async function loadLatestServerPendingAction(
+  supabase: any,
+  userId: string,
+): Promise<PendingActionRecord | null> {
+  const query = await supabase
+    .from("ai_pending_actions")
+    .select("id,user_id,user_text,timezone,actions,status,expires_at,created_at")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (query.error || !Array.isArray(query.data)) return null;
+
+  for (const row of query.data) {
+    const expiresAt = new Date(String(row?.expires_at || "")).getTime();
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      const expiredId = String(row?.id || "");
+      if (expiredId && ENTITY_UUID_RE.test(expiredId)) {
+        await supabase
+          .from("ai_pending_actions")
+          .update({ status: "expired" })
+          .eq("id", expiredId)
+          .eq("user_id", userId)
+          .eq("status", "pending");
+      }
+      continue;
+    }
+    if (Array.isArray(row?.actions) && row.actions.length && typeof row.actions[0]?.tool === "string") {
+      return row as PendingActionRecord;
+    }
+  }
+
+  return null;
+}
+
 function publicPendingAction(record: PendingActionRecord, fallback?: PendingAction | null): PendingAction | null {
   const first = Array.isArray(record.actions) ? record.actions[0] : null;
   if (!first?.tool || !first.arguments) return fallback ?? null;
@@ -272,7 +308,7 @@ function mutationApplied(tool: string, result: any) {
     return false;
   if (result?.requires_confirmation === true) return false;
   if (isMutationToolName(tool) && result?.verified === false) return false;
-  if (tool === "delete_schedule_blocks_bulk" || tool === "delete_tasks_bulk")
+  if (tool === "delete_schedule_blocks_bulk" || tool === "delete_tasks_bulk" || tool === "delete_habits_bulk")
     return Number(result?.count || 0) > 0 && result?.verified !== false;
   if (tool === "delete_all_notifications") return Number(result?.deleted || 0) > 0 && result?.verified !== false;
   if (tool === "delete_all_reminders") return Number(result?.deleted || 0) > 0 && result?.verified !== false;
@@ -651,6 +687,11 @@ function plannedActionDetail(tool: string, rawArgs: string) {
       typeof args.keyword === "string" && args.keyword.trim() ? ` yang cocok dengan “${args.keyword.trim()}”` : "";
     return `Menghapus seluruh tugas${status}${keyword} dalam satu operasi`;
   }
+  if (tool === "delete_habits_bulk") {
+    const keyword =
+      typeof args.keyword === "string" && args.keyword.trim() ? ` yang cocok dengan “${args.keyword.trim()}”` : "";
+    return `Menghapus seluruh rutinitas${keyword} dalam satu operasi`;
+  }
   if (args.amount != null)
     return `${actionLabel(tool, { ok: true })}: Rp ${Number(args.amount).toLocaleString("id-ID")}`;
   return actionLabel(tool, { ok: true });
@@ -686,6 +727,7 @@ function actionLabel(tool: string, result: any) {
     update_schedule_block: "Memperbarui agenda",
     delete_schedule_block: "Menghapus agenda",
     delete_schedule_blocks_bulk: "Menghapus banyak agenda",
+    delete_habits_bulk: "Menghapus banyak rutinitas",
     capture_inbox_item: "Menambahkan ke Inbox",
     create_note: "Membuat catatan",
     update_note: "Memperbarui catatan",
@@ -1303,7 +1345,8 @@ async function handleChatPost(req: Request) {
     typeof pendingActionId === "string" && pendingActionId.trim()
       ? pendingActionId.trim()
       : legacyPendingAction?.pendingId || null;
-  const serverPendingActionRecord = await loadServerPendingAction(supabase, user.id, requestedPendingId);
+  const serverPendingActionRecord = await loadServerPendingAction(supabase, user.id, requestedPendingId)
+    ?? (isExplicitConfirmation(String(message || "")) ? await loadLatestServerPendingAction(supabase, user.id) : null);
   const pendingAction = serverPendingActionRecord
     ? publicPendingAction(serverPendingActionRecord, legacyPendingAction)
     : legacyPendingAction;
@@ -2279,6 +2322,134 @@ async function handleChatPost(req: Request) {
 
   const turnMessages: RawMsg[] = [newUserMessage];
   let finalText = "";
+  const storedBulkActions = !pendingAction && isExplicitConfirmation(String(message || ""))
+    && serverPendingActionRecord && Array.isArray(serverPendingActionRecord.actions)
+    ? serverPendingActionRecord.actions.filter((action: any) => action?.tool && action?.arguments).slice(0, 10)
+    : [];
+  const storedBulkTools = new Set([
+    "delete_tasks_bulk",
+    "delete_schedule_blocks_bulk",
+    "delete_habits_bulk",
+    "delete_all_reminders",
+    "delete_all_notifications",
+    "log_expenses_batch",
+    "update_tasks_bulk",
+  ]);
+  const isStoredBulkConfirmation =
+    storedBulkActions.length > 0 &&
+    storedBulkActions.every((action: any) => storedBulkTools.has(String(action.tool)));
+
+  if (isStoredBulkConfirmation && serverPendingActionRecord) {
+    const bulkResults: any[] = [];
+    for (const action of storedBulkActions) {
+      let argsObject: any = {};
+      try {
+        argsObject = JSON.parse(String(action.arguments || "{}"));
+      } catch {
+        argsObject = {};
+      }
+      const execution = await executeAndVerifyMutation({
+        supabase,
+        userId: user.id,
+        timezone,
+        tool: String(action.tool),
+        args: argsObject,
+      });
+      bulkResults.push({ tool: String(action.tool), ...execution });
+      performedActions.push({
+        tool: String(action.tool),
+        ok: execution.applied,
+        label: actionLabel(String(action.tool), execution.result),
+      });
+      if (execution.applied) {
+        if (execution.undoActionId) undoActionIds.push(execution.undoActionId);
+        latestActionEntityIds = uniqueStrings([
+          ...latestActionEntityIds,
+          ...collectResultEntityIds(execution.result),
+        ]).slice(-12);
+      }
+    }
+
+    const appliedCount = bulkResults.filter((item) => item.applied).length;
+    const allApplied = appliedCount === bulkResults.length && bulkResults.length > 0;
+    if (allApplied) {
+      await supabase
+        .from("ai_pending_actions")
+        .update({ status: "applied", applied_at: new Date().toISOString() })
+        .eq("id", serverPendingActionRecord.id)
+        .eq("user_id", user.id)
+        .eq("status", "pending");
+    }
+
+    const resultSummary = bulkResults
+      .map((item: any) => {
+        const result = item.result || {};
+        const count = Number(result.count ?? result.deleted ?? result.created ?? result.updated ?? 0);
+        return (
+          actionLabel(item.tool, result) +
+          (count ? " (" + count + ")" : "") +
+          ": " +
+          (item.applied ? "berhasil" : "belum terverifikasi")
+        );
+      })
+      .join("; ");
+
+    finalText = allApplied
+      ? "Siap. " + resultSummary + ". Perubahan sudah diverifikasi."
+      : "Sebagian perubahan belum berhasil diverifikasi. " +
+        (resultSummary || "Tidak ada perubahan yang diterapkan.");
+
+    await saveServerChatTurn(
+      supabase,
+      user.id,
+      "assistant",
+      finalText,
+      typeof turnId === "string" ? turnId.slice(0, 120) : null,
+      { domains, mode: selectedMode, verifiedActions: appliedCount },
+    );
+    return NextResponse.json({
+      reply: finalText,
+      turnMessages: [{ role: "assistant", content: finalText }],
+      domains,
+      pendingAction: null,
+      pendingActionId: null,
+      pendingBulkAction: allApplied
+        ? null
+        : {
+            id: serverPendingActionRecord.id,
+            expiresAt: serverPendingActionRecord.expires_at,
+            actions: serverPendingActionRecord.actions,
+            risk: "destructive",
+            requiresConfirmation: true,
+          },
+      pendingScheduleImport: pendingScheduleImport || null,
+      visionUsed: Boolean(imageDataUrl),
+      mode: selectedMode,
+      actions: performedActions,
+      undoActionId: undoActionIds.at(-1) || null,
+      conversationState: {
+        ...conversationDecision.state,
+        activeEntityIds: latestActionEntityIds.length
+          ? latestActionEntityIds
+          : conversationDecision.state.activeEntityIds,
+        lastActionTools: performedActions
+          .filter((a) => a.ok)
+          .map((a) => a.tool)
+          .slice(-8),
+      },
+      aiMeta: {
+        model: selectedAiModel,
+        contextMode: aiReadAllData ? "all" : "smart",
+        domains,
+        deniedDomains,
+        temporalGuard: temporalGuard.active,
+        operation: conversationDecision.currentOperation,
+        mutationExpected: true,
+        verifiedActions: appliedCount,
+      },
+    });
+  }
+
   let nextPendingAction: PendingAction | null = pendingAction;
   const toolExecutionCache = new Map<string, { result: any; attempts: number; lastOk: boolean }>();
   let pendingBulkAction: any = null;
@@ -2367,7 +2538,7 @@ async function handleChatPost(req: Request) {
       const isBulkMutation =
         mutations.length > 1 ||
         mutations.some((call) =>
-          ["log_expenses_batch", "update_tasks_bulk", "delete_tasks_bulk", "delete_schedule_blocks_bulk"].includes(
+          ["log_expenses_batch", "update_tasks_bulk", "delete_tasks_bulk", "delete_schedule_blocks_bulk", "delete_habits_bulk"].includes(
             call.function.name,
           ),
         );
@@ -2387,6 +2558,31 @@ async function handleChatPost(req: Request) {
                 const extracted = extractMassDeleteExceptions(message || "");
                 if ((!Array.isArray(args.exclude_keywords) || args.exclude_keywords.length === 0) && extracted.length)
                   args.exclude_keywords = extracted;
+                args.confirm_all = true;
+              }
+              if (call.function.name === "delete_habits_bulk") {
+                const previewResult = await executeTool(
+                  { supabase, userId: user.id, timezone },
+                  "delete_habits_bulk",
+                  JSON.stringify({ ...args, confirm_all: false }),
+                );
+                const previewTargets = Array.isArray(previewResult?.targets) ? previewResult.targets : [];
+                if (previewTargets.length) {
+                  args.habit_ids = previewTargets
+                    .map((row: any) => String(row?.id || ""))
+                    .filter((value: string) => ENTITY_UUID_RE.test(value))
+                    .slice(0, 1000);
+                  actionPreview =
+                    "Menghapus " +
+                    previewTargets.length +
+                    " rutinitas: " +
+                    previewTargets
+                      .slice(0, 8)
+                      .map((row: any) => String(row?.name || ""))
+                      .filter(Boolean)
+                      .join(", ") +
+                    (previewTargets.length > 8 ? " …" : "");
+                }
                 args.confirm_all = true;
               }
               const argumentsJson = JSON.stringify(args);
