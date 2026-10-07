@@ -1,7 +1,6 @@
-import type { Config } from "tailwindcss";
 import { zIndexTheme } from "./lib/zIndex";
 
-const config: Config = {
+const config = {
   darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
