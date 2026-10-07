@@ -20,6 +20,8 @@ export async function GET(req: Request) {
     const { data: profile } = await supabase.from("users").select("timezone,preferences").eq("id", user.id).maybeSingle();
     const preferences = (profile?.preferences || {}) as Record<string, unknown>;
     if (preferences.proactiveAssistant === false) return [];
+    const timezone = String(profile?.timezone || "Asia/Jakarta");
+    const now = new Date();
     const { data: proactivePrefs } = await supabase
       .from("ai_proactive_preferences")
       .select("enabled,max_suggestions_per_day,quiet_start,quiet_end")
@@ -32,9 +34,6 @@ export async function GET(req: Request) {
       candidateScore: 100,
     });
     if (!policy.allowed) return [];
-
-    const timezone = String(profile?.timezone || "Asia/Jakarta");
-    const now = new Date();
     const today = dateStrInTimezone(now, timezone);
     const horizon = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
