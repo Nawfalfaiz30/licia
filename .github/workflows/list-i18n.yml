@@ -1,0 +1,20 @@
+name: List remaining i18n keys
+
+on:
+  push:
+    branches: ["upgrade/pdf-2026-10"]
+
+permissions:
+  contents: read
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - name: Print missing i18n keys
+        run: node scripts/i18n.mjs missing
