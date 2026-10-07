@@ -1406,6 +1406,36 @@ html.kb-open .licia-bottom-nav{display:none!important;}
 
 /* v51 — dashboard information-first layout from UI/UX roadmap. */
 .dashboard-v29{min-width:0;}
+.dashboard-widget-grid{display:flex;flex-direction:column;gap:1.25rem;min-width:0;}
+@media (min-width:1280px){
+  .dashboard-widget-grid{
+    display:grid;
+    grid-template-columns:repeat(12,minmax(0,1fr));
+    align-items:start;
+    gap:1rem;
+  }
+  .dashboard-widget-grid > [data-widget]{min-width:0;}
+  .dashboard-widget-grid > [data-widget="now"]{grid-column:span 8;}
+  .dashboard-widget-grid > [data-widget="overview"]{grid-column:span 4;}
+  .dashboard-widget-grid > [data-widget="stats"]{grid-column:span 4;}
+  .dashboard-widget-grid > [data-widget="nextmove"]{grid-column:span 8;}
+  .dashboard-widget-grid > [data-widget="direction"]{grid-column:span 8;}
+  .dashboard-widget-grid > [data-widget="body"]{grid-column:span 4;}
+  .dashboard-widget-grid > [data-widget="insights"],
+  .dashboard-widget-grid > [data-widget="review"],
+  .dashboard-widget-grid > [data-widget="control"]{grid-column:1 / -1;}
+}
+@media (max-width:767px){
+  .dashboard-v29{gap:.75rem;}
+  .dashboard-widget-grid{gap:.75rem;}
+  .dashboard-v29 .dashboard-overview-card{min-height:104px;}
+  .dashboard-v29 .dashboard-overview-card > div:first-child{
+    text-transform:none;
+    letter-spacing:normal;
+    line-height:1.2;
+    font-size:.75rem;
+  }
+}
 @media (min-width:1280px){
   .dashboard-v29{
     display:grid;

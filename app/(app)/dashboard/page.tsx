@@ -517,6 +517,7 @@ export default async function DashboardPage() {
           </Link>
         </section>
 
+        <div className="dashboard-widget-grid">
         <DashboardWidget id="overview">
           <section className="dashboard-top-overview grid gap-3 sm:grid-cols-2">
             <Link
@@ -1200,6 +1201,7 @@ export default async function DashboardPage() {
             </Card>
           </section>
         </DashboardWidget>
+        </div>
       </div>
     </DashboardLayoutProvider>
   );

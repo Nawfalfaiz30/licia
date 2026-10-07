@@ -41,7 +41,7 @@ const group = (label: string, i18nKey: string, items: NavItem[]): NavGroup => ({
 
 export const navGroups: NavGroup[] = [
   group("Inti", "nav_core", [
-    item("/today", "Beranda", "home", LayoutDashboard, true),
+    item("/dashboard", "Beranda", "home", LayoutDashboard, true),
     item("/chat", "Chat Licia", "chat", MessageCircle, true),
     item("/tasks", "Tugas", "tasks", ListTodo, true),
     item("/calendar", "Kalender", "calendar", CalendarDays, true),
@@ -91,7 +91,7 @@ export const moreNavGroups: NavGroup[] = [
 export const allNavItems = navGroups.flatMap((g) => g.items);
 export const primaryNavItems = allNavItems.filter((i) => i.primary);
 export const mobilePrimaryNavItems = [
-  navGroups[0].items.find((i) => i.href === "/today")!,
+  navGroups[0].items.find((i) => i.href === "/dashboard")!,
   navGroups[0].items.find((i) => i.href === "/tasks")!,
   navGroups[0].items.find((i) => i.href === "/chat")!,
   navGroups[0].items.find((i) => i.href === "/calendar")!,
