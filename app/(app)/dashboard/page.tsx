@@ -469,20 +469,51 @@ export default async function DashboardPage() {
       <div className="dashboard-v29 flex flex-col gap-5 animate-licia-page-in">
         <header className="rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3 sm:px-5">
           <div className="flex min-h-[76px] items-center gap-3">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl ring-1 ring-accent/15"><img src="/licia-avatar.png" alt={tr("Licia")} className="h-full w-full object-cover"/></div>
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl ring-1 ring-accent/15">
+              <img src="/licia-avatar.png" alt={tr("Licia")} className="h-full w-full object-cover" />
+            </div>
             <div className="min-w-0 flex-1">
               <p className="text-2xs font-semibold text-accent">{tr("LIFE OS")}</p>
-              <h1 className="truncate font-display text-2xl text-text">{greeting}, {profile?.display_name || tr("kamu")}.</h1>
-              <p className="truncate text-2xs text-textMuted">{tr("{agenda} jadwal · {tasks} tugas aktif",{agenda:todayAgenda.length,tasks:openTasks.length})}{proactiveRisk ? tr(" · Perlu perhatian") : ""}</p>
+              <h1 className="truncate font-display text-2xl text-text">
+                {greeting}, {profile?.display_name || tr("kamu")}.
+              </h1>
+              <p className="truncate text-2xs text-textMuted">
+                {tr("{agenda} jadwal · {tasks} tugas aktif", { agenda: todayAgenda.length, tasks: openTasks.length })}
+                {proactiveRisk ? tr(" · Perlu perhatian") : ""}
+              </p>
             </div>
-            <DashboardCustomizer/>
+            <DashboardCustomizer />
           </div>
         </header>
         <section className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" aria-label={tr("Aksi cepat")}>
-          <Link href="/tasks" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white"><Plus size={15}/>{tr("Tugas")}</Link>
-          <Link href="/capture" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"><Plus size={15}/>{tr("Catatan")}</Link>
-          <Link href="/finance?tab=transactions" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"><Wallet size={15}/>{tr("Pengeluaran")}</Link>
-          <Link href="/search" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"><Search size={15}/>{tr("Cari")}</Link>
+          <Link
+            href="/tasks"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white"
+          >
+            <Plus size={15} />
+            {tr("Tugas")}
+          </Link>
+          <Link
+            href="/capture"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"
+          >
+            <Plus size={15} />
+            {tr("Catatan")}
+          </Link>
+          <Link
+            href="/finance?tab=transactions"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"
+          >
+            <Wallet size={15} />
+            {tr("Pengeluaran")}
+          </Link>
+          <Link
+            href="/search"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-xs font-semibold text-textMuted hover:border-accent hover:text-accent"
+          >
+            <Search size={15} />
+            {tr("Cari")}
+          </Link>
         </section>
 
         <DashboardWidget id="overview">

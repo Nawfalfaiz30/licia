@@ -711,7 +711,12 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    requestAnimationFrame(() => { if (isNearBottomRef.current) { el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); setShowJumpToLatest(false); } else setShowJumpToLatest(true); });
+    requestAnimationFrame(() => {
+      if (isNearBottomRef.current) {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        setShowJumpToLatest(false);
+      } else setShowJumpToLatest(true);
+    });
   }, [displayMessages, loading]);
 
   useEffect(() => {
@@ -1268,7 +1273,11 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
 
       <div
         ref={scrollRef}
-        onScroll={(event) => { const el = event.currentTarget; isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; if (isNearBottomRef.current) setShowJumpToLatest(false); }}
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+          if (isNearBottomRef.current) setShowJumpToLatest(false);
+        }}
         className="chat-v48-pane min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 sm:py-6"
       >
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-3.5 sm:gap-4">
@@ -1471,11 +1480,35 @@ export function ChatWidget({ compact = false }: { compact?: boolean }) {
               [tr("Jadwal besok"), tr("Apa jadwal saya besok?")],
               [tr("Catat pengeluaran"), tr("Catat pengeluaran baru")],
               [tr("Ringkas hari ini"), tr("Ringkas hari saya")],
-            ].map(([label,prompt]) => <button key={label} type="button" onClick={() => { setInput(prompt); textareaRef.current?.focus(); }} className="shrink-0 rounded-full border border-border bg-bg px-3 py-2 text-2xs font-semibold text-textMuted hover:border-accent/25 hover:text-accent">{label}</button>)}
+            ].map(([label, prompt]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  setInput(prompt);
+                  textareaRef.current?.focus();
+                }}
+                className="shrink-0 rounded-full border border-border bg-bg px-3 py-2 text-2xs font-semibold text-textMuted hover:border-accent/25 hover:text-accent"
+              >
+                {label}
+              </button>
+            ))}
           </div>
           <div className="mb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
-            {latestAiMessage?.aiMeta && <span className="shrink-0 rounded-full border border-border bg-bg px-2.5 py-1.5 text-2xs font-semibold text-textMuted">{tr("Konteks: {contextLabel}", { contextLabel })}</span>}
-            {conversationState?.activeDomain && conversationState.activeDomain !== "overview" && <button type="button" onClick={resetConversationContext} className="shrink-0 rounded-full border border-accent/15 bg-accent/5 px-2.5 py-1.5 text-2xs font-semibold text-accent">{tr("Konteks:")} {conversationState.activeDomain.replaceAll("_"," ")} · ×</button>}
+            {latestAiMessage?.aiMeta && (
+              <span className="shrink-0 rounded-full border border-border bg-bg px-2.5 py-1.5 text-2xs font-semibold text-textMuted">
+                {tr("Konteks: {contextLabel}", { contextLabel })}
+              </span>
+            )}
+            {conversationState?.activeDomain && conversationState.activeDomain !== "overview" && (
+              <button
+                type="button"
+                onClick={resetConversationContext}
+                className="shrink-0 rounded-full border border-accent/15 bg-accent/5 px-2.5 py-1.5 text-2xs font-semibold text-accent"
+              >
+                {tr("Konteks:")} {conversationState.activeDomain.replaceAll("_", " ")} · ×
+              </button>
+            )}
           </div>
           {pendingImage && (
             <div className="mb-1.5 flex items-center gap-2 rounded-xl border border-border bg-bg px-2.5 py-1.5">

@@ -217,7 +217,9 @@ function normalizeStartPage(value: unknown) {
   };
   return (
     map[v] ||
-    (v === "today" || v === "dashboard" || v === "plan" || v === "chat" || v === "capture" || v === "insights" ? v : "today")
+    (v === "today" || v === "dashboard" || v === "plan" || v === "chat" || v === "capture" || v === "insights"
+      ? v
+      : "today")
   );
 }
 

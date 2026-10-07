@@ -117,5 +117,46 @@ export { ToastProvider, notifyToast } from "./toast";
 
 export { AnimatedNumber } from "./AnimatedNumber";
 
-export function Chip({children,active=false,tone="default",onClick,className}:{children:React.ReactNode;active?:boolean;tone?:"default"|"accent"|"danger"|"success";onClick?:()=>void;className?:string}){const body=<span className={clsx("inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border px-3 text-2xs font-semibold transition-colors duration-180",active?"border-accent bg-accent text-white":tone==="danger"?"border-danger/20 bg-danger/5 text-danger":tone==="success"?"border-success/20 bg-success/5 text-success":tone==="accent"?"border-accent/20 bg-accent/5 text-accent":"border-border bg-surface text-textMuted",className)}>{children}</span>;return onClick?<button type="button" onClick={onClick} className="shrink-0">{body}</button>:body;}
-export function Skeleton({className}:{className?:string}){return <div aria-hidden="true" className={clsx("animate-pulse rounded-[var(--radius-md)] bg-bg",className)}/>;}
+export function Chip({
+  children,
+  active = false,
+  tone = "default",
+  onClick,
+  className,
+}: {
+  children: React.ReactNode;
+  active?: boolean;
+  tone?: "default" | "accent" | "danger" | "success";
+  onClick?: () => void;
+  className?: string;
+}) {
+  const body = (
+    <span
+      className={clsx(
+        "inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border px-3 text-2xs font-semibold transition-colors duration-180",
+        active
+          ? "border-accent bg-accent text-white"
+          : tone === "danger"
+            ? "border-danger/20 bg-danger/5 text-danger"
+            : tone === "success"
+              ? "border-success/20 bg-success/5 text-success"
+              : tone === "accent"
+                ? "border-accent/20 bg-accent/5 text-accent"
+                : "border-border bg-surface text-textMuted",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} className="shrink-0">
+      {body}
+    </button>
+  ) : (
+    body
+  );
+}
+export function Skeleton({ className }: { className?: string }) {
+  return <div aria-hidden="true" className={clsx("animate-pulse rounded-[var(--radius-md)] bg-bg", className)} />;
+}

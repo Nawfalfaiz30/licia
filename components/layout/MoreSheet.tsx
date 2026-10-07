@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Grid2X2, LogOut, Search, X, ArrowRight } from "lucide-react";
-import { moreNavGroups,isNavPathActive } from "./nav-items";
+import { moreNavGroups, isNavPathActive } from "./nav-items";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/components/LanguageProvider";
 import { Overlay } from "@/components/ui/Overlay";

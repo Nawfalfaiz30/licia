@@ -489,16 +489,18 @@ export default function FinancePage() {
             </p>
             <h1 className="font-display text-3xl text-text">{trn("Keuangan")}</h1>
             <p className="mt-1 max-w-2xl text-sm leading-relaxed text-textMuted">
-              {trn(
-                "Ringkasan arus kas bulan ini",
-              )}
+              {trn("Ringkasan arus kas bulan ini")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="rounded-xl border border-border bg-bg px-3 py-2 text-xs text-textMuted">
               {monthLabel(now)}
             </span>
-            <button type="button" onClick={() => setTab("transactions")} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white">
+            <button
+              type="button"
+              onClick={() => setTab("transactions")}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-semibold text-white"
+            >
               <Plus size={14} /> {trn("Transaksi")}
             </button>
             <button
@@ -601,7 +603,17 @@ export default function FinancePage() {
               <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.25rem,5.8vw,1.75rem)] leading-none text-success tabular-nums">
                 {rupiah(monthIncome)}
               </p>
-              <p className="mt-2 text-2xs text-textMuted">{previousMonth ? trn("{delta}% vs bulan lalu",{delta:Math.round(((monthIncome-(previousMonth.income||0))/Math.max(1,Math.abs(previousMonth.income||0)))*100)}) : trn("Uang masuk")}</p>
+              <p className="mt-2 text-2xs text-textMuted">
+                {previousMonth
+                  ? trn("{delta}% vs bulan lalu", {
+                      delta: Math.round(
+                        ((monthIncome - (previousMonth.income || 0)) /
+                          Math.max(1, Math.abs(previousMonth.income || 0))) *
+                          100,
+                      ),
+                    })
+                  : trn("Uang masuk")}
+              </p>
             </Card>
             <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
               <div className="flex min-w-0 items-center gap-2">
@@ -613,7 +625,9 @@ export default function FinancePage() {
               <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[clamp(1.25rem,5.8vw,1.75rem)] leading-none text-danger tabular-nums">
                 {rupiah(monthExpense)}
               </p>
-              <p className="mt-2 text-2xs text-textMuted">{expenseDelta === null ? trn("Uang keluar") : trn("{delta}% vs bulan lalu",{delta:expenseDelta})}</p>
+              <p className="mt-2 text-2xs text-textMuted">
+                {expenseDelta === null ? trn("Uang keluar") : trn("{delta}% vs bulan lalu", { delta: expenseDelta })}
+              </p>
             </Card>
             <Card className="min-w-0 overflow-hidden p-4 sm:p-5">
               <div className="flex min-w-0 items-center gap-2">
@@ -633,88 +647,111 @@ export default function FinancePage() {
                 </p>
                 <span className="text-right text-2xs leading-tight text-textMuted">{trn("dari pemasukan")}</span>
               </div>
-              <p className="mt-2 text-2xs text-textMuted">{previousMonth ? trn("vs bulan lalu {delta} poin",{delta:Math.round(savingRate-(previousMonth.income>0?((previousMonth.income-previousMonth.expense)/previousMonth.income)*100:0))}) : trn("Dari pemasukan bulan ini.")}</p>
+              <p className="mt-2 text-2xs text-textMuted">
+                {previousMonth
+                  ? trn("vs bulan lalu {delta} poin", {
+                      delta: Math.round(
+                        savingRate -
+                          (previousMonth.income > 0
+                            ? ((previousMonth.income - previousMonth.expense) / previousMonth.income) * 100
+                            : 0),
+                      ),
+                    })
+                  : trn("Dari pemasukan bulan ini.")}
+              </p>
             </Card>
           </div>
 
           {upcomingSubscriptions.length > 0 ? (
-<Card className="border-accent/15 bg-gradient-to-br from-accent/10 via-surface to-surface">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <span className="rounded-2xl bg-accent/10 p-3 text-accent">
-                  <CreditCard size={17} />
-                </span>
-                <div>
-                  <p className="text-2xs font-bold uppercase tracking-[.16em] text-accent">
-                    {trn("Komitmen berikutnya")}
-                  </p>
-                  <h2 className="mt-1 font-display text-lg text-text">{trn("Langganan tetap bagian dari Keuangan")}</h2>
-                  <p className="mt-1 text-xs leading-relaxed text-textMuted">
-                    {trn("Biaya rutin, tanggal tagihan, pengingat, dan arus kas berada dalam satu tempat.")}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => void openSubscriptions()}
-                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-2xs font-semibold text-white"
-              >
-                <Plus size={13} /> {trn("Kelola langganan")}
-              </button>
-            </div>
-            {upcomingSubscriptions.length > 0 ? (
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {upcomingSubscriptions.slice(0, 3).map((s) => (
-                  <div key={s.id} className="rounded-2xl border border-border bg-bg p-3">
-                    <div className="flex items-start gap-2">
-                      <span className="rounded-xl bg-accent/10 p-2 text-accent">
-                        <CalendarClock size={14} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="break-words text-xs font-semibold text-text">{s.name}</p>
-                        <p className="mt-0.5 text-2xs text-textMuted">
-                          {s.next_billing_date
-                            ? new Date(`${s.next_billing_date}T12:00:00`).toLocaleDateString(documentLocale(), {
-                                day: "numeric",
-                                month: "short",
-                              })
-                            : trn("Tanggal belum diatur")}
-                        </p>
-                      </div>
-                      <p className="shrink-0 text-xs font-semibold text-text">{rupiah(Number(s.amount))}</p>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => void recordSubscriptionCharge(s)}
-                        className="min-h-9 text-2xs font-semibold text-accent hover:underline"
-                      >
-                        {trn("Catat pembayaran")}
-                      </button>
-                      {s.service_url && (
-                        <a
-                          href={s.service_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-2xs font-semibold text-textMuted hover:text-accent"
-                        >
-                          {trn("Layanan")} <ExternalLink size={9} />
-                        </a>
-                      )}
-                    </div>
+            <Card className="border-accent/15 bg-gradient-to-br from-accent/10 via-surface to-surface">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <span className="rounded-2xl bg-accent/10 p-3 text-accent">
+                    <CreditCard size={17} />
+                  </span>
+                  <div>
+                    <p className="text-2xs font-bold uppercase tracking-[.16em] text-accent">
+                      {trn("Komitmen berikutnya")}
+                    </p>
+                    <h2 className="mt-1 font-display text-lg text-text">
+                      {trn("Langganan tetap bagian dari Keuangan")}
+                    </h2>
+                    <p className="mt-1 text-xs leading-relaxed text-textMuted">
+                      {trn("Biaya rutin, tanggal tagihan, pengingat, dan arus kas berada dalam satu tempat.")}
+                    </p>
                   </div>
-                ))}
+                </div>
+                <button
+                  onClick={() => void openSubscriptions()}
+                  className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-2xs font-semibold text-white"
+                >
+                  <Plus size={13} /> {trn("Kelola langganan")}
+                </button>
               </div>
-            ) : (
-              <div className="mt-3 rounded-xl bg-bg p-3 text-2xs text-textMuted">
-                {trn(
-                  "Belum ada langganan aktif. Tambahkan layanan rutin agar biaya berulang ikut masuk ke ringkasan keuangan.",
-                )}
-              </div>
-            )}
-          </Card>
+              {upcomingSubscriptions.length > 0 ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {upcomingSubscriptions.slice(0, 3).map((s) => (
+                    <div key={s.id} className="rounded-2xl border border-border bg-bg p-3">
+                      <div className="flex items-start gap-2">
+                        <span className="rounded-xl bg-accent/10 p-2 text-accent">
+                          <CalendarClock size={14} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="break-words text-xs font-semibold text-text">{s.name}</p>
+                          <p className="mt-0.5 text-2xs text-textMuted">
+                            {s.next_billing_date
+                              ? new Date(`${s.next_billing_date}T12:00:00`).toLocaleDateString(documentLocale(), {
+                                  day: "numeric",
+                                  month: "short",
+                                })
+                              : trn("Tanggal belum diatur")}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-xs font-semibold text-text">{rupiah(Number(s.amount))}</p>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => void recordSubscriptionCharge(s)}
+                          className="min-h-9 text-2xs font-semibold text-accent hover:underline"
+                        >
+                          {trn("Catat pembayaran")}
+                        </button>
+                        {s.service_url && (
+                          <a
+                            href={s.service_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-2xs font-semibold text-textMuted hover:text-accent"
+                          >
+                            {trn("Layanan")} <ExternalLink size={9} />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 rounded-xl bg-bg p-3 text-2xs text-textMuted">
+                  {trn(
+                    "Belum ada langganan aktif. Tambahkan layanan rutin agar biaya berulang ikut masuk ke ringkasan keuangan.",
+                  )}
+                </div>
+              )}
+            </Card>
           ) : (
             <div className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3.5">
-              <div className="flex min-w-0 items-center gap-2"><CalendarClock size={15} className="shrink-0 text-accent"/><span className="truncate text-xs font-semibold text-text">{trn("Belum ada langganan")}</span></div>
-              <button type="button" onClick={() => void openSubscriptions()} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-2xs font-semibold text-white"><Plus size={13}/>{trn("Tambah")}</button>
+              <div className="flex min-w-0 items-center gap-2">
+                <CalendarClock size={15} className="shrink-0 text-accent" />
+                <span className="truncate text-xs font-semibold text-text">{trn("Belum ada langganan")}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void openSubscriptions()}
+                className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-2xs font-semibold text-white"
+              >
+                <Plus size={13} />
+                {trn("Tambah")}
+              </button>
             </div>
           )}
           <Card className="border-accent/15 bg-gradient-to-br from-accent/5 via-surface to-surface p-4 sm:p-5 animate-licia-action-burst">

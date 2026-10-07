@@ -137,5 +137,9 @@ export const setTodayOnly = (layout: DashboardLayout, value: boolean): Dashboard
 export const resetLayout = (): DashboardLayout => normalizeLayout(null);
 
 export function isCustomized(layout: DashboardLayout): boolean {
-  return layout.todayOnly || layout.hidden.length > 0 || layout.order.some((id, i) => id !== DEFAULT_DASHBOARD_LAYOUT.order[i]);
+  return (
+    layout.todayOnly ||
+    layout.hidden.length > 0 ||
+    layout.order.some((id, i) => id !== DEFAULT_DASHBOARD_LAYOUT.order[i])
+  );
 }

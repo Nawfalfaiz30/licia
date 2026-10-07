@@ -1264,10 +1264,32 @@ export default function TasksPage() {
                     {task.title}
                   </p>
                 </div>
-                <div className={clsx("mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs", overdue ? "text-danger" : "text-textMuted")}>
+                <div
+                  className={clsx(
+                    "mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs",
+                    overdue ? "text-danger" : "text-textMuted",
+                  )}
+                >
                   <span>{task.due_at ? formatDue(task.due_at, timezone, locale) : tr("Tanpa tenggat")}</span>
-                  {task.estimated_minutes ? <><span>·</span><span>{tr("{estimated_minutes} mnt",{estimated_minutes:task.estimated_minutes})}</span></> : null}
-                  <span>·</span><span className={clsx("font-semibold",task.priority==="high"?"text-danger":task.priority==="medium"?"text-accent":"text-textMuted")}>● {priorityLabel[task.priority]}</span>
+                  {task.estimated_minutes ? (
+                    <>
+                      <span>·</span>
+                      <span>{tr("{estimated_minutes} mnt", { estimated_minutes: task.estimated_minutes })}</span>
+                    </>
+                  ) : null}
+                  <span>·</span>
+                  <span
+                    className={clsx(
+                      "font-semibold",
+                      task.priority === "high"
+                        ? "text-danger"
+                        : task.priority === "medium"
+                          ? "text-accent"
+                          : "text-textMuted",
+                    )}
+                  >
+                    ● {priorityLabel[task.priority]}
+                  </span>
                 </div>
               </button>
               <span
@@ -1535,14 +1557,27 @@ export default function TasksPage() {
   return (
     <div className="task-page mx-auto min-w-0 max-w-7xl space-y-5 pb-8 animate-licia-page-in">
       <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border pb-3">
-        <div className="min-w-0"><p className="text-2xs font-semibold text-accent">{tr("Execution")}</p><h1 className="font-display text-2xl text-text">{tr("Tugas")}</h1><p className="text-2xs text-textMuted">{tr("{active} tugas aktif",{active:stats.active})}</p></div>
-        <PrimaryButton onClick={()=>setComposerOpen(true)} className="min-h-11 shrink-0 px-3.5 text-xs"><Plus size={15}/>{tr("Tugas")}</PrimaryButton>
+        <div className="min-w-0">
+          <p className="text-2xs font-semibold text-accent">{tr("Execution")}</p>
+          <h1 className="font-display text-2xl text-text">{tr("Tugas")}</h1>
+          <p className="text-2xs text-textMuted">{tr("{active} tugas aktif", { active: stats.active })}</p>
+        </div>
+        <PrimaryButton onClick={() => setComposerOpen(true)} className="min-h-11 shrink-0 px-3.5 text-xs">
+          <Plus size={15} />
+          {tr("Tugas")}
+        </PrimaryButton>
       </header>
       <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        <Chip active>{tr("Aktif")} {stats.active}</Chip>
-        <Chip tone={stats.overdue>0?"danger":"default"}>{tr("Terlambat")} {stats.overdue}</Chip>
-        <Chip>{tr("Hari ini")} {stats.today}</Chip>
-        <Chip>{tr("{minutes} mnt",{minutes:stats.effort})}</Chip>
+        <Chip active>
+          {tr("Aktif")} {stats.active}
+        </Chip>
+        <Chip tone={stats.overdue > 0 ? "danger" : "default"}>
+          {tr("Terlambat")} {stats.overdue}
+        </Chip>
+        <Chip>
+          {tr("Hari ini")} {stats.today}
+        </Chip>
+        <Chip>{tr("{minutes} mnt", { minutes: stats.effort })}</Chip>
       </div>
       {composerOpen && (
         <Card className="task-capture border-accent/15 bg-surface p-4 shadow-2xl sm:p-5 rounded-t-[1.5rem] lg:rounded-2xl lg:shadow-sm fixed inset-x-0 bottom-0 z-modal max-h-[88dvh] overflow-y-auto lg:static lg:inset-auto lg:z-auto lg:max-h-none">
@@ -1560,13 +1595,78 @@ export default function TasksPage() {
             </div>
             <div className="grid gap-2 sm:grid-cols-3 xl:w-[520px]">
               <div className="flex gap-1.5 sm:col-span-2">
-                <button type="button" onClick={()=>{setCustomDueDate(false);setForm({...form,due_date:dateStrInTimezone(new Date(),timezone)});}} className={clsx("min-h-11 flex-1 rounded-xl border px-3 text-2xs font-semibold",!customDueDate&&form.due_date?"border-accent bg-accent/10 text-accent":"border-border bg-bg text-textMuted")}>{tr("Hari ini")}</button>
-                <button type="button" onClick={()=>{setCustomDueDate(false);setForm({...form,due_date:dateStrInTimezone(new Date(Date.now()+86400000),timezone)});}} className="min-h-11 flex-1 rounded-xl border border-border bg-bg px-3 text-2xs font-semibold text-textMuted">{tr("Besok")}</button>
-                <button type="button" onClick={()=>setCustomDueDate(true)} className={clsx("min-h-11 flex-1 rounded-xl border px-3 text-2xs font-semibold",customDueDate?"border-accent bg-accent/10 text-accent":"border-border bg-bg text-textMuted")}>{tr("Pilih…")}</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomDueDate(false);
+                    setForm({ ...form, due_date: dateStrInTimezone(new Date(), timezone) });
+                  }}
+                  className={clsx(
+                    "min-h-11 flex-1 rounded-xl border px-3 text-2xs font-semibold",
+                    !customDueDate && form.due_date
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-border bg-bg text-textMuted",
+                  )}
+                >
+                  {tr("Hari ini")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomDueDate(false);
+                    setForm({ ...form, due_date: dateStrInTimezone(new Date(Date.now() + 86400000), timezone) });
+                  }}
+                  className="min-h-11 flex-1 rounded-xl border border-border bg-bg px-3 text-2xs font-semibold text-textMuted"
+                >
+                  {tr("Besok")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomDueDate(true)}
+                  className={clsx(
+                    "min-h-11 flex-1 rounded-xl border px-3 text-2xs font-semibold",
+                    customDueDate ? "border-accent bg-accent/10 text-accent" : "border-border bg-bg text-textMuted",
+                  )}
+                >
+                  {tr("Pilih…")}
+                </button>
               </div>
-              {customDueDate ? <input type="date" value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text"/> : <input type="time" value={form.due_time} onChange={e=>setForm({...form,due_time:e.target.value})} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text" aria-label={tr("Waktu tenggat (opsional)")}/>}
-              <select value={form.priority} onChange={e=>setForm({...form,priority:e.target.value as Task["priority"]})} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"><option value="low">{tr("Rendah")}</option><option value="medium">{tr("Sedang")}</option><option value="high">{tr("Tinggi")}</option></select>
-              <select value={form.estimated_minutes} onChange={e=>setForm({...form,estimated_minutes:e.target.value})} className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"><option value="">{tr("Durasi")}</option><option value="15">15 mnt</option><option value="30">30 mnt</option><option value="60">1 jam</option><option value="90">1,5 jam</option></select>
+              {customDueDate ? (
+                <input
+                  type="date"
+                  value={form.due_date}
+                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                  className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text"
+                />
+              ) : (
+                <input
+                  type="time"
+                  value={form.due_time}
+                  onChange={(e) => setForm({ ...form, due_time: e.target.value })}
+                  className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs text-text"
+                  aria-label={tr("Waktu tenggat (opsional)")}
+                />
+              )}
+              <select
+                value={form.priority}
+                onChange={(e) => setForm({ ...form, priority: e.target.value as Task["priority"] })}
+                className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"
+              >
+                <option value="low">{tr("Rendah")}</option>
+                <option value="medium">{tr("Sedang")}</option>
+                <option value="high">{tr("Tinggi")}</option>
+              </select>
+              <select
+                value={form.estimated_minutes}
+                onChange={(e) => setForm({ ...form, estimated_minutes: e.target.value })}
+                className="min-h-11 rounded-xl border border-border bg-bg px-3 text-xs font-semibold text-text"
+              >
+                <option value="">{tr("Durasi")}</option>
+                <option value="15">15 mnt</option>
+                <option value="30">30 mnt</option>
+                <option value="60">1 jam</option>
+                <option value="90">1,5 jam</option>
+              </select>
             </div>
             <PrimaryButton onClick={addTask} disabled={saving} className="h-12 shrink-0 rounded-2xl px-5">
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}{" "}
@@ -1734,62 +1834,67 @@ export default function TasksPage() {
           </Card>
         )
       )}
-      <details className="rounded-2xl border border-border bg-surface"><summary className="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-textMuted">{tr("Impor dari… dan aksi lanjutan")}</summary><section className="task-bridge-grid grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            icon: CalendarDays,
-            label: tr("Agenda → Tugas"),
-            text: tr("Jadikan agenda hari ini sebagai tugas yang langsung terhubung."),
-            action: convertAgendaToTasks,
-            busy: "agenda-task",
-          },
-          {
-            icon: Inbox,
-            label: tr("Inbox → Tugas"),
-            text: tr("Ubah tangkapan Inbox terbuka menjadi tugas nyata."),
-            action: convertInboxToTasks,
-            busy: "inbox-task",
-          },
-          {
-            icon: CalendarClock,
-            label: tr("Tugas → Agenda"),
-            text: tr("Cari celah waktu hari ini dan jadwalkan tugas terbuka."),
-            action: scheduleOpenTasks,
-            busy: "task-agenda",
-          },
-          {
-            icon: AlarmClock,
-            label: tr("Agenda → Pengingat"),
-            text: tr("Buat pengingat untuk agenda hari ini tanpa membuka halaman lain."),
-            action: createAgendaReminders,
-            busy: "reminders",
-          },
-        ].map((item, index) => {
-          const Icon = item.icon;
-          const busy = quickAction === item.busy;
-          return (
-            <button
-              key={item.label}
-              onClick={() => void item.action()}
-              disabled={Boolean(quickAction)}
-              style={{ animationDelay: `${index * 60}ms` }}
-              className="task-bridge-card group flex min-w-0 items-center gap-3 rounded-[1.35rem] border border-border bg-surface p-3.5 text-left animate-licia-card-in disabled:cursor-wait disabled:opacity-60"
-            >
-              <span className="shrink-0 rounded-2xl bg-accent/10 p-2.5 text-accent transition group-hover:scale-110">
-                {busy ? <Loader2 size={15} className="animate-spin" /> : <Icon size={15} />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <b className="block break-words text-xs text-text">{item.label}</b>
-                <span className="mt-0.5 block break-words text-2xs leading-relaxed text-textMuted">{item.text}</span>
-              </span>
-              <ArrowRight
-                size={13}
-                className="shrink-0 text-textMuted transition group-hover:translate-x-1 group-hover:text-accent"
-              />
-            </button>
-          );
-        })}
-      </section></details>
+      <details className="rounded-2xl border border-border bg-surface">
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-semibold text-textMuted">
+          {tr("Impor dari… dan aksi lanjutan")}
+        </summary>
+        <section className="task-bridge-grid grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              icon: CalendarDays,
+              label: tr("Agenda → Tugas"),
+              text: tr("Jadikan agenda hari ini sebagai tugas yang langsung terhubung."),
+              action: convertAgendaToTasks,
+              busy: "agenda-task",
+            },
+            {
+              icon: Inbox,
+              label: tr("Inbox → Tugas"),
+              text: tr("Ubah tangkapan Inbox terbuka menjadi tugas nyata."),
+              action: convertInboxToTasks,
+              busy: "inbox-task",
+            },
+            {
+              icon: CalendarClock,
+              label: tr("Tugas → Agenda"),
+              text: tr("Cari celah waktu hari ini dan jadwalkan tugas terbuka."),
+              action: scheduleOpenTasks,
+              busy: "task-agenda",
+            },
+            {
+              icon: AlarmClock,
+              label: tr("Agenda → Pengingat"),
+              text: tr("Buat pengingat untuk agenda hari ini tanpa membuka halaman lain."),
+              action: createAgendaReminders,
+              busy: "reminders",
+            },
+          ].map((item, index) => {
+            const Icon = item.icon;
+            const busy = quickAction === item.busy;
+            return (
+              <button
+                key={item.label}
+                onClick={() => void item.action()}
+                disabled={Boolean(quickAction)}
+                style={{ animationDelay: `${index * 60}ms` }}
+                className="task-bridge-card group flex min-w-0 items-center gap-3 rounded-[1.35rem] border border-border bg-surface p-3.5 text-left animate-licia-card-in disabled:cursor-wait disabled:opacity-60"
+              >
+                <span className="shrink-0 rounded-2xl bg-accent/10 p-2.5 text-accent transition group-hover:scale-110">
+                  {busy ? <Loader2 size={15} className="animate-spin" /> : <Icon size={15} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <b className="block break-words text-xs text-text">{item.label}</b>
+                  <span className="mt-0.5 block break-words text-2xs leading-relaxed text-textMuted">{item.text}</span>
+                </span>
+                <ArrowRight
+                  size={13}
+                  className="shrink-0 text-textMuted transition group-hover:translate-x-1 group-hover:text-accent"
+                />
+              </button>
+            );
+          })}
+        </section>
+      </details>
       <section className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
         <Card className="overflow-hidden p-0">
           <div className="border-b border-border p-4 sm:p-5">
