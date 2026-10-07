@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { createClient } from "@/lib/supabase/client";
 import {
   DASHBOARD_LAYOUT_KEY,
+  DEFAULT_DASHBOARD_LAYOUT,
   normalizeLayout,
   parseLayout,
   resetLayout,
@@ -13,6 +14,12 @@ import {
 
 type Ctx = { layout: DashboardLayout; ready: boolean; update: (next: DashboardLayout) => void };
 const DashboardLayoutContext = createContext<Ctx>({ layout: resetLayout(), ready: false, update: () => undefined });
+const LEGACY_DASHBOARD_ORDER = ["overview", "nextmove", "stats", "now", "insights", "direction", "body", "review", "control"] as const;
+
+function migrateLegacyDefault(layout: DashboardLayout): DashboardLayout {
+  const legacy = layout.hidden.length === 0 && !layout.todayOnly && layout.order.length === LEGACY_DASHBOARD_ORDER.length && layout.order.every((id, index) => id === LEGACY_DASHBOARD_ORDER[index]);
+  return legacy ? { ...DEFAULT_DASHBOARD_LAYOUT, order: [...DEFAULT_DASHBOARD_LAYOUT.order] } : layout;
+}
 
 /**
  * Menyimpan tata letak dashboard di localStorage dan menyiarkannya ke seluruh widget (A8).
@@ -27,7 +34,10 @@ export function DashboardLayoutProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     const read = () => {
       try {
-        setLayout(parseLayout(localStorage.getItem(DASHBOARD_LAYOUT_KEY)));
+        const stored = parseLayout(localStorage.getItem(DASHBOARD_LAYOUT_KEY));
+        const migrated = migrateLegacyDefault(stored);
+        setLayout(migrated);
+        if (migrated !== stored) localStorage.setItem(DASHBOARD_LAYOUT_KEY, serializeLayout(migrated));
       } catch {
         /* storage diblokir */
       }

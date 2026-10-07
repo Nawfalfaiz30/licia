@@ -30,6 +30,7 @@ import { memoizeUserData } from "@/lib/performance/userCache";
 import { DashboardLayoutProvider } from "@/components/dashboard/DashboardLayoutProvider";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 import { DashboardCustomizer } from "@/components/dashboard/DashboardCustomizer";
+import { TodayPriorityList } from "@/components/today/TodayPriorityList";
 import { OnboardingChecklist } from "@/components/intelligence/OnboardingChecklist";
 import { getServerT } from "@/lib/i18n-server";
 
@@ -799,186 +800,62 @@ export default async function DashboardPage() {
         </DashboardWidget>
 
         <DashboardWidget id="now">
-          <section className="grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
-            <Card className="p-4 sm:p-5">
-              <SectionTitle
-                action={
-                  <Link href="/today" className="text-xs font-semibold text-accent">
-                    {tr("Buka Hari Ini")} <ArrowRight size={12} className="inline" />
-                  </Link>
-                }
-              >
-                {tr("Yang perlu kamu lakukan")}
-              </SectionTitle>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Link
-                  href="/tasks"
-                  className="rounded-2xl border border-accent/15 bg-accent/5 p-4 transition hover:-translate-y-0.5 hover:border-accent/30"
-                >
-                  <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-wider text-accent">
-                    <ListChecks size={12} /> {tr("Langkah berikutnya")}
-                  </div>
-                  {priorityTask ? (
-                    <>
-                      <p className="mt-2 break-words text-sm font-semibold text-text">{priorityTask.title}</p>
-                      <p className="mt-1 text-2xs text-textMuted">
-                        {priorityTask.priority === "high" ? tr("Prioritas tinggi") : tr("Tugas berikutnya")} ·{" "}
-                        {priorityTask.due_at ? whenLabel(priorityTask.due_at, timezone) : tr("Tanpa tenggat")}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-3 text-sm text-textMuted">
-                      {tr("Tidak ada tugas mendesak. Kamu bisa mulai dari target atau sesi fokus.")}
-                    </p>
-                  )}
-                </Link>
-                <Link
-                  href="/calendar"
-                  className="rounded-2xl border border-border bg-bg p-4 transition hover:-translate-y-0.5 hover:border-accent/25"
-                >
-                  <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-wider text-accent">
-                    <CalendarDays size={12} /> {tr("Agenda berikutnya")}
-                  </div>
-                  {nextAgenda ? (
-                    <>
-                      <p className="mt-2 break-words text-sm font-semibold text-text">{nextAgenda.title}</p>
-                      <p className="mt-1 text-2xs text-textMuted">
-                        {dateLabel(nextAgenda.block_date, timezone)} · {time(nextAgenda.start_time)}–
-                        {time(nextAgenda.end_time)}
-                        {nextAgenda.location ? tr(" · {location}", { location: nextAgenda.location }) : ""}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-3 text-sm text-textMuted">{tr("Belum ada agenda terdekat.")}</p>
-                  )}
-                </Link>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                <Link
-                  href="/capture"
-                  className="rounded-2xl border border-dashed border-accent/20 bg-accent/5 p-3 transition hover:border-accent/30"
-                >
-                  <div className="flex items-center gap-2">
-                    <Inbox size={13} className="text-accent" />
-                    <p className="text-xs font-semibold text-text">{tr("Kotak masuk")}</p>
-                    <span className="ml-auto text-2xs text-accent">{(inbox.data ?? []).length}</span>
-                  </div>
-                  <p className="mt-1 line-clamp-1 text-2xs text-textMuted">
-                    {(inbox.data ?? [])[0]?.content || tr("Tidak ada catatan mentah yang menunggu dipilah.")}
-                  </p>
-                </Link>
-                <Link
-                  href="/reminders"
-                  className="rounded-2xl border border-border bg-bg p-3 transition hover:border-accent/25"
-                >
-                  <div className="flex items-center gap-2">
-                    <BellRing size={13} className="text-accent" />
-                    <p className="text-xs font-semibold text-text">{tr("Pengingat")}</p>
-                    <span className="ml-auto text-2xs text-accent">
-                      {reminder ? whenLabel(reminder.remind_at, timezone) : "—"}
-                    </span>
-                  </div>
-                  <p className="mt-1 line-clamp-1 text-2xs text-textMuted">
-                    {reminder?.title || tr("Belum ada pengingat terdekat.")}
-                  </p>
-                </Link>
-                <Link
-                  href="/focus"
-                  className="rounded-2xl border border-border bg-bg p-3 transition hover:border-accent/25"
-                >
-                  <div className="flex items-center gap-2">
-                    <Timer size={13} className="text-accent" />
-                    <p className="text-xs font-semibold text-text">{tr("Fokus")}</p>
-                    <span className="ml-auto text-2xs text-accent">{focusTodayMin}m</span>
-                  </div>
-                  <p className="mt-1 line-clamp-1 text-2xs text-textMuted">
-                    {focusTodayMin
-                      ? tr("Sesi fokus sudah tercatat hari ini.")
-                      : tr("Mulai sesi fokus untuk satu pekerjaan penting.")}
-                  </p>
-                </Link>
-              </div>
-            </Card>
-
-            <Card className="p-4 sm:p-5">
-              <SectionTitle
-                action={
-                  <Link href="/planner" className="text-xs font-semibold text-accent">
-                    {tr("Buka Planner")} <ArrowRight size={12} className="inline" />
-                  </Link>
-                }
-              >
-                {tr("Perencanaan hari ini")}
-              </SectionTitle>
-              <div className="rounded-2xl border border-accent/15 bg-accent/5 p-4">
-                <div className="flex items-start gap-3">
-                  <BrainCircuit size={17} className="mt-0.5 shrink-0 text-accent" />
-                  <div className="min-w-0">
-                    <p className="text-2xs font-bold uppercase tracking-wider text-accent">{tr("Kapasitas & beban")}</p>
-                    <p className="mt-1 text-sm font-semibold text-text">
-                      {openTasks.length
-                        ? tr("{openTasks_length} tugas terbuka", { openTasks_length: openTasks.length })
-                        : tr("Tugasmu sudah cukup tertata")}
-                    </p>
-                    <p className="mt-1 text-2xs leading-relaxed text-textMuted">
-                      {tr(
-                        "Gunakan Planner untuk menyusun waktu, mensimulasikan perubahan, dan mencari ruang fokus tanpa langsung mengubah kalender.",
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  <div className="rounded-xl bg-bg p-3">
-                    <p className="text-2xs text-textMuted">{tr("Terlambat")}</p>
-                    <p className="mt-1 text-lg font-semibold text-danger">{overdue.length}</p>
-                  </div>
-                  <div className="rounded-xl bg-bg p-3">
-                    <p className="text-2xs text-textMuted">{tr("Fokus hari ini")}</p>
-                    <p className="mt-1 text-lg font-semibold text-text">{focusTodayMin}m</p>
-                  </div>
-                  <div className="rounded-xl bg-bg p-3">
-                    <p className="text-2xs text-textMuted">{tr("Target")}</p>
-                    <p className="mt-1 text-lg font-semibold text-accent">{avgGoal}%</p>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link
-                    href="/planner"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-2xs font-semibold text-white"
-                  >
-                    {tr("Atur hari")} <ArrowRight size={11} />
-                  </Link>
-                  <Link
-                    href="/planner?mode=what-if"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-bg px-3 py-2 text-2xs font-semibold text-textMuted hover:text-accent"
-                  >
-                    {tr("Simulasikan perubahan")}
-                  </Link>
-                </div>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <Link href="/goals-projects" className="rounded-xl bg-bg p-3 transition hover:bg-accent/5">
-                  <p className="text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Target terdekat")}</p>
-                  <p className="mt-1 text-xs font-semibold text-text">
-                    {nextGoal?.title || tr("Belum ada target aktif")}
-                  </p>
-                  <p className="mt-1 text-2xs text-textMuted">
-                    {nextGoal
-                      ? tr("{Number}% progres", { Number: Number(nextGoal.progress || 0) })
-                      : tr("Buat target untuk membangun arah.")}
-                  </p>
-                </Link>
-                <Link href="/goals-projects" className="rounded-xl bg-bg p-3 transition hover:bg-accent/5">
-                  <p className="text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Proyek aktif")}</p>
-                  <p className="mt-1 text-xs font-semibold text-text">{(projects.data ?? []).length}</p>
-                  <p className="mt-1 text-2xs text-textMuted">
-                    {(projects.data ?? [])[0]?.name || tr("Belum ada proyek aktif.")}
-                  </p>
-                </Link>
-              </div>
-            </Card>
-          </section>
-        </DashboardWidget>
+  <section className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+    <Card className="p-4 sm:p-5">
+      <SectionTitle action={<Link href="/tasks" className="text-xs font-semibold text-accent">{tr("Semua tugas")} <ArrowRight size={12} className="inline" /></Link>}>
+        {tr("Prioritas sekarang")}
+      </SectionTitle>
+      <TodayPriorityList
+        tasks={briefPriorities.map((task) => ({
+          id: task.id,
+          title: task.title,
+          due_at: task.due_at,
+          priority: task.priority === "high" || task.priority === "medium" || task.priority === "low" ? task.priority : "medium",
+          timezone,
+        }))}
+      />
+    </Card>
+    <Card className="p-4 sm:p-5">
+      <SectionTitle action={<Link href="/calendar" className="text-xs font-semibold text-accent">{tr("Buka Kalender")} <ArrowRight size={12} className="inline" /></Link>}>
+        {tr("Jadwal hari ini")}
+      </SectionTitle>
+      <div className="space-y-2">
+        {todayAgenda.slice(0, 3).map((a) => (
+          <Link href="/calendar" key={a.id} className="flex items-start gap-3 rounded-xl border border-border bg-bg p-3 transition hover:border-accent/25">
+            <div className="w-12 shrink-0 text-center">
+              <p className="text-xs font-semibold text-accent">{time(a.start_time)}</p>
+              <p className="text-2xs text-textMuted">{time(a.end_time)}</p>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-xs font-semibold text-text">{a.title}</p>
+              <p className="mt-1 line-clamp-1 text-2xs text-textMuted">{tr("Mulai {time}", { time: time(a.start_time) })}{a.location ? ` · ${a.location}` : ""}</p>
+            </div>
+            <ArrowRight size={12} className="mt-1 shrink-0 text-textMuted" />
+          </Link>
+        ))}
+        {!todayAgenda.length && (
+          <div className="rounded-xl bg-bg p-4">
+            <p className="text-sm font-semibold text-text">{tr("Belum ada agenda")}</p>
+            <Link href="/calendar" className="mt-2 inline-flex text-xs font-semibold text-accent">{tr("Tambah agenda")} <ArrowRight size={11} className="ml-1 mt-0.5" /></Link>
+          </div>
+        )}
+      </div>
+      {upcomingAgenda.length > 0 && (
+        <div className="mt-3 border-t border-border pt-3">
+          <p className="mb-2 text-2xs font-semibold text-textMuted">{tr("Agenda mendatang")}</p>
+          <div className="space-y-1.5">
+            {upcomingAgenda.slice(0, 3).map((a) => (
+              <Link href="/calendar" key={a.id} className="flex items-center justify-between gap-2">
+                <span className="truncate text-2xs text-text">{a.title}</span>
+                <span className="shrink-0 text-2xs text-textMuted">{dateLabel(a.block_date, timezone)} · {time(a.start_time)}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  </section>
+</DashboardWidget>
 
         <DashboardWidget id="insights">
           <LifeInsights />

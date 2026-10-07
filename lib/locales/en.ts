@@ -4,6 +4,15 @@
  * Placeholder {nama} harus sama persis di kedua sisi.
  */
 export const enPhrases: Record<string, string> = {
+  "Bulan sebelumnya": "Previous month",
+  "Bulan berikutnya": "Next month",
+  "Saldo semua dompet": "All wallet balances",
+  "Tren 6 bulan": "6-month trend",
+  "Transaksi terbaru": "Recent transactions",
+  "Lihat semua transaksi": "View all transactions",
+  "Anggaran per kategori": "Budget by category",
+  "Belum ada anggaran": "No budgets yet",
+  "Buat anggaran agar pengeluaran punya batas yang jelas.": "Create a budget to give spending a clear limit.",
   "Selisih bulan ini": "Monthly difference",
   "Belum ada target": "No goals yet",
   "Buat target pertama": "Create your first goal",
