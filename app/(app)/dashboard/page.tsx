@@ -475,7 +475,7 @@ export default async function DashboardPage() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-2xs font-semibold text-accent">{tr("LIFE OS")}</p>
-              <h1 className="truncate font-display text-2xl text-text">
+              <h1 className="font-display text-xl leading-tight text-text sm:truncate sm:text-2xl">
                 {greeting}, {profile?.display_name || tr("kamu")}.
               </h1>
               <p className="truncate text-2xs text-textMuted">
