@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { requireRecentStepUp } from "@/lib/security/step-up";
 
 const TABLES: { table: string; label: string; sortKey: string }[] = [
   { table: "areas", label: "Area Kehidupan", sortKey: "created_at" },
@@ -271,6 +272,8 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`export:${user.id}`, 3, 60000);
   if (gate) return gate;
+  const stepUpError = await requireRecentStepUp(supabase, "/settings");
+  if (stepUpError) return stepUpError;
   const { data: profile } = await supabase.from("users").select("display_name,timezone").eq("id", user.id).single();
   const tz = profile?.timezone || "Asia/Jakarta";
   const name = profile?.display_name?.trim() || "Pengguna";
