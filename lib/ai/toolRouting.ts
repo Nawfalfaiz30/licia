@@ -212,7 +212,7 @@ const writeTools: Partial<Record<AiDomain, string[]>> = {
   decisions: ["log_decision", "update_decision", "delete_decision"],
   learning: ["create_skill", "update_skill", "delete_skill"],
   reading: ["log_reading", "update_reading", "delete_reading"],
-  habits: ["create_habit", "update_habit", "checkin_habit", "uncheckin_habit", "delete_habit"],
+  habits: ["create_habit", "update_habit", "checkin_habit", "uncheckin_habit", "delete_habit", "delete_habits_bulk"],
   subscriptions: ["create_subscription", "update_subscription", "delete_subscription"],
   memory: ["save_memory", "delete_memory"],
   vault: ["create_vault_item", "update_vault_item", "delete_vault_item"],
@@ -241,6 +241,8 @@ const updatePattern =
 const createPattern =
   /\b(buat|buatkan|catat|simpan|tambah|tambahkan|masukkan|input|import|jadwalkan|ubah jadi|jadikan|convert|konversi|log|check[-\s]?in)\b/i;
 const actionPattern = new RegExp(`${deletePattern.source}|${updatePattern.source}|${createPattern.source}`, "i");
+const massDeletePattern = /\b(semua|seluruh|semuanya|all|massal|bulk)\b/i;
+const broadCollectionDeleteTools = ["delete_tasks_bulk", "delete_schedule_blocks_bulk", "delete_habits_bulk", "delete_all_reminders", "delete_all_notifications"];
 const capabilityPattern =
   /\b(apa yang bisa|apa saja yang bisa|kemampuan|fitur|modul|crud|create|read|update|delete|semua data|seluruh data|life os|bisa melakukan|bisa ngapain)\b/i;
 
@@ -349,7 +351,14 @@ export function selectToolDefs<T extends { function?: { name?: string } }>(
 ) {
   const names = new Set<string>();
   const wantsWrite = actionPattern.test(userText);
+  const broadCollectionDelete = wantsWrite && deletePattern.test(userText) && massDeletePattern.test(userText);
   if (capabilityPattern.test(userText)) names.add("get_life_os_capabilities");
+  if (broadCollectionDelete) {
+    // "Hapus semua" tanpa domain tetap memberi model write surface koleksi yang aman.
+    // Interceptor bulk di chatOrchestrator menahan mutation pertama untuk konfirmasi.
+    for (const name of broadCollectionDeleteTools) names.add(name);
+    for (const name of ["get_tasks", "get_schedule", "get_habits", "get_reminders", "get_notifications"]) names.add(name);
+  }
   if (
     /\b(hubungkan|terhubung|terkait|relasi|hubungan|rantai|graph|graf|project.*task|task.*project|target.*project|project.*target|task.*agenda|agenda.*task|task.*fokus|fokus.*task)\b/i.test(
       userText,
