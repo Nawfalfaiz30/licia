@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRecentStepUp, syncMutationRequiresStepUp } from "@/lib/security/step-up";
 import { createClient } from "@/lib/supabase/server";
 import { enforceSameOrigin, assertJsonSize } from "@/lib/security";
 import { isClientNewer, mergeIfSafe, safeStrategy, type ConflictStrategy } from "@/lib/sync/conflict";
@@ -182,6 +183,10 @@ export async function POST(req: Request) {
   const baseVersion = body?.baseVersion == null ? null : Number(body.baseVersion);
   const clientUpdatedAt = body?.clientUpdatedAt ? String(body.clientUpdatedAt) : null;
   const conflictStrategy = safeStrategy(body?.conflictStrategy);
+  if (syncMutationRequiresStepUp(entityType, operation)) {
+    const stepUpError = await requireRecentStepUp(supabase, "/sync");
+    if (stepUpError) return stepUpError;
+  }
   const definition = ALLOWED[entityType];
   const supported =
     definition &&
