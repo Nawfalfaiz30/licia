@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { enforceSameOrigin } from "@/lib/security";
 import { exchangeCode } from "@/lib/integrations/googleCalendar";
-import { encryptSecret, hmacSha256Hex } from "@/lib/integrations/secretBox";
+import { encryptSecret, oauthStateFingerprint } from "@/lib/integrations/secretBox";
 
 export async function GET(req: Request) {
   const origin = enforceSameOrigin(req);
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     .select("id,redirect_path,expires_at")
     .eq("user_id", user.id)
     .eq("provider", "google_calendar")
-    .eq("state_hash", hmacSha256Hex(state))
+    .eq("state_hash", oauthStateFingerprint(state))
     .maybeSingle();
   if (stateError || !stateRow || new Date(stateRow.expires_at).getTime() < Date.now()) {
     return NextResponse.json({ error: "State OAuth tidak valid atau sudah kedaluwarsa." }, { status: 400 });
