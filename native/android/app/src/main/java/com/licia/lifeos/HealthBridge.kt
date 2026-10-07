@@ -1,6 +1,5 @@
 package com.licia.lifeos
 
-import android.webkit.WebView
 import org.json.JSONObject
 import android.content.Context
 import android.os.Build
@@ -20,6 +19,7 @@ class HealthBridge(
     private val context: Context,
     private val scope: CoroutineScope,
     private val runOnUiThread: (Runnable) -> Unit,
+    private val evaluateJavascript: (String) -> Unit,
     private val requestPermissions: (Set<String>) -> Unit,
 ) {
     val readPermissions = setOf(
