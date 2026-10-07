@@ -1,6 +1,6 @@
 {
   "name": "licia",
-  "version": "0.57.0",
+  "version": "0.58.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,8 +13,10 @@
     "prebuild": "node scripts/preflight.mjs --production",
     "preflight:dev": "node scripts/preflight.mjs",
     "audit": "node scripts/audit.mjs",
+    "security": "node scripts/check-secrets.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run && node scripts/i18n.mjs check && node scripts/test-v57.mjs && node scripts/test-v54-2.mjs && node scripts/test-v54.mjs && node scripts/test-v53.mjs",
+    "test": "npm run test:unit && npm run i18n:check && npm run test:regression",
+    "test:regression": "node scripts/test-v57.mjs && node scripts/test-v54-2.mjs && node scripts/test-v54.mjs && node scripts/test-v53.mjs",
     "setup:push": "node scripts/setup-push.mjs",
     "sync:diagnose": "node scripts/healthcheck.mjs",
     "verify:v32": "node scripts/verify-v32.mjs",
@@ -43,11 +45,13 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "ci": "npm run typecheck && npm run lint && npm run test:unit",
+    "ci": "npm run security && npm run typecheck && npm run lint && npm run format:check && npm run i18n:check && npm run test:unit && npm run audit && npm run db:verify && npm run test:pcf && npm run eval:gate",
     "eval": "node scripts/eval.mjs",
     "eval:dry": "node scripts/eval.mjs",
+    "eval:gate": "node scripts/eval-gate.mjs",
     "i18n:check": "node scripts/i18n.mjs check",
     "db:verify": "node scripts/verify-migrations.mjs",
+    "retention": "node scripts/retention.mjs",
     "test:pcf": "node scripts/test-pcf.mjs"
   },
   "dependencies": {
