@@ -9,7 +9,16 @@ import { useDashboardLayout } from "@/components/dashboard/DashboardLayoutProvid
  */
 export function DashboardWidget({ id, children }: { id: DashboardWidgetId; children: React.ReactNode }) {
   const { layout, ready } = useDashboardLayout();
-  if (!ready) return <div style={{ order: 0 }} data-widget={id}>{children}</div>;
+  if (!ready)
+    return (
+      <div style={{ order: 0 }} data-widget={id}>
+        {children}
+      </div>
+    );
   if (!isWidgetVisible(layout, id)) return null;
-  return <div style={{ order: widgetOrder(layout, id) + 1 }} data-widget={id}>{children}</div>;
+  return (
+    <div style={{ order: widgetOrder(layout, id) + 1 }} data-widget={id}>
+      {children}
+    </div>
+  );
 }

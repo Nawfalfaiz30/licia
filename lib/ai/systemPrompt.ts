@@ -15,23 +15,46 @@ export type AiRuntimePreferences = {
   aiDeniedDomains?: string[];
 };
 
-export function buildSystemPrompt(displayName: string | null, timezone: string | null = "Asia/Jakarta", clientNowIso?: string, connectedContext?: string, mode: AiMode = "assistant", responseStyle: "concise" | "normal" | "detailed" = "normal", runtimePreferences: AiRuntimePreferences = {}) {
+export function buildSystemPrompt(
+  displayName: string | null,
+  timezone: string | null = "Asia/Jakarta",
+  clientNowIso?: string,
+  connectedContext?: string,
+  mode: AiMode = "assistant",
+  responseStyle: "concise" | "normal" | "detailed" = "normal",
+  runtimePreferences: AiRuntimePreferences = {},
+) {
   const tz = timezone || "Asia/Jakarta";
   const offset = offsetForTimezone(tz);
   const zoneLabel = labelForTimezone(tz);
   const parsed = clientNowIso ? new Date(clientNowIso) : null;
   const now = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date();
-  const todayStr = now.toLocaleDateString("id-ID", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const todayStr = now.toLocaleDateString("id-ID", {
+    timeZone: tz,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   const todayISO = now.toLocaleDateString("sv-SE", { timeZone: tz });
   const nowTime = now.toLocaleTimeString("id-ID", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
   const name = displayName?.trim();
-  const styleInstruction: Record<string,string> = { concise: "Gaya jawaban: ringkas, langsung ke inti, minim pengulangan.", normal: "Gaya jawaban: seimbang, praktis, cukup detail untuk mengambil tindakan.", detailed: "Gaya jawaban: lebih detail dan terstruktur, tetapi tetap relevan dan tidak bertele-tele." };
-  const modeInstructions: Record<AiMode,string> = {
-    assistant: "Mode Assistant: jawab natural, ringkas, dan bantu menyelesaikan tujuan pengguna dengan konteks modul yang relevan.",
-    planner: "Mode Planner: utamakan urutan langkah, kapasitas waktu, deadline, dan rencana yang bisa langsung dijalankan. Jangan mengubah data tanpa izin yang diperlukan.",
-    analyst: "Mode Analyst: fokus pada pola, perbandingan, sebab-akibat yang didukung data, dan jelaskan dasar kesimpulan. Jangan mengarang korelasi.",
-    operator: "Mode Operator: utamakan tindakan nyata di aplikasi. Cari ID yang benar, jalankan operasi berurutan, minta konfirmasi untuk tindakan destruktif, lalu laporkan perubahan.",
-    reflector: "Mode Reflektor: bantu meninjau minggu/keputusan/kebiasaan dengan nada tenang, identifikasi pembelajaran dan langkah berikutnya tanpa menghakimi.",
+  const styleInstruction: Record<string, string> = {
+    concise: "Gaya jawaban: ringkas, langsung ke inti, minim pengulangan.",
+    normal: "Gaya jawaban: seimbang, praktis, cukup detail untuk mengambil tindakan.",
+    detailed: "Gaya jawaban: lebih detail dan terstruktur, tetapi tetap relevan dan tidak bertele-tele.",
+  };
+  const modeInstructions: Record<AiMode, string> = {
+    assistant:
+      "Mode Assistant: jawab natural, ringkas, dan bantu menyelesaikan tujuan pengguna dengan konteks modul yang relevan.",
+    planner:
+      "Mode Planner: utamakan urutan langkah, kapasitas waktu, deadline, dan rencana yang bisa langsung dijalankan. Jangan mengubah data tanpa izin yang diperlukan.",
+    analyst:
+      "Mode Analyst: fokus pada pola, perbandingan, sebab-akibat yang didukung data, dan jelaskan dasar kesimpulan. Jangan mengarang korelasi.",
+    operator:
+      "Mode Operator: utamakan tindakan nyata di aplikasi. Cari ID yang benar, jalankan operasi berurutan, minta konfirmasi untuk tindakan destruktif, lalu laporkan perubahan.",
+    reflector:
+      "Mode Reflektor: bantu meninjau minggu/keputusan/kebiasaan dengan nada tenang, identifikasi pembelajaran dan langkah berikutnya tanpa menghakimi.",
   };
   const modeInstruction = modeInstructions[mode] ?? modeInstructions.assistant;
 
@@ -39,6 +62,7 @@ export function buildSystemPrompt(displayName: string | null, timezone: string |
 Bedakan fakta, inferensi, dan saran ketika menjelaskan insight; gunakan evidence yang benar-benar tersedia dan jangan mengarang sumber.
 Rencana perubahan banyak harus tampil sebagai preview/ringkasan action, dan operasi massal atau destruktif tetap menunggu konfirmasi.
 ${LICIA_AGENT_POLICY}
+STEP-UP UNTUK AKSI SENSITIF: bila tool mengembalikan code "STEP_UP_REQUIRED", jangan menganggap aksi telah dijalankan. Jelaskan bahwa verifikasi keamanan tambahan diperlukan, berikan tautan step_up_url sebagai langkah berikutnya, dan minta pengguna mengulangi/lanjutkan aksi setelah verifikasi. Jangan memanggil ulang tool sensitif secara identik sebelum verifikasi selesai. Bila code "STEP_UP_UNAVAILABLE", laporkan bahwa verifikasi keamanan sedang tidak tersedia dan jangan melakukan workaround yang melemahkan proteksi.
 PENJAGA TANGGAL: bila pengguna menyebut nomor tanggal DAN nama hari (mis. "Sabtu tanggal 26"), gunakan resolve_calendar_date dan wajib cocokkan keduanya. Jangan memilih tanggal hanya karena nomor harinya sama. Jika hasil alat menyatakan hari tidak cocok, jangan paksa hasil tersebut menjadi benar.
 
 KEAMANAN DATA TAK TEPERCAYA:

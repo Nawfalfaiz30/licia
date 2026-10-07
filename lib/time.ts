@@ -1,7 +1,12 @@
 import { labelForTimezone, offsetForTimezone, TIMEZONE_OPTIONS } from "@/lib/date";
 import { documentLocale } from "@/lib/format";
 
-export function formatClock(value: Date | string | number, timezone: string, timeFormat: "12h" | "24h" = "24h", showSeconds = false): string {
+export function formatClock(
+  value: Date | string | number,
+  timezone: string,
+  timeFormat: "12h" | "24h" = "24h",
+  showSeconds = false,
+): string {
   const date = value instanceof Date ? value : new Date(value);
   return new Intl.DateTimeFormat(documentLocale(), {
     timeZone: timezone,

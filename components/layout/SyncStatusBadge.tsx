@@ -55,7 +55,15 @@ export function SyncStatusBadge() {
   }, []);
 
   const tone = !online ? "warning" : conflicts > 0 ? "warning" : queued > 0 || syncing ? "accent" : "success";
-  const label = syncing ? "Menyinkronkan" : !online ? "Offline" : conflicts > 0 ? `${conflicts} konflik` : queued > 0 ? tr("{queued} menunggu", { queued }) : "Tersinkron";
+  const label = syncing
+    ? "Menyinkronkan"
+    : !online
+      ? "Offline"
+      : conflicts > 0
+        ? `${conflicts} konflik`
+        : queued > 0
+          ? tr("{queued} menunggu", { queued })
+          : "Tersinkron";
   const Icon = syncing ? RefreshCw : !online ? CloudOff : conflicts > 0 ? AlertTriangle : Cloud;
 
   return (

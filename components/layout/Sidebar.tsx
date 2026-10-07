@@ -34,7 +34,9 @@ export function Sidebar() {
       <nav className="flex-1 space-y-5 overflow-y-auto no-scrollbar">
         {navGroups.map((group) => (
           <div key={t(group.i18nKey)}>
-            <p className="licia-sidebar-label text-2xs text-textMuted uppercase tracking-wide px-3 mb-1.5">{t(group.i18nKey)}</p>
+            <p className="licia-sidebar-label text-2xs text-textMuted uppercase tracking-wide px-3 mb-1.5">
+              {t(group.i18nKey)}
+            </p>
             <div className="space-y-1">
               {group.items.map((item) => {
                 const active = pathname?.startsWith(item.href);
@@ -46,7 +48,7 @@ export function Sidebar() {
                     title={t(item.i18nKey)}
                     className={clsx(
                       "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                      active ? "bg-accent/10 text-accent" : "text-textMuted hover:bg-bg hover:text-text"
+                      active ? "bg-accent/10 text-accent" : "text-textMuted hover:bg-bg hover:text-text",
                     )}
                   >
                     <Icon size={18} />

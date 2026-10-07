@@ -3,7 +3,8 @@ import { mutateEntity } from "@/lib/sync/client";
 import { parseSmartCapture, smartDueAtIso, type ChipLang } from "@/lib/text/smartParse";
 import { captureTimezone } from "@/lib/ui/captureTimezone";
 
-export type CreatedTask = { ok: true; id: string | null; title: string; queued: boolean } | { ok: false; error: string };
+export type CreatedTask =
+  { ok: true; id: string | null; title: string; queued: boolean } | { ok: false; error: string };
 
 /** Membuat tugas dari teks bebas dengan smart parsing (tanggal/jam/prioritas) — dipakai palet aksi. */
 export async function createTaskFromText(text: string, lang: ChipLang = "id"): Promise<CreatedTask> {

@@ -3,7 +3,9 @@ import path from "node:path";
 
 const root = process.cwd();
 const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
-const assert = (ok, message) => { if (!ok) throw new Error(`AI/UX regression: ${message}`); };
+const assert = (ok, message) => {
+  if (!ok) throw new Error(`AI/UX regression: ${message}`);
+};
 
 const convo = read("lib/ai/conversationIntelligence.ts");
 const prompt = read("lib/ai/systemPrompt.ts");
@@ -19,49 +21,160 @@ const bottom = read("components/layout/BottomNav.tsx");
 const dashboard = read("app/(app)/dashboard/page.tsx");
 
 assert(convo.includes("propertyFollowUpPattern") && convo.includes("catatannya"), "property follow-up routing missing");
-assert(convo.includes("recentAssistantText") && convo.includes("inferDomainFromRecentAssistant"), "stale context recovery missing");
+assert(
+  convo.includes("recentAssistantText") && convo.includes("inferDomainFromRecentAssistant"),
+  "stale context recovery missing",
+);
 assert(convo.includes("sanitizeEntityIds") && convo.includes("UUID_PATTERN"), "entity ID sanitization missing");
-assert(prompt.includes("JANGAN PERNAH mengirim nomor urut") && prompt.includes("EDIT PROPERTI"), "target resolution instructions missing");
-assert(context.includes("select(\"id,amount,category,note,occurred_at\")") && context.includes("[id: ${t.id}]"), "connected context must expose real IDs");
-assert(route.includes("recentAssistantText") && route.includes("ENTITY_UUID_RE"), "chat route continuity/entity validation missing");
-assert(convo.includes("assistantMutationProposalPattern") && convo.includes("confirmsRecentMutationProposal"), "confirmation-to-mutation continuity missing");
-assert(route.includes("confirmationRoutingHint") && route.includes("[konfirmasi aksi: ubah]"), "confirmed mutation routing hint missing");
-assert(route.includes("taskCompletionFollowUp") && route.includes("update_tasks_bulk"), "deterministic task completion continuity missing");
+assert(
+  prompt.includes("JANGAN PERNAH mengirim nomor urut") && prompt.includes("EDIT PROPERTI"),
+  "target resolution instructions missing",
+);
+assert(
+  context.includes('select("id,amount,category,note,occurred_at")') && context.includes("[id: ${t.id}]"),
+  "connected context must expose real IDs",
+);
+assert(
+  route.includes("recentAssistantText") && route.includes("ENTITY_UUID_RE"),
+  "chat route continuity/entity validation missing",
+);
+assert(
+  convo.includes("assistantMutationProposalPattern") && convo.includes("confirmsRecentMutationProposal"),
+  "confirmation-to-mutation continuity missing",
+);
+assert(
+  route.includes("confirmationRoutingHint") && route.includes("[konfirmasi aksi: ubah]"),
+  "confirmed mutation routing hint missing",
+);
+assert(
+  route.includes("taskCompletionFollowUp") && route.includes("update_tasks_bulk"),
+  "deterministic task completion continuity missing",
+);
 assert(route.includes("resolveActionScope") && route.includes("taskScope"), "phase 3 action scope missing");
-assert(route.includes("confirmationFromProposal") && route.includes("activeIds.length"), "proposal target scope guard missing");
-assert(route.includes("conversationalUndoIntent") && route.includes("undoActionGroup"), "phase 3 conversational undo missing");
-assert(tools.includes('name: "get_life_graph"') && tools.includes("case \"get_life_graph\""), "phase 3 Life Graph tool missing");
-assert(tools.includes("due_on") && tools.includes("due_from") && tools.includes("due_to") && tools.includes("due_after"), "phase 3 task scope fields missing");
+assert(
+  route.includes("confirmationFromProposal") && route.includes("activeIds.length"),
+  "proposal target scope guard missing",
+);
+assert(
+  route.includes("conversationalUndoIntent") && route.includes("undoActionGroup"),
+  "phase 3 conversational undo missing",
+);
+assert(
+  tools.includes('name: "get_life_graph"') && tools.includes('case "get_life_graph"'),
+  "phase 3 Life Graph tool missing",
+);
+assert(
+  tools.includes("due_on") && tools.includes("due_from") && tools.includes("due_to") && tools.includes("due_after"),
+  "phase 3 task scope fields missing",
+);
 assert(fs.existsSync(path.join(root, "tests/actionScope.test.ts")), "phase 3 action scope tests missing");
-assert(prompt.includes("SCOPE AKSI WAJIB") && prompt.includes("target persis dari proposal") && prompt.includes("get_life_graph"), "phase 3 prompt guardrails missing");
+assert(
+  prompt.includes("SCOPE AKSI WAJIB") &&
+    prompt.includes("target persis dari proposal") &&
+    prompt.includes("get_life_graph"),
+  "phase 3 prompt guardrails missing",
+);
 assert(actionUndo?.includes("undoActionGroup"), "phase 3 shared undo helper missing");
-assert(tools.includes('name: "get_life_os_capabilities"') && tools.includes('case "get_life_os_capabilities"'), "Life OS capability discovery tool missing");
-assert(tools.includes('"smart_inbox_item"') && tools.includes('"memory"'), "fallback CRUD does not expose Smart Inbox/Memory entities");
-assert(/notifications:\s*\["mark_notification_read",\s*"delete_notification"/.test(routing), "notification mutation routing missing");
+assert(
+  tools.includes('name: "get_life_os_capabilities"') && tools.includes('case "get_life_os_capabilities"'),
+  "Life OS capability discovery tool missing",
+);
+assert(
+  tools.includes('"smart_inbox_item"') && tools.includes('"memory"'),
+  "fallback CRUD does not expose Smart Inbox/Memory entities",
+);
+assert(
+  /notifications:\s*\["mark_notification_read",\s*"delete_notification"/.test(routing),
+  "notification mutation routing missing",
+);
 assert(routing.includes("journal: [") && routing.includes("relations: ["), "journal/relations routing missing");
 assert(convo.includes('"journal", "relations"'), "conversation domain set missing journal/relations");
-assert(tools.includes('name: "update_tasks_bulk"') && tools.includes("case \"update_tasks_bulk\""), "bulk task update surface missing");
-assert(tools.includes('name: "get_life_graph"') && tools.includes("case \"get_life_graph\""), "Life Graph tooling missing");
-assert(tools.includes("due_on") && tools.includes("due_from") && tools.includes("due_to") && tools.includes("due_after"), "task bulk scope fields missing");
+assert(
+  tools.includes('name: "update_tasks_bulk"') && tools.includes('case "update_tasks_bulk"'),
+  "bulk task update surface missing",
+);
+assert(
+  tools.includes('name: "get_life_graph"') && tools.includes('case "get_life_graph"'),
+  "Life Graph tooling missing",
+);
+assert(
+  tools.includes("due_on") && tools.includes("due_from") && tools.includes("due_to") && tools.includes("due_after"),
+  "task bulk scope fields missing",
+);
 assert(route.includes("resolveActionScope") && route.includes("taskScope"), "action scope enforcement missing");
-assert(route.includes("currentTaskScope") && route.includes("state.activeScope") && route.includes("activeTaskScope"), "task scope inheritance missing");
-assert(route.includes("explicitMultiTaskReference") && route.includes("inheritedScopeArgs"), "bulk task guard must require explicit target or inherited scope");
-assert(route.includes("due_on: activeTaskScope.fromDate") && route.includes("due_after: activeTaskScope.toDate"), "active task scope must constrain model-generated bulk updates");
-assert(actionUndo.includes("verifyRestoredAction") && actionUndo.includes("Status task belum kembali"), "undo must verify restored task state");
-assert(fs.readFileSync(path.join(root, "tests/actionScope.test.ts"), "utf8").includes("setelah hari ini collapse to today") && fs.readFileSync(path.join(root, "tests/actionScope.test.ts"), "utf8").includes("sebelum hari ini collapse to today"), "relative scope regression tests missing");
-assert(route.includes("conversationalUndoIntent") && route.includes("undoActionGroup") && route.includes("isConversationalUndoIntent"), "conversational undo missing");
-assert(route.includes("scopeNoMatch: true") && route.includes("Tidak ada tugas yang perlu diubah pada scope"), "explicit task scope must fail closed when no target matches");
-assert(verify.includes("MANAGED_ENTITY_TABLES") && verify.includes("database-readback-managed"), "managed CRUD verification missing");
+assert(
+  route.includes("currentTaskScope") && route.includes("state.activeScope") && route.includes("activeTaskScope"),
+  "task scope inheritance missing",
+);
+assert(
+  route.includes("explicitMultiTaskReference") && route.includes("inheritedScopeArgs"),
+  "bulk task guard must require explicit target or inherited scope",
+);
+assert(
+  route.includes("due_on: activeTaskScope.fromDate") && route.includes("due_after: activeTaskScope.toDate"),
+  "active task scope must constrain model-generated bulk updates",
+);
+assert(
+  actionUndo.includes("verifyRestoredAction") && actionUndo.includes("Status task belum kembali"),
+  "undo must verify restored task state",
+);
+assert(
+  fs
+    .readFileSync(path.join(root, "tests/actionScope.test.ts"), "utf8")
+    .includes("setelah hari ini collapse to today") &&
+    fs
+      .readFileSync(path.join(root, "tests/actionScope.test.ts"), "utf8")
+      .includes("sebelum hari ini collapse to today"),
+  "relative scope regression tests missing",
+);
+assert(
+  route.includes("conversationalUndoIntent") &&
+    route.includes("undoActionGroup") &&
+    route.includes("isConversationalUndoIntent"),
+  "conversational undo missing",
+);
+assert(
+  route.includes("scopeNoMatch: true") && route.includes("Tidak ada tugas yang perlu diubah pada scope"),
+  "explicit task scope must fail closed when no target matches",
+);
+assert(
+  verify.includes("MANAGED_ENTITY_TABLES") && verify.includes("database-readback-managed"),
+  "managed CRUD verification missing",
+);
 assert(fs.existsSync(path.join(root, "tests/actionScope.test.ts")), "action scope unit test file missing");
 assert(routing.includes("tandai|centang|selesaikan"), "completion verbs are not routed as update mutations");
-assert(verify.includes('update_tasks_bulk: "tasks"') && verify.includes('capture_inbox_item: "smart_inbox_items"'), "CRUD verification map incomplete");
-assert(tools.includes("INVALID_ENTITY_ID") && tools.includes("expenseId"), "invalid UUID guard missing for expense update");
-assert(tools.includes("noteId") && tools.includes("ID catatan tidak valid"), "invalid UUID guard missing for note update");
-assert(settings.includes("Atur Licia sesuai caramu") && settings.includes("Pilih yang penting. Licia menyesuaikan sisanya."), "settings hero not simplified");
-assert(settings.includes("Bahasa antarmuka") && settings.includes("applyAiPreset"), "settings UX language/preset upgrade missing");
-assert(chat.includes("resetConversationContext") && chat.includes("Konfirmasi hapus"), "chat context/confirmation UX missing");
-assert(bottom.includes("visiblePrimary") && bottom.includes('/finance') && bottom.includes('"Hari Ini"'), "mobile nav primary footer is missing expected Phase 1 items");
+assert(
+  verify.includes('update_tasks_bulk: "tasks"') && verify.includes('capture_inbox_item: "smart_inbox_items"'),
+  "CRUD verification map incomplete",
+);
+assert(
+  tools.includes("INVALID_ENTITY_ID") && tools.includes("expenseId"),
+  "invalid UUID guard missing for expense update",
+);
+assert(
+  tools.includes("noteId") && tools.includes("ID catatan tidak valid"),
+  "invalid UUID guard missing for note update",
+);
+assert(
+  settings.includes("Atur Licia sesuai caramu") && settings.includes("Pilih yang penting. Licia menyesuaikan sisanya."),
+  "settings hero not simplified",
+);
+assert(
+  settings.includes("Bahasa antarmuka") && settings.includes("applyAiPreset"),
+  "settings UX language/preset upgrade missing",
+);
+assert(
+  chat.includes("resetConversationContext") && chat.includes("Konfirmasi hapus"),
+  "chat context/confirmation UX missing",
+);
+assert(
+  bottom.includes("visiblePrimary") && bottom.includes("/finance") && bottom.includes('"Hari Ini"'),
+  "mobile nav primary footer is missing expected Phase 1 items",
+);
 assert(!bottom.includes('href: "/capture"'), "Capture must not occupy the mobile primary footer in Phase 1");
-assert(dashboard.includes("const smartMove =") && dashboard.includes("Prioritas sekarang"), "dashboard next-move card missing");
+assert(
+  dashboard.includes("const smartMove =") && dashboard.includes("Prioritas sekarang"),
+  "dashboard next-move card missing",
+);
 
 console.log("Licia AI/UX regression tests OK");

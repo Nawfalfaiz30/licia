@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -23,16 +22,61 @@ export function MobileAccountAction({ compact = false }: { compact?: boolean }) 
     router.refresh();
   }
 
-  if (compact) return <button onClick={() => setOpen(true)} className="touch-target inline-flex items-center justify-center rounded-xl text-textMuted hover:text-text" aria-label={t("Akun")}><UserRound size={17}/></button>;
+  if (compact)
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="touch-target inline-flex items-center justify-center rounded-xl text-textMuted hover:text-text"
+        aria-label={t("Akun")}
+      >
+        <UserRound size={17} />
+      </button>
+    );
   return (
     <>
-      <button onClick={() => setOpen(true)} className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface px-3.5 py-3 text-left text-sm font-semibold text-text transition hover:border-accent/30 hover:text-accent">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent"><UserRound size={17}/></span>
-        <span className="min-w-0 flex-1"><span className="block">{t("Akun & sesi")}</span><span className="mt-0.5 block text-2xs font-normal text-textMuted">{t("Keluar dari Licia di perangkat ini")}</span></span>
+      <button
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface px-3.5 py-3 text-left text-sm font-semibold text-text transition hover:border-accent/30 hover:text-accent"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent">
+          <UserRound size={17} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block">{t("Akun & sesi")}</span>
+          <span className="mt-0.5 block text-2xs font-normal text-textMuted">
+            {t("Keluar dari Licia di perangkat ini")}
+          </span>
+        </span>
       </button>
-      <Overlay open={open} onClose={() => setOpen(false)} tier="modal" align="end" label={t("Akun")} panelClassName="w-full max-w-md rounded-[1.6rem] border border-border bg-surface p-4 shadow-2xl animate-licia-pop-in">
-        <div className="flex items-center justify-between gap-3"><div><p className="font-display text-lg text-text">{t("Akun")}</p><p className="text-xs text-textMuted">{t("Tindakan sesi")}</p></div><button className="touch-target rounded-xl text-textMuted" onClick={() => setOpen(false)} aria-label={t("Tutup")}><X size={17} aria-hidden="true" /></button></div>
-        <button onClick={() => void logout()} disabled={busy} className="mt-4 flex min-h-12 w-full items-center gap-3 rounded-2xl border border-danger/20 bg-danger/5 px-4 text-left text-sm font-semibold text-danger transition hover:bg-danger/10 disabled:opacity-50"><LogOut size={17} aria-hidden="true" /><span>{busy ? t("Keluar…") : t("Keluar")}</span></button>
+      <Overlay
+        open={open}
+        onClose={() => setOpen(false)}
+        tier="modal"
+        align="end"
+        label={t("Akun")}
+        panelClassName="w-full max-w-md rounded-[1.6rem] border border-border bg-surface p-4 shadow-2xl animate-licia-pop-in"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="font-display text-lg text-text">{t("Akun")}</p>
+            <p className="text-xs text-textMuted">{t("Tindakan sesi")}</p>
+          </div>
+          <button
+            className="touch-target rounded-xl text-textMuted"
+            onClick={() => setOpen(false)}
+            aria-label={t("Tutup")}
+          >
+            <X size={17} aria-hidden="true" />
+          </button>
+        </div>
+        <button
+          onClick={() => void logout()}
+          disabled={busy}
+          className="mt-4 flex min-h-12 w-full items-center gap-3 rounded-2xl border border-danger/20 bg-danger/5 px-4 text-left text-sm font-semibold text-danger transition hover:bg-danger/10 disabled:opacity-50"
+        >
+          <LogOut size={17} aria-hidden="true" />
+          <span>{busy ? t("Keluar…") : t("Keluar")}</span>
+        </button>
       </Overlay>
     </>
   );

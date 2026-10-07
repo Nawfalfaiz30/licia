@@ -1,7 +1,19 @@
 /** Tata letak dashboard yang bisa diatur (A8). Logika murni; tersimpan di cookie agar server langsung merender urutan yang benar. */
 export const DASHBOARD_COOKIE = "licia-dashboard";
 
-export const WIDGET_IDS = ["header", "onboarding", "overview", "next", "stats", "today", "insights", "goals", "life", "review", "more"] as const;
+export const WIDGET_IDS = [
+  "header",
+  "onboarding",
+  "overview",
+  "next",
+  "stats",
+  "today",
+  "insights",
+  "goals",
+  "life",
+  "review",
+  "more",
+] as const;
 export type WidgetId = (typeof WIDGET_IDS)[number];
 
 /** Judul di panel "Sesuaikan" (diterjemahkan lewat tr saat render). */
@@ -34,19 +46,30 @@ export function normalizePrefs(input: unknown): DashboardPrefs {
   const raw = (input && typeof input === "object" ? input : {}) as Partial<Record<keyof DashboardPrefs, unknown>>;
   const seen = new Set<WidgetId>();
   const order: WidgetId[] = [];
-  for (const id of Array.isArray(raw.order) ? raw.order : []) if (isId(id) && !seen.has(id)) { seen.add(id); order.push(id); }
+  for (const id of Array.isArray(raw.order) ? raw.order : [])
+    if (isId(id) && !seen.has(id)) {
+      seen.add(id);
+      order.push(id);
+    }
   for (const id of WIDGET_IDS) if (!seen.has(id)) order.push(id);
   const withoutLocked = order.filter((id) => !LOCKED.has(id));
   const finalOrder = [...WIDGET_IDS.filter((id) => LOCKED.has(id)), ...withoutLocked];
-  const hidden = Array.from(new Set((Array.isArray(raw.hidden) ? raw.hidden : []).filter(isId).filter((id) => !LOCKED.has(id))));
+  const hidden = Array.from(
+    new Set((Array.isArray(raw.hidden) ? raw.hidden : []).filter(isId).filter((id) => !LOCKED.has(id))),
+  );
   return { order: finalOrder, hidden, todayOnly: raw.todayOnly === true };
 }
 
 export function parsePrefs(cookieValue: string | null | undefined): DashboardPrefs {
   if (!cookieValue) return { ...DEFAULT_PREFS, order: [...DEFAULT_PREFS.order] };
-  try { return normalizePrefs(JSON.parse(decodeURIComponent(cookieValue))); } catch { return { ...DEFAULT_PREFS, order: [...DEFAULT_PREFS.order] }; }
+  try {
+    return normalizePrefs(JSON.parse(decodeURIComponent(cookieValue)));
+  } catch {
+    return { ...DEFAULT_PREFS, order: [...DEFAULT_PREFS.order] };
+  }
 }
-export const serializePrefs = (prefs: DashboardPrefs) => encodeURIComponent(JSON.stringify({ order: prefs.order, hidden: prefs.hidden, todayOnly: prefs.todayOnly }));
+export const serializePrefs = (prefs: DashboardPrefs) =>
+  encodeURIComponent(JSON.stringify({ order: prefs.order, hidden: prefs.hidden, todayOnly: prefs.todayOnly }));
 
 /** Urutan widget yang benar-benar tampil. */
 export function visibleWidgets(prefs: DashboardPrefs): WidgetId[] {

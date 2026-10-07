@@ -47,7 +47,12 @@ describe("kamus Inggris", () => {
     expect(keys.filter((k) => !enPhrases[k].trim())).toEqual([]);
   });
   it("tidak menyisakan kata fungsi Indonesia yang jelas pada terjemahan (indikasi lupa terjemah)", () => {
-    const leftovers = keys.filter((k) => /\b(yang|dengan|untuk|belum|tidak|sudah|akan)\b/i.test(enPhrases[k]) && k.length > 12 && !/Kotlin|besok|jam \d|Licia/.test(k + enPhrases[k]));
+    const leftovers = keys.filter(
+      (k) =>
+        /\b(yang|dengan|untuk|belum|tidak|sudah|akan)\b/i.test(enPhrases[k]) &&
+        k.length > 12 &&
+        !/Kotlin|besok|jam \d|Licia/.test(k + enPhrases[k]),
+    );
     expect(leftovers).toEqual([]);
   });
 });

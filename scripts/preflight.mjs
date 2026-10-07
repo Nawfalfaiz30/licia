@@ -10,7 +10,7 @@ import process from "node:process";
 function parseEnvValue(raw) {
   let value = raw.trim();
   if (!value) return "";
-  if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
     value = value.slice(1, -1);
   }
   return value.replace(/\\n/g, "\n");
@@ -18,12 +18,7 @@ function parseEnvValue(raw) {
 
 function loadEnvFiles(forcedNodeEnv) {
   const nodeEnv = forcedNodeEnv || process.env.NODE_ENV || "development";
-  const files = [
-    ".env",
-    `.env.${nodeEnv}`,
-    ".env.local",
-    `.env.${nodeEnv}.local`,
-  ];
+  const files = [".env", `.env.${nodeEnv}`, ".env.local", `.env.${nodeEnv}.local`];
   const loaded = [];
 
   for (const relative of files) {
@@ -88,7 +83,10 @@ if (site && app && site.origin !== app.origin) {
 }
 if (isProd) {
   const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
-  for (const [name, parsed] of [["NEXT_PUBLIC_SITE_URL", site], ["APP_URL", app]]) {
+  for (const [name, parsed] of [
+    ["NEXT_PUBLIC_SITE_URL", site],
+    ["APP_URL", app],
+  ]) {
     if (parsed && loopbackHosts.has(parsed.hostname.toLowerCase())) {
       errors.push(`${name} tidak boleh menunjuk ke localhost/loopback pada production.`);
     }
@@ -100,19 +98,33 @@ if (isProd) {
   // have no domain/certificate. The exact origin is still validated and must
   // match between NEXT_PUBLIC_SITE_URL and APP_URL.
   if (site?.protocol === "http:" || app?.protocol === "http:") {
-    warnings.push("Production menggunakan HTTP. Ini cocok untuk deployment IP-only, tetapi koneksi, PWA/service worker, dan browser notification tidak mendapat jaminan HTTPS.");
+    warnings.push(
+      "Production menggunakan HTTP. Ini cocok untuk deployment IP-only, tetapi koneksi, PWA/service worker, dan browser notification tidak mendapat jaminan HTTPS.",
+    );
   }
   if (process.env.DEV_TUNNEL_ORIGIN?.trim()) errors.push("DEV_TUNNEL_ORIGIN harus kosong di production.");
 }
 
 if (isProd && fs.existsSync("package.json")) {
-  try { await import("web-push"); } catch { errors.push("Dependency web-push belum terpasang. Jalankan npm install setelah memperbarui source/package.json."); }
+  try {
+    await import("web-push");
+  } catch {
+    errors.push("Dependency web-push belum terpasang. Jalankan npm install setelah memperbarui source/package.json.");
+  }
 }
 if (isProd && !isCiBuildOnly) {
-  const productionRequired = ["SUPABASE_SERVICE_ROLE_KEY","VAPID_SUBJECT","VAPID_PUBLIC_KEY","VAPID_PRIVATE_KEY","LICIA_CRON_SECRET"];
-  for (const key of productionRequired) if (!process.env[key]?.trim()) errors.push(`${key} belum diisi. Jalur Web Push + reminder worker belum siap.`);
+  const productionRequired = [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "VAPID_SUBJECT",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY",
+    "LICIA_CRON_SECRET",
+  ];
+  for (const key of productionRequired)
+    if (!process.env[key]?.trim()) errors.push(`${key} belum diisi. Jalur Web Push + reminder worker belum siap.`);
   const interval = Number(process.env.LICIA_REMINDER_WORKER_INTERVAL_MS || 60000);
-  if (!Number.isInteger(interval) || interval < 30000 || interval > 600000) errors.push("LICIA_REMINDER_WORKER_INTERVAL_MS harus berupa bilangan 30000–600000.");
+  if (!Number.isInteger(interval) || interval < 30000 || interval > 600000)
+    errors.push("LICIA_REMINDER_WORKER_INTERVAL_MS harus berupa bilangan 30000–600000.");
 }
 
 for (const file of [
@@ -126,7 +138,9 @@ for (const file of [
 }
 
 if (!fs.existsSync("package-lock.json")) {
-  warnings.push("package-lock.json belum tersedia. Buat/commit lockfile dari mesin yang memiliki akses npm registry lalu gunakan npm ci untuk deployment reproducible.");
+  warnings.push(
+    "package-lock.json belum tersedia. Buat/commit lockfile dari mesin yang memiliki akses npm registry lalu gunakan npm ci untuk deployment reproducible.",
+  );
 }
 
 if (errors.length) {

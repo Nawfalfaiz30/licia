@@ -1,15 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function getOrCreateProfile(
-  supabase: SupabaseClient,
-  userId: string,
-  fallbackName?: string | null
-) {
-  const { data: profile } = await supabase
-    .from("users")
-    .select("display_name, timezone")
-    .eq("id", userId)
-    .single();
+export async function getOrCreateProfile(supabase: SupabaseClient, userId: string, fallbackName?: string | null) {
+  const { data: profile } = await supabase.from("users").select("display_name, timezone").eq("id", userId).single();
 
   if (profile) return profile;
 

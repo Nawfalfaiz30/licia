@@ -41,23 +41,34 @@ export async function createDefaultScheduleReminder(
     .limit(1);
   if (existing?.[0]) return existing[0];
 
-  const inserted = await supabase.from("reminders").insert({
-    user_id: userId,
-    title: `Pengingat: ${block.title}`,
-    body: `${String(block.start_time).slice(0, 5)}–${String(block.end_time).slice(0, 5)}`,
-    remind_at: new Date(remindMs).toISOString(),
-    timezone,
-    target_type: "schedule",
-    target_id: block.id,
-    offset_minutes: minutes,
-    href: "/calendar",
-    enabled: true,
-    status: "pending",
-    updated_at: new Date().toISOString(),
-  }).select("id,title,remind_at,target_type,target_id,offset_minutes,status").maybeSingle();
+  const inserted = await supabase
+    .from("reminders")
+    .insert({
+      user_id: userId,
+      title: `Pengingat: ${block.title}`,
+      body: `${String(block.start_time).slice(0, 5)}–${String(block.end_time).slice(0, 5)}`,
+      remind_at: new Date(remindMs).toISOString(),
+      timezone,
+      target_type: "schedule",
+      target_id: block.id,
+      offset_minutes: minutes,
+      href: "/calendar",
+      enabled: true,
+      status: "pending",
+      updated_at: new Date().toISOString(),
+    })
+    .select("id,title,remind_at,target_type,target_id,offset_minutes,status")
+    .maybeSingle();
   if (!inserted.error) return inserted.data ?? null;
   if (inserted.error.code === "23505") {
-    const { data: existingAfterRace } = await supabase.from("reminders").select("id,status,enabled").eq("user_id", userId).eq("target_type", "schedule").eq("target_id", block.id).eq("offset_minutes", minutes).limit(1);
+    const { data: existingAfterRace } = await supabase
+      .from("reminders")
+      .select("id,status,enabled")
+      .eq("user_id", userId)
+      .eq("target_type", "schedule")
+      .eq("target_id", block.id)
+      .eq("offset_minutes", minutes)
+      .limit(1);
     return existingAfterRace?.[0] ?? null;
   }
   return null;
@@ -89,10 +100,15 @@ export async function syncExistingScheduleReminder(
     sent_at: null,
     updated_at: new Date().toISOString(),
   };
-  const { data } = await supabase.from("reminders").update(patch).eq("id", reminder.id).eq("user_id", userId).select().maybeSingle();
+  const { data } = await supabase
+    .from("reminders")
+    .update(patch)
+    .eq("id", reminder.id)
+    .eq("user_id", userId)
+    .select()
+    .maybeSingle();
   return data ?? null;
 }
-
 
 type TaskRow = {
   id: string;
@@ -121,23 +137,34 @@ export async function createDefaultTaskReminder(
     .eq("target_id", task.id)
     .limit(1);
   if (existing?.[0]) return existing[0];
-  const inserted = await supabase.from("reminders").insert({
-    user_id: userId,
-    title: `Pengingat: ${task.title}`,
-    body: `Deadline ${new Date(task.due_at).toLocaleString("id-ID", { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
-    remind_at: new Date(remindMs).toISOString(),
-    timezone,
-    target_type: "task",
-    target_id: task.id,
-    offset_minutes: minutes,
-    href: "/tasks",
-    enabled: true,
-    status: "pending",
-    updated_at: new Date().toISOString(),
-  }).select("id,title,remind_at,target_type,target_id,offset_minutes,status").maybeSingle();
+  const inserted = await supabase
+    .from("reminders")
+    .insert({
+      user_id: userId,
+      title: `Pengingat: ${task.title}`,
+      body: `Deadline ${new Date(task.due_at).toLocaleString("id-ID", { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+      remind_at: new Date(remindMs).toISOString(),
+      timezone,
+      target_type: "task",
+      target_id: task.id,
+      offset_minutes: minutes,
+      href: "/tasks",
+      enabled: true,
+      status: "pending",
+      updated_at: new Date().toISOString(),
+    })
+    .select("id,title,remind_at,target_type,target_id,offset_minutes,status")
+    .maybeSingle();
   if (!inserted.error) return inserted.data ?? null;
   if (inserted.error.code === "23505") {
-    const { data: existingAfterRace } = await supabase.from("reminders").select("id,status,enabled").eq("user_id", userId).eq("target_type", "task").eq("target_id", task.id).eq("offset_minutes", minutes).limit(1);
+    const { data: existingAfterRace } = await supabase
+      .from("reminders")
+      .select("id,status,enabled")
+      .eq("user_id", userId)
+      .eq("target_type", "task")
+      .eq("target_id", task.id)
+      .eq("offset_minutes", minutes)
+      .limit(1);
     return existingAfterRace?.[0] ?? null;
   }
   return null;
@@ -159,7 +186,18 @@ export async function syncExistingTaskReminder(
     .maybeSingle();
   if (!reminder || reminder.enabled === false || !reminder.offset_minutes) return null;
   if (!task.due_at) {
-    const { data } = await supabase.from("reminders").update({ enabled: false, status: "cancelled", last_error: "Task deadline removed", updated_at: new Date().toISOString() }).eq("id", reminder.id).eq("user_id", userId).select().maybeSingle();
+    const { data } = await supabase
+      .from("reminders")
+      .update({
+        enabled: false,
+        status: "cancelled",
+        last_error: "Task deadline removed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", reminder.id)
+      .eq("user_id", userId)
+      .select()
+      .maybeSingle();
     return data ?? null;
   }
   const dueMs = new Date(task.due_at).getTime();
@@ -167,8 +205,21 @@ export async function syncExistingTaskReminder(
   if (!Number.isFinite(remindMs)) return null;
   const status = remindMs > Date.now() ? "pending" : "waiting_for_device";
   const body = `Deadline ${new Date(task.due_at).toLocaleString("id-ID", { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`;
-  const { data } = await supabase.from("reminders").update({
-    title: `Pengingat: ${task.title}`, body, remind_at: new Date(remindMs).toISOString(), timezone, status, sent_at: null, last_attempt_at: null, updated_at: new Date().toISOString(),
-  }).eq("id", reminder.id).eq("user_id", userId).select().maybeSingle();
+  const { data } = await supabase
+    .from("reminders")
+    .update({
+      title: `Pengingat: ${task.title}`,
+      body,
+      remind_at: new Date(remindMs).toISOString(),
+      timezone,
+      status,
+      sent_at: null,
+      last_attempt_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", reminder.id)
+    .eq("user_id", userId)
+    .select()
+    .maybeSingle();
   return data ?? null;
 }

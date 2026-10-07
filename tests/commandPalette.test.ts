@@ -55,12 +55,42 @@ describe("moveActive", () => {
   });
 });
 
-const page = (id: string, label: string, keywords = ""): PaletteItem => ({ id: `page:${id}`, kind: "page", label, keywords, href: `/${id}`, group: "Halaman" });
-const cmd = (id: string, label: string, keywords = ""): PaletteItem => ({ id: `cmd:${id}`, kind: "command", commandId: id, label, keywords, group: "Aksi" });
-const create: PaletteItem = { id: "create-task", kind: "create-task", label: "Buat tugas", payload: "x", group: "Buat" };
-const pages = [page("tasks", "Tugas", "tasks todo"), page("finance", "Keuangan", "finance money"), page("settings", "Pengaturan", "settings")];
-const commands = [cmd("new-task", "Buat tugas baru", "new task create"), cmd("theme-dark", "Tema gelap", "theme dark"), cmd("language-toggle", "Ganti bahasa", "language english")];
-const results: PaletteItem[] = [{ id: "res:1", kind: "result", label: "Catatan rapat", href: "/notes", group: "Hasil" }];
+const page = (id: string, label: string, keywords = ""): PaletteItem => ({
+  id: `page:${id}`,
+  kind: "page",
+  label,
+  keywords,
+  href: `/${id}`,
+  group: "Halaman",
+});
+const cmd = (id: string, label: string, keywords = ""): PaletteItem => ({
+  id: `cmd:${id}`,
+  kind: "command",
+  commandId: id,
+  label,
+  keywords,
+  group: "Aksi",
+});
+const create: PaletteItem = {
+  id: "create-task",
+  kind: "create-task",
+  label: "Buat tugas",
+  payload: "x",
+  group: "Buat",
+};
+const pages = [
+  page("tasks", "Tugas", "tasks todo"),
+  page("finance", "Keuangan", "finance money"),
+  page("settings", "Pengaturan", "settings"),
+];
+const commands = [
+  cmd("new-task", "Buat tugas baru", "new task create"),
+  cmd("theme-dark", "Tema gelap", "theme dark"),
+  cmd("language-toggle", "Ganti bahasa", "language english"),
+];
+const results: PaletteItem[] = [
+  { id: "res:1", kind: "result", label: "Catatan rapat", href: "/notes", group: "Hasil" },
+];
 
 describe("parsePaletteQuery", () => {
   it("awalan > / ? menentukan cakupan", () => {
@@ -72,7 +102,8 @@ describe("parsePaletteQuery", () => {
 });
 
 describe("composePalette", () => {
-  const run = (query: string, createTask: PaletteItem | null = create) => composePalette({ query, pages, commands, results, createTask }).items.map((i) => i.id);
+  const run = (query: string, createTask: PaletteItem | null = create) =>
+    composePalette({ query, pages, commands, results, createTask }).items.map((i) => i.id);
   it("kueri kosong → perintah teratas lalu halaman", () => {
     const ids = run("");
     expect(ids[0]).toBe("cmd:new-task");

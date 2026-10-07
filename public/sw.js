@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'licia-pwa-';
-const FALLBACK_APP_VERSION = '0.57.0';
+const FALLBACK_APP_VERSION = '0.58.0';
 let CACHE = CACHE_PREFIX + FALLBACK_APP_VERSION;
 let DB_VERSION = 4;
 const OFFLINE_URL = '/offline.html';
@@ -142,7 +142,7 @@ async function replayOfflineQueue() {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(loadVersionMetadata().then(() => caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).catch(() => undefined)));
-  self.skipWaiting();
+  // Keep the new worker waiting until the user accepts the update banner.
 });
 
 self.addEventListener('activate', (event) => {

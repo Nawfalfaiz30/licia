@@ -8,6 +8,7 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
   { key: "Cross-Origin-Resource-Policy", value: "same-site" },
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+  { key: "Origin-Agent-Cluster", value: "?1" },
 ];
 
 const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || "";
@@ -32,7 +33,8 @@ const securityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "img-src 'self' data: blob:" + (imageRemotePatterns.length ? " " + imageRemotePatterns.map((p) => p.protocol + "://" + p.hostname).join(" ") : ""),
+  "img-src 'self' data: blob:" +
+    (imageRemotePatterns.length ? " " + imageRemotePatterns.map((p) => p.protocol + "://" + p.hostname).join(" ") : ""),
   "font-src 'self' data: https://fonts.gstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}`,
@@ -51,6 +53,9 @@ const nextConfig = {
     remotePatterns: imageRemotePatterns,
   },
   turbopack: {},
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

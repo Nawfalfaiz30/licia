@@ -4,8 +4,8 @@ import { navGroups } from "@/components/layout/nav-items";
 
 describe("resolveGoTo", () => {
   it("huruf dikenal → tujuan, tidak peka huruf besar", () => {
-    expect(resolveGoTo("d")?.href).toBe("/dashboard");
-    expect(resolveGoTo("D")?.href).toBe("/dashboard");
+    expect(resolveGoTo("d")?.href).toBe("/today");
+    expect(resolveGoTo("D")?.href).toBe("/today");
     expect(resolveGoTo("/")?.href).toBe("/search");
   });
   it("huruf tak dikenal dan kunci prototipe → null", () => {
@@ -36,7 +36,9 @@ describe("isTypingTarget", () => {
     expect(isTypingTarget({ tagName: "textarea" } as any)).toBe(true);
     expect(isTypingTarget({ tagName: "SELECT" } as any)).toBe(true);
     expect(isTypingTarget({ tagName: "DIV", isContentEditable: true } as any)).toBe(true);
-    expect(isTypingTarget({ tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "textbox" : null) } as any)).toBe(true);
+    expect(
+      isTypingTarget({ tagName: "DIV", getAttribute: (n: string) => (n === "role" ? "textbox" : null) } as any),
+    ).toBe(true);
   });
   it("tombol, tautan, body, dan null = bukan", () => {
     expect(isTypingTarget({ tagName: "BUTTON" } as any)).toBe(false);

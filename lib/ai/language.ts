@@ -6,7 +6,10 @@ import { LANGUAGE_COOKIE, resolveLanguage, type Language } from "@/lib/i18n";
 
 export function languageFromCookieHeader(header: string | null | undefined): Language {
   if (!header) return "id";
-  const match = header.split(/;\s*/).map((part) => part.split("=")).find(([name]) => name === LANGUAGE_COOKIE);
+  const match = header
+    .split(/;\s*/)
+    .map((part) => part.split("="))
+    .find(([name]) => name === LANGUAGE_COOKIE);
   return resolveLanguage(match?.[1] ? decodeURIComponent(match[1]) : undefined);
 }
 

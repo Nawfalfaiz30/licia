@@ -1,36 +1,36 @@
-import fs from 'node:fs';
-import { readFileSync } from 'node:fs';
-import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import fs from "node:fs";
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-const chat = fs.readFileSync(new URL('../app/api/chat/route.ts', import.meta.url), 'utf8');
-const chatOrchestrator = fs.readFileSync(new URL('../lib/ai/chatOrchestrator.ts', import.meta.url), 'utf8');
-const chatRuntimeSource = chat + '\n' + chatOrchestrator;
-const historySchema = readFileSync(new URL('../supabase/schema_ai_chat_history.sql', import.meta.url), 'utf8');
-const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const chat = fs.readFileSync(new URL("../app/api/chat/route.ts", import.meta.url), "utf8");
+const chatOrchestrator = fs.readFileSync(new URL("../lib/ai/chatOrchestrator.ts", import.meta.url), "utf8");
+const chatRuntimeSource = chat + "\n" + chatOrchestrator;
+const historySchema = readFileSync(new URL("../supabase/schema_ai_chat_history.sql", import.meta.url), "utf8");
+const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
-const runtime = readFileSync(new URL('../lib/ai/runtime.ts', import.meta.url), 'utf8');
+const runtime = readFileSync(new URL("../lib/ai/runtime.ts", import.meta.url), "utf8");
 assert.match(runtime, /export function generationOptions/);
 assert.match(runtime, /LICIA_AI_OMIT_TEMPERATURE/);
 assert.match(runtime, /LICIA_AI_REASONING_EFFORT/);
 
 for (const file of [
-  'lib/ai/chatOrchestrator.ts',
-  'app/api/weekly-planner/route.ts',
-  'app/api/v38/daily-plan/route.ts',
-  'app/api/inbox/triage/route.ts',
-  'app/api/estimate-nutrition/route.ts',
-  'app/api/tasks/assist/route.ts',
+  "lib/ai/chatOrchestrator.ts",
+  "app/api/weekly-planner/route.ts",
+  "app/api/v38/daily-plan/route.ts",
+  "app/api/inbox/triage/route.ts",
+  "app/api/estimate-nutrition/route.ts",
+  "app/api/tasks/assist/route.ts",
 ]) {
-  const src = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+  const src = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
   assert.match(src, /generationOptions\(/);
   assert.match(src, /chatCompletion\(/);
 }
 
 // V56: versi minimum (>= 0.54), bukan kunci eksak 0.54.x yang membuat `npm test` gagal di setiap rilis baru.
 assert.ok(/^0\.(5[4-9]|[6-9]\d)\./.test(pkg.version), `versi paket ${pkg.version} < 0.54`);
-assert.ok(fs.existsSync(new URL('../DEPLOY_VPS.md', import.meta.url)));
+assert.ok(fs.existsSync(new URL("../DEPLOY_VPS.md", import.meta.url)));
 assert.match(runtime, /reasoning_effort/);
 assert.match(runtime, /unsupportedGenerationParameter/);
 assert.match(chatRuntimeSource, /tools:\s*selectedTools/);
@@ -39,10 +39,10 @@ assert.match(chatRuntimeSource, /selectAiToolModel/);
 assert.match(chatRuntimeSource, /pendingActionId/);
 assert.match(chatRuntimeSource, /loadServerPendingAction/);
 assert.match(chatOrchestrator, /export async function chatDelete/);
-const validatorUrl = pathToFileURL(new URL('../lib/ai/toolValidation.ts', import.meta.url).pathname).href;
+const validatorUrl = pathToFileURL(new URL("../lib/ai/toolValidation.ts", import.meta.url).pathname).href;
 const behaviorScript = `
 import { validateToolArguments } from ${JSON.stringify(validatorUrl)};
-import { chatCompletion, generationOptions } from ${JSON.stringify(pathToFileURL(new URL('../lib/ai/runtime.ts', import.meta.url).pathname).href)};
+import { chatCompletion, generationOptions } from ${JSON.stringify(pathToFileURL(new URL("../lib/ai/runtime.ts", import.meta.url).pathname).href)};
 const defs = [{ type: 'function', function: { name: 'demo', parameters: { type: 'object', properties: { amount: { type: 'number' }, label: { type: 'string' } }, required: ['amount'] } } }];
 process.env.LICIA_AI_OMIT_TEMPERATURE = 'true';
 process.env.LICIA_AI_REASONING_EFFORT = 'none';
@@ -79,11 +79,13 @@ if (!validateToolArguments(defs, 'demo', { amount: 100 }).ok) process.exit(1);
 if (validateToolArguments(defs, 'demo', {}).ok) process.exit(2);
 if (validateToolArguments(defs, 'demo', { amount: '100' }).ok) process.exit(3);
 `;
-execFileSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', behaviorScript], { stdio: 'ignore' });
-const validation = readFileSync(new URL('../lib/ai/toolValidation.ts', import.meta.url), 'utf8');
+execFileSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", behaviorScript], {
+  stdio: "ignore",
+});
+const validation = readFileSync(new URL("../lib/ai/toolValidation.ts", import.meta.url), "utf8");
 assert.match(validation, /validateToolArguments/);
 assert.match(validation, /INVALID_TOOL_ARGUMENTS/);
 assert.match(historySchema, /create table if not exists public.ai_chat_messages/);
 assert.match(historySchema, /auth.uid\(\) = user_id/);
 assert.match(historySchema, /ai_chat_messages_turn_unique_idx/);
-console.log('Licia v0.54.4 reasoning/tool/server-action checks OK');
+console.log("Licia v0.54.4 reasoning/tool/server-action checks OK");

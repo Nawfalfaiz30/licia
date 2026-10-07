@@ -13,30 +13,47 @@ export type VisionScheduleBlock = {
 };
 
 const WEEKDAYS: Record<string, string> = {
-  senin: "senin", monday: "senin",
-  selasa: "selasa", tuesday: "selasa",
-  rabu: "rabu", wednesday: "rabu",
-  kamis: "kamis", thursday: "kamis",
-  jumat: "jumat", "jum'at": "jumat", friday: "jumat",
-  sabtu: "sabtu", saturday: "sabtu",
-  minggu: "minggu", sunday: "minggu",
+  senin: "senin",
+  monday: "senin",
+  selasa: "selasa",
+  tuesday: "selasa",
+  rabu: "rabu",
+  wednesday: "rabu",
+  kamis: "kamis",
+  thursday: "kamis",
+  jumat: "jumat",
+  "jum'at": "jumat",
+  friday: "jumat",
+  sabtu: "sabtu",
+  saturday: "sabtu",
+  minggu: "minggu",
+  sunday: "minggu",
 };
 
 const WEEKDAY_INDEX = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
 
 const MONTHS: Record<string, number> = {
-  januari: 1, january: 1,
-  februari: 2, february: 2,
-  maret: 3, march: 3,
+  januari: 1,
+  january: 1,
+  februari: 2,
+  february: 2,
+  maret: 3,
+  march: 3,
   april: 4,
-  mei: 5, may: 5,
-  juni: 6, june: 6,
-  juli: 7, july: 7,
-  agustus: 8, august: 8,
+  mei: 5,
+  may: 5,
+  juni: 6,
+  june: 6,
+  juli: 7,
+  july: 7,
+  agustus: 8,
+  august: 8,
   september: 9,
-  oktober: 10, october: 10,
+  oktober: 10,
+  october: 10,
   november: 11,
-  desember: 12, december: 12,
+  desember: 12,
+  december: 12,
 };
 
 function pad(value: number) {
@@ -51,12 +68,16 @@ function validDate(year: number, month: number, day: number) {
 }
 
 function normalizeWeekday(value: unknown): string | null {
-  const key = String(value ?? "").trim().toLowerCase();
+  const key = String(value ?? "")
+    .trim()
+    .toLowerCase();
   return WEEKDAYS[key] ?? null;
 }
 
 function normalizeTime(value: unknown): string | null {
-  const raw = String(value ?? "").trim().replace(/\./g, ":");
+  const raw = String(value ?? "")
+    .trim()
+    .replace(/\./g, ":");
   const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (!match) return null;
   const hour = Number(match[1]);
@@ -72,11 +93,7 @@ function normalizeTime(value: unknown): string | null {
 export function parseVisionDate(value: unknown, referenceDate: Date, timezone: string): string | null {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
-  const text = raw
-    .replace(/,/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLocaleLowerCase("id-ID");
+  const text = raw.replace(/,/g, " ").replace(/\s+/g, " ").trim().toLocaleLowerCase("id-ID");
 
   const iso = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
   if (iso) return validDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
@@ -84,23 +101,34 @@ export function parseVisionDate(value: unknown, referenceDate: Date, timezone: s
   const slash = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b/);
   if (slash) return validDate(Number(slash[3]), Number(slash[2]), Number(slash[1]));
 
-  const dayMonthYear = text.match(/\b(\d{1,2})\s+(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember|january|february|march|may|june|july|august|october|december)\s+(20\d{2})\b/i);
+  const dayMonthYear = text.match(
+    /\b(\d{1,2})\s+(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember|january|february|march|may|june|july|august|october|december)\s+(20\d{2})\b/i,
+  );
   if (dayMonthYear) {
     return validDate(Number(dayMonthYear[3]), MONTHS[dayMonthYear[2].toLowerCase()], Number(dayMonthYear[1]));
   }
 
-  const monthDayYear = text.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(20\d{2})\b/i);
+  const monthDayYear = text.match(
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(20\d{2})\b/i,
+  );
   if (monthDayYear) {
     return validDate(Number(monthDayYear[3]), MONTHS[monthDayYear[1].toLowerCase()], Number(monthDayYear[2]));
   }
 
-  const verbose = text.match(/\btanggal\s+(\d{1,2})(?:\s+bulan)?\s+(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)\s+(?:tahun\s+)?(20\d{2})\b/i);
+  const verbose = text.match(
+    /\btanggal\s+(\d{1,2})(?:\s+bulan)?\s+(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)\s+(?:tahun\s+)?(20\d{2})\b/i,
+  );
   if (verbose) {
     return validDate(Number(verbose[3]), MONTHS[verbose[2].toLowerCase()], Number(verbose[1]));
   }
 
   const resolved = resolveNaturalDate(text, referenceDate, timezone)[0];
-  if (resolved?.confidence === "high" && /\b(20\d{2}|tanggal|januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)\b/i.test(text)) {
+  if (
+    resolved?.confidence === "high" &&
+    /\b(20\d{2}|tanggal|januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)\b/i.test(
+      text,
+    )
+  ) {
     return resolved.date;
   }
   return null;
@@ -118,7 +146,11 @@ export function weekdayFromDate(blockDate: string): string | null {
  * Normalize vision output without throwing away events just because the image
  * is an email/document rather than a weekly timetable.
  */
-export function normalizeVisionScheduleBlocks(value: unknown, referenceDate: Date, timezone: string): VisionScheduleBlock[] {
+export function normalizeVisionScheduleBlocks(
+  value: unknown,
+  referenceDate: Date,
+  timezone: string,
+): VisionScheduleBlock[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
   const result: VisionScheduleBlock[] = [];
@@ -140,9 +172,10 @@ export function normalizeVisionScheduleBlocks(value: unknown, referenceDate: Dat
     seen.add(key);
 
     const sourceRaw = String(item.source_type ?? "unknown").toLowerCase();
-    const source_type = sourceRaw === "email" || sourceRaw === "calendar" || sourceRaw === "schedule_table" || sourceRaw === "document"
-      ? sourceRaw
-      : "unknown";
+    const source_type =
+      sourceRaw === "email" || sourceRaw === "calendar" || sourceRaw === "schedule_table" || sourceRaw === "document"
+        ? sourceRaw
+        : "unknown";
 
     result.push({
       block_date: blockDate,

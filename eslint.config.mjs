@@ -1,9 +1,9 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 
-const reactHooksPlugin = nextVitals.find(
-  (config) => config.plugins && config.plugins["react-hooks"],
-)?.plugins?.["react-hooks"];
+const reactHooksPlugin = nextVitals.find((config) => config.plugins && config.plugins["react-hooks"])?.plugins?.[
+  "react-hooks"
+];
 
 export default defineConfig([
   ...nextVitals,

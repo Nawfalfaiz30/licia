@@ -143,44 +143,44 @@ Operasi destruktif dan operasi massal memiliki guardrail. AI diarahkan untuk men
 
 # 🧭 Modul Life OS
 
-| Modul | Route | Fungsi utama |
-|---|---|---|
-| 🏠 Beranda | `/dashboard` | Ringkasan lintas Life OS dan jalur cepat ke sumber data |
-| ✨ Hari Ini | `/today` | Agenda, task, focus, dan aktivitas hari berjalan |
-| ⚡ Life Command | `/command` | Menjalankan tujuan multi-langkah lewat natural language |
-| 📥 Capture Studio | `/capture` | Menangkap teks/input sebelum dirapikan |
-| 📥 Smart Inbox | `/inbox` | Menampung item mentah dan AI triage |
-| ✅ Tugas | `/tasks` | Task, prioritas, deadline, estimasi, project, subtasks |
-| 📅 Kalender | `/calendar` | Agenda dan komitmen berbasis waktu |
-| 🧠 Weekly Planner | `/planner` | Menyusun rencana mingguan berbasis data nyata |
-| ⏱️ Focus | `/focus` | Sesi kerja terukur yang dapat terhubung ke task |
-| 🍅 Pomodoro | `/pomodoro` | Sesi Pomodoro dan histori fokus |
-| 📁 Projects | `/projects` | Wadah pekerjaan multi-langkah |
-| 🎯 Goals | `/goals` | Target, progress, milestone, next step, review cycle |
-| 🗒️ Notes | `/notes` | Catatan pribadi dan sumber context |
-| 📚 Reading | `/reading` | Bacaan, progress, sesi, rating, notes, takeaways |
-| 🔁 Habits | `/habits` | Rutinitas dan check-in berulang |
-| 🎓 Learning | `/learning` | Skill tracker dan hubungan dengan Focus/Goal |
-| 🧠 Memory | `/memory` | Informasi yang sengaja disimpan untuk context jangka panjang |
-| 🔐 Vault | `/vault` | Knowledge base pribadi untuk note, link, dokumen, tag |
-| 💰 Finance | `/finance` | Account, income, expense, budget, saldo, arus kas |
-| 🔁 Subscriptions | `/subscriptions` | Billing berulang dan reminder renewals |
-| ❤️ Health | `/health` | Log kesehatan dan ringkasan kondisi |
-| 🗺️ Life Map | `/life-map` | Hubungan Area → Goal → Project → Task → Calendar/Focus |
-| 🕸️ Life Graph | `/life-graph` | Graph Goal, Project, Task dan orphan signal |
-| 🕒 Timeline | `/timeline` | Audit pribadi berbasis aktivitas dan perubahan |
-| 📊 Analytics | `/analytics` | Pola task, focus, finance, reading, movement, goal, project |
-| 💡 Insights | `/insights` | Insight berbasis data nyata |
-| 🌊 Life Pulse | `/pulse` | Snapshot cepat kondisi Life OS |
-| 📝 Decisions | `/decisions` | Jurnal proses dan hasil pengambilan keputusan |
-| 📰 Brief & Review | `/brief` | Ringkasan dan review hari/minggu |
-| ⚙️ Automations | `/automations` | Trigger → condition → action → result |
-| 🔔 Reminders | `/reminders` | Reminder custom, task-bound, schedule-bound, retry |
-| 🧠 AI Action Log | `/ai-history` | Audit operasi AI, batch, dan undo |
-| 🔎 Search | `/search` | Pencarian lintas data Life OS |
-| 🩺 System Center | `/system` | Diagnosis database, AI, push, reminder, telemetry |
-| 📖 Guide | `/guide` | Panduan penggunaan setiap workflow |
-| ⚙️ Settings | `/settings` | Tema, font, AI, workspace, notifikasi, PWA, data |
+| Modul             | Route            | Fungsi utama                                                 |
+| ----------------- | ---------------- | ------------------------------------------------------------ |
+| 🏠 Beranda        | `/dashboard`     | Ringkasan lintas Life OS dan jalur cepat ke sumber data      |
+| ✨ Hari Ini       | `/today`         | Agenda, task, focus, dan aktivitas hari berjalan             |
+| ⚡ Life Command   | `/command`       | Menjalankan tujuan multi-langkah lewat natural language      |
+| 📥 Capture Studio | `/capture`       | Menangkap teks/input sebelum dirapikan                       |
+| 📥 Smart Inbox    | `/inbox`         | Menampung item mentah dan AI triage                          |
+| ✅ Tugas          | `/tasks`         | Task, prioritas, deadline, estimasi, project, subtasks       |
+| 📅 Kalender       | `/calendar`      | Agenda dan komitmen berbasis waktu                           |
+| 🧠 Weekly Planner | `/planner`       | Menyusun rencana mingguan berbasis data nyata                |
+| ⏱️ Focus          | `/focus`         | Sesi kerja terukur yang dapat terhubung ke task              |
+| 🍅 Pomodoro       | `/pomodoro`      | Sesi Pomodoro dan histori fokus                              |
+| 📁 Projects       | `/projects`      | Wadah pekerjaan multi-langkah                                |
+| 🎯 Goals          | `/goals`         | Target, progress, milestone, next step, review cycle         |
+| 🗒️ Notes          | `/notes`         | Catatan pribadi dan sumber context                           |
+| 📚 Reading        | `/reading`       | Bacaan, progress, sesi, rating, notes, takeaways             |
+| 🔁 Habits         | `/habits`        | Rutinitas dan check-in berulang                              |
+| 🎓 Learning       | `/learning`      | Skill tracker dan hubungan dengan Focus/Goal                 |
+| 🧠 Memory         | `/memory`        | Informasi yang sengaja disimpan untuk context jangka panjang |
+| 🔐 Vault          | `/vault`         | Knowledge base pribadi untuk note, link, dokumen, tag        |
+| 💰 Finance        | `/finance`       | Account, income, expense, budget, saldo, arus kas            |
+| 🔁 Subscriptions  | `/subscriptions` | Billing berulang dan reminder renewals                       |
+| ❤️ Health         | `/health`        | Log kesehatan dan ringkasan kondisi                          |
+| 🗺️ Life Map       | `/life-map`      | Hubungan Area → Goal → Project → Task → Calendar/Focus       |
+| 🕸️ Life Graph     | `/life-graph`    | Graph Goal, Project, Task dan orphan signal                  |
+| 🕒 Timeline       | `/timeline`      | Audit pribadi berbasis aktivitas dan perubahan               |
+| 📊 Analytics      | `/analytics`     | Pola task, focus, finance, reading, movement, goal, project  |
+| 💡 Insights       | `/insights`      | Insight berbasis data nyata                                  |
+| 🌊 Life Pulse     | `/pulse`         | Snapshot cepat kondisi Life OS                               |
+| 📝 Decisions      | `/decisions`     | Jurnal proses dan hasil pengambilan keputusan                |
+| 📰 Brief & Review | `/brief`         | Ringkasan dan review hari/minggu                             |
+| ⚙️ Automations    | `/automations`   | Trigger → condition → action → result                        |
+| 🔔 Reminders      | `/reminders`     | Reminder custom, task-bound, schedule-bound, retry           |
+| 🧠 AI Action Log  | `/ai-history`    | Audit operasi AI, batch, dan undo                            |
+| 🔎 Search         | `/search`        | Pencarian lintas data Life OS                                |
+| 🩺 System Center  | `/system`        | Diagnosis database, AI, push, reminder, telemetry            |
+| 📖 Guide          | `/guide`         | Panduan penggunaan setiap workflow                           |
+| ⚙️ Settings       | `/settings`      | Tema, font, AI, workspace, notifikasi, PWA, data             |
 
 ---
 
@@ -299,7 +299,7 @@ Licia dirancang untuk desktop dan mobile.
 - **Tugas** — tampilan Daftar / Kanban / Matriks Eisenhower / Pekan (seret-lepas atau pilih "Pindahkan ke…"); pintasan `J K X E Enter #`; semua aksi cepat bisa **Diurungkan** (`Ctrl/⌘+Z`).
 - **Beranda** — tombol **Atur beranda** (tampil/sembunyi, urutan) dan mode **Hari ini saja**.
 - **Overlay** — semua dialog/sheet memakai `components/ui/Overlay.tsx` (perangkap fokus, Esc hanya untuk yang teratas). Lapisan z-index hanya lewat token (`z-nav`, `z-sheet`, `z-modal`, `z-palette`, `z-toast`; lihat `lib/zIndex.ts`).
-- **Ukuran teks & kontras** — teks minimum 11 px berbasis rem; Pengaturan > Ukuran teks. Aksen kustom diturunkan otomatis menjadi *isian* dan *tinta* yang lolos WCAG AA (`lib/contrast.ts`).
+- **Ukuran teks & kontras** — teks minimum 11 px berbasis rem; Pengaturan > Ukuran teks. Aksen kustom diturunkan otomatis menjadi _isian_ dan _tinta_ yang lolos WCAG AA (`lib/contrast.ts`).
 
 ## Data Export
 
@@ -483,20 +483,20 @@ Migration schema kini menggunakan canonical migration chain di supabase/migratio
 
 # 🧰 Tech Stack
 
-| Teknologi | Versi / Peran |
-|---|---|
-| Next.js | 16.3.6 |
-| React | 19.2.8 |
-| TypeScript | 5.9.x |
-| Supabase JS | 2.117.1 |
-| Supabase SSR | 0.12.7 |
-| OpenAI SDK | 4.67.3 |
-| Tailwind CSS | 3.4.17 |
-| Web Push | 3.6.7 |
-| Lucide React | UI icons |
-| ESLint | 9.35.0 |
-| Node.js | 22.x |
-| npm | 10+ |
+| Teknologi    | Versi / Peran |
+| ------------ | ------------- |
+| Next.js      | 16.3.6        |
+| React        | 19.2.8        |
+| TypeScript   | 5.9.x         |
+| Supabase JS  | 2.117.1       |
+| Supabase SSR | 0.12.7        |
+| OpenAI SDK   | 4.67.3        |
+| Tailwind CSS | 3.4.17        |
+| Web Push     | 3.6.7         |
+| Lucide React | UI icons      |
+| ESLint       | 9.35.0        |
+| Node.js      | 22.x          |
+| npm          | 10+           |
 
 Project menetapkan engine:
 
@@ -583,21 +583,21 @@ LICIA_REMINDER_WORKER_INTERVAL_MS=60000
 DEV_TUNNEL_ORIGIN=
 ```
 
-| Variable | Fungsi |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | URL Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public/anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Akses admin server-side |
-| `OPENAI_API_KEY` | AI runtime |
-| `LICIA_AI_MODEL` | Model utama eksplisit |
-| `LICIA_AI_HEAVY_MODEL` | Model berat opsional |
-| `VAPID_SUBJECT` | Identitas Web Push |
-| `VAPID_PUBLIC_KEY` | Public VAPID |
-| `VAPID_PRIVATE_KEY` | Private VAPID |
-| `LICIA_CRON_SECRET` | Secret dispatcher |
-| `LICIA_REMINDER_WORKER_INTERVAL_MS` | Interval worker |
-| `NEXT_PUBLIC_SITE_URL` | URL publik |
-| `APP_URL` | URL server-side |
+| Variable                            | Fungsi                  |
+| ----------------------------------- | ----------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`          | URL Supabase            |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`     | Public/anon key         |
+| `SUPABASE_SERVICE_ROLE_KEY`         | Akses admin server-side |
+| `OPENAI_API_KEY`                    | AI runtime              |
+| `LICIA_AI_MODEL`                    | Model utama eksplisit   |
+| `LICIA_AI_HEAVY_MODEL`              | Model berat opsional    |
+| `VAPID_SUBJECT`                     | Identitas Web Push      |
+| `VAPID_PUBLIC_KEY`                  | Public VAPID            |
+| `VAPID_PRIVATE_KEY`                 | Private VAPID           |
+| `LICIA_CRON_SECRET`                 | Secret dispatcher       |
+| `LICIA_REMINDER_WORKER_INTERVAL_MS` | Interval worker         |
+| `NEXT_PUBLIC_SITE_URL`              | URL publik              |
+| `APP_URL`                           | URL server-side         |
 
 Jika muncul:
 
@@ -879,12 +879,11 @@ Undo jika snapshot tersedia
 
 ---
 
-
 # 🧩 Architecture & engineering principles
 
 Licia dibangun sebagai satu sistem yang menghubungkan UI, API, AI, domain service, database, sync, dan notification pipeline.
 
-~~~text
+```text
                          ┌──────────────────────┐
                          │       Licia UI       │
                          │ Web / PWA / Android  │
@@ -919,11 +918,11 @@ Licia dibangun sebagai satu sistem yang menghubungkan UI, API, AI, domain servic
                        └──────┬───────┘
                               ▼
                          Device clients
-~~~
+```
 
 ### Lapisan kode
 
-~~~text
+```text
 app/                 Presentation, pages, route handlers
 components/          Reusable UI dan interaction layer
 lib/ai/              Context, prompt, routing, tools, orchestration
@@ -938,7 +937,7 @@ scripts/             Build, preflight, audit, verification, tests, worker
 native/android/      Android WebView shell dan native bridge
 deploy/              Reverse proxy / VPS configuration
 config/              Application version metadata
-~~~
+```
 
 ### Prinsip engineering
 
@@ -956,9 +955,9 @@ config/              Application version metadata
 
 Sumber migration production adalah:
 
-~~~text
+```text
 supabase/migrations/
-~~~
+```
 
 Chain canonical saat ini berjalan dari **0001 sampai 0015**.
 
@@ -966,9 +965,9 @@ Migration chain mencakup fondasi aplikasi, sinkronisasi multi-device, finance le
 
 Gunakan:
 
-~~~bash
+```bash
 npm run db:verify
-~~~
+```
 
 untuk memeriksa struktur dan urutan migration yang diharapkan.
 
@@ -1006,9 +1005,9 @@ Route /api/export-data menghasilkan arsip HTML yang dapat dibaca, dicetak, atau 
 
 Source Android tersedia di:
 
-~~~text
+```text
 native/android/
-~~~
+```
 
 Shell Android menggunakan WebView untuk terhubung ke instance Licia online dan menyediakan native bridge untuk kebutuhan perangkat.
 
@@ -1028,9 +1027,9 @@ Fitur native saat ini mencakup:
 
 Konfigurasi aplikasi membaca metadata dari:
 
-~~~text
+```text
 config/licia-version.json
-~~~
+```
 
 versionName mengikuti appVersion, sedangkan host Android mengikuti LICIA_URL.
 
@@ -1042,7 +1041,7 @@ Release build menonaktifkan cleartext traffic dan application backup. Debug buil
 
 Sebelum production deployment, jalankan:
 
-~~~bash
+```bash
 npm run preflight
 npm run typecheck
 npm run lint
@@ -1052,7 +1051,7 @@ npm run audit
 npm run test
 npm run verify:native
 npm run build
-~~~
+```
 
 CI GitHub menjalankan quality gates tersebut sebagai automated verification untuk:
 
@@ -1068,15 +1067,15 @@ CI GitHub menjalankan quality gates tersebut sebagai automated verification untu
 
 Health check:
 
-~~~bash
+```bash
 npm run health
-~~~
+```
 
 Endpoint:
 
-~~~text
+```text
 /api/health
-~~~
+```
 
 ---
 
@@ -1090,16 +1089,16 @@ Project production terhubung ke repository GitHub dan branch main.
 
 Gunakan Node.js 22.x untuk menyamakan runtime dengan:
 
-~~~text
+```text
 package.json
 .nvmrc
 preflight
 GitHub CI
-~~~
+```
 
 Environment production minimal:
 
-~~~text
+```text
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_URL
@@ -1108,31 +1107,31 @@ OPENAI_API_KEY
 NEXT_PUBLIC_SITE_URL
 APP_URL
 LICIA_URL
-~~~
+```
 
 Untuk Web Push dan reminder:
 
-~~~text
+```text
 VAPID_SUBJECT
 VAPID_PUBLIC_KEY
 VAPID_PRIVATE_KEY
 LICIA_CRON_SECRET
-~~~
+```
 
 ### VPS
 
 Panduan VPS lengkap tersedia di:
 
-~~~text
+```text
 DEPLOY_VPS.md
-~~~
+```
 
 PM2 menjalankan dua proses utama:
 
-~~~text
+```text
 licia
 licia-reminder-worker
-~~~
+```
 
 > Untuk reminder production, gunakan satu dispatcher utama agar event tidak diproses ganda.
 
@@ -1144,35 +1143,35 @@ Gunakan .env.example sebagai referensi.
 
 Variabel utama:
 
-| Variable | Fungsi |
-|---|---|
-| NEXT_PUBLIC_SUPABASE_URL | URL Supabase |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | Public/anon key |
-| SUPABASE_URL | URL server-side |
-| SUPABASE_SERVICE_ROLE_KEY | Server-only admin access |
-| OPENAI_API_KEY | AI runtime |
-| LICIA_AI_MODEL | Model utama |
-| LICIA_AI_HEAVY_MODEL | Model untuk jalur kompleks |
-| LICIA_AI_TOOL_MODEL | Model untuk tool calling |
-| LICIA_AI_FALLBACK_MODEL | Model cadangan |
-| LICIA_AI_OMIT_TEMPERATURE | Compatibility control untuk reasoning model |
-| LICIA_AI_REASONING_EFFORT | Kontrol reasoning effort |
-| NEXT_PUBLIC_SITE_URL | Public origin |
-| APP_URL | Server application origin |
-| LICIA_URL | Base URL aplikasi |
-| LICIA_INTERNAL_URL | Internal URL opsional |
-| VAPID_SUBJECT | Identitas Web Push |
-| VAPID_PUBLIC_KEY | Public VAPID key |
-| VAPID_PRIVATE_KEY | Private VAPID key |
-| LICIA_CRON_SECRET | Secret dispatcher |
-| LICIA_REMINDER_WORKER_INTERVAL_MS | Interval worker |
-| LICIA_REMINDER_MAX_DELIVERY_ATTEMPTS | Batas percobaan delivery |
-| LICIA_REMINDER_MAX_OVERDUE_MS | Batas keterlambatan reminder |
-| LICIA_SYNC_DEFAULT_INTERVAL_SECONDS | Default interval sync |
-| LICIA_CONTEXT_CACHE_TTL_MS | Context cache TTL |
-| LICIA_ALLOW_MISSING_ORIGIN | Kontrol untuk non-browser client di production |
-| LICIA_DEV_ORIGINS | Origin development tambahan |
-| DEV_TUNNEL_ORIGIN | Origin tunnel development |
+| Variable                             | Fungsi                                         |
+| ------------------------------------ | ---------------------------------------------- |
+| NEXT_PUBLIC_SUPABASE_URL             | URL Supabase                                   |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY        | Public/anon key                                |
+| SUPABASE_URL                         | URL server-side                                |
+| SUPABASE_SERVICE_ROLE_KEY            | Server-only admin access                       |
+| OPENAI_API_KEY                       | AI runtime                                     |
+| LICIA_AI_MODEL                       | Model utama                                    |
+| LICIA_AI_HEAVY_MODEL                 | Model untuk jalur kompleks                     |
+| LICIA_AI_TOOL_MODEL                  | Model untuk tool calling                       |
+| LICIA_AI_FALLBACK_MODEL              | Model cadangan                                 |
+| LICIA_AI_OMIT_TEMPERATURE            | Compatibility control untuk reasoning model    |
+| LICIA_AI_REASONING_EFFORT            | Kontrol reasoning effort                       |
+| NEXT_PUBLIC_SITE_URL                 | Public origin                                  |
+| APP_URL                              | Server application origin                      |
+| LICIA_URL                            | Base URL aplikasi                              |
+| LICIA_INTERNAL_URL                   | Internal URL opsional                          |
+| VAPID_SUBJECT                        | Identitas Web Push                             |
+| VAPID_PUBLIC_KEY                     | Public VAPID key                               |
+| VAPID_PRIVATE_KEY                    | Private VAPID key                              |
+| LICIA_CRON_SECRET                    | Secret dispatcher                              |
+| LICIA_REMINDER_WORKER_INTERVAL_MS    | Interval worker                                |
+| LICIA_REMINDER_MAX_DELIVERY_ATTEMPTS | Batas percobaan delivery                       |
+| LICIA_REMINDER_MAX_OVERDUE_MS        | Batas keterlambatan reminder                   |
+| LICIA_SYNC_DEFAULT_INTERVAL_SECONDS  | Default interval sync                          |
+| LICIA_CONTEXT_CACHE_TTL_MS           | Context cache TTL                              |
+| LICIA_ALLOW_MISSING_ORIGIN           | Kontrol untuk non-browser client di production |
+| LICIA_DEV_ORIGINS                    | Origin development tambahan                    |
+| DEV_TUNNEL_ORIGIN                    | Origin tunnel development                      |
 
 ### Security rule
 
@@ -1180,12 +1179,12 @@ Jangan pernah commit secret ke repository.
 
 Khusus:
 
-~~~text
+```text
 SUPABASE_SERVICE_ROLE_KEY
 OPENAI_API_KEY
 VAPID_PRIVATE_KEY
 LICIA_CRON_SECRET
-~~~
+```
 
 harus tetap berada di server/deployment environment.
 
@@ -1197,7 +1196,7 @@ Gunakan /system sebagai dashboard diagnosis setelah deployment atau perubahan ko
 
 Area yang dipantau:
 
-~~~text
+```text
 Database
 AI configuration
 Reminder worker
@@ -1207,13 +1206,13 @@ Sync state
 Device registration
 Telemetry
 Service readiness
-~~~
+```
 
 Untuk sinkronisasi dan konflik, gunakan:
 
-~~~text
+```text
 /sync
-~~~
+```
 
 ---
 
@@ -1221,13 +1220,13 @@ Untuk sinkronisasi dan konflik, gunakan:
 
 ### Build gagal
 
-~~~bash
+```bash
 npm run preflight
 npm run typecheck
 npm run lint
 npm run test
 npm run build
-~~~
+```
 
 Perbaiki error pertama yang dilaporkan sebelum mengejar error berikutnya.
 
@@ -1235,24 +1234,24 @@ Perbaiki error pertama yang dilaporkan sebelum mengejar error berikutnya.
 
 Periksa:
 
-~~~text
+```text
 OPENAI_API_KEY
 LICIA_AI_MODEL
 LICIA_AI_TOOL_MODEL
 LICIA_AI_FALLBACK_MODEL
-~~~
+```
 
 ### Reminder tidak terkirim
 
 Periksa:
 
-~~~text
+```text
 VAPID_SUBJECT
 VAPID_PUBLIC_KEY
 VAPID_PRIVATE_KEY
 LICIA_CRON_SECRET
 licia-reminder-worker
-~~~
+```
 
 Kemudian buka /system.
 
@@ -1260,14 +1259,14 @@ Kemudian buka /system.
 
 Periksa:
 
-~~~text
+```text
 Supabase Auth
 RLS / policies
 device registration
 sync cursor
 mutation status
 Realtime
-~~~
+```
 
 Kemudian buka /sync.
 
@@ -1279,12 +1278,12 @@ Periksa permission browser, subscription device, service worker, dan event deliv
 
 Periksa:
 
-~~~text
+```text
 NEXT_PUBLIC_SITE_URL
 APP_URL
 LICIA_URL
 LICIA_ALLOW_MISSING_ORIGIN
-~~~
+```
 
 Pastikan origin production benar dan sesuai konfigurasi deployment.
 
@@ -1294,7 +1293,7 @@ Pastikan origin production benar dan sesuai konfigurasi deployment.
 
 File utama:
 
-~~~text
+```text
 README.md
 DEPLOY_VPS.md
 CHANGELOG.md
@@ -1318,7 +1317,7 @@ scripts/reminder-cron.mjs
 
 native/android/
 deploy/
-~~~
+```
 
 Dokumentasi historis lama tetap dapat berada di repository sebagai referensi engineering, tetapi **README ini adalah pintu utama untuk memahami kondisi Licia saat ini**.
 
@@ -1328,7 +1327,7 @@ Dokumentasi historis lama tetap dapat berada di repository sebagai referensi eng
 
 Licia menyatukan:
 
-~~~text
+```text
 🧠 Berpikir
 📝 Mencatat
 ✅ Mengerjakan
@@ -1342,7 +1341,7 @@ Licia menyatukan:
 📊 Melihat pola
 🤖 Bertindak dengan AI
 🔐 Menjaga data
-~~~
+```
 
 <p align="center">
   <strong>Licia — Your life, connected.</strong>

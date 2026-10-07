@@ -20,7 +20,9 @@ function envBool(value: string | undefined, fallback: boolean): boolean {
 }
 
 function normalizeReasoningEffort(value: string | undefined): ReasoningEffort | undefined {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   if (!normalized || normalized === "auto" || normalized === "default") return undefined;
   const allowed = new Set(["none", "minimal", "low", "medium", "high"]);
   if (!allowed.has(normalized)) return undefined;
@@ -33,7 +35,10 @@ function unsupportedGenerationParameter(error: unknown, parameter: "temperature"
   const message = String(e?.message || "");
   if (status !== 400) return false;
   const escaped = parameter === "reasoning_effort" ? "reasoning[_ ]?effort" : "temperature";
-  return new RegExp(`(?:unsupported|does not support|only the default)[\\s\\S]{0,180}${escaped}|${escaped}[\\s\\S]{0,180}(?:unsupported|does not support|only the default)`, "i").test(message);
+  return new RegExp(
+    `(?:unsupported|does not support|only the default)[\\s\\S]{0,180}${escaped}|${escaped}[\\s\\S]{0,180}(?:unsupported|does not support|only the default)`,
+    "i",
+  ).test(message);
 }
 
 /**
@@ -44,10 +49,16 @@ function unsupportedGenerationParameter(error: unknown, parameter: "temperature"
  * the selected model. The completion wrapper retries once without a parameter
  * when the API explicitly rejects that parameter.
  */
-export function generationOptions(model: string, temperature: number, overrides?: { reasoningEffort?: string | null; omitTemperature?: boolean }): GenerationOptions {
+export function generationOptions(
+  model: string,
+  temperature: number,
+  overrides?: { reasoningEffort?: string | null; omitTemperature?: boolean },
+): GenerationOptions {
   void model;
   const omitTemperature = overrides?.omitTemperature ?? envBool(process.env.LICIA_AI_OMIT_TEMPERATURE, true);
-  const reasoningEffort = normalizeReasoningEffort(overrides?.reasoningEffort ?? process.env.LICIA_AI_REASONING_EFFORT ?? "none");
+  const reasoningEffort = normalizeReasoningEffort(
+    overrides?.reasoningEffort ?? process.env.LICIA_AI_REASONING_EFFORT ?? "none",
+  );
   const options: GenerationOptions = {};
   if (!omitTemperature && Number.isFinite(temperature)) options.temperature = temperature;
   if (reasoningEffort) options.reasoning_effort = reasoningEffort;
@@ -60,7 +71,10 @@ export async function chatCompletion(
   requestOptions?: OpenAI.RequestOptions,
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
   try {
-    return await client.chat.completions.create(params as any, requestOptions as any) as OpenAI.Chat.Completions.ChatCompletion;
+    return (await client.chat.completions.create(
+      params as any,
+      requestOptions as any,
+    )) as OpenAI.Chat.Completions.ChatCompletion;
   } catch (error) {
     const dropTemperature = unsupportedGenerationParameter(error, "temperature");
     const dropReasoning = unsupportedGenerationParameter(error, "reasoning_effort");
@@ -74,20 +88,23 @@ export async function chatCompletion(
       model: params.model,
       removed: [dropTemperature ? "temperature" : null, dropReasoning ? "reasoning_effort" : null].filter(Boolean),
     });
-    return await client.chat.completions.create(retryParams as unknown as ChatCompletionParams, requestOptions as OpenAI.RequestOptions) as OpenAI.Chat.Completions.ChatCompletion;
+    return (await client.chat.completions.create(
+      retryParams as unknown as ChatCompletionParams,
+      requestOptions as OpenAI.RequestOptions,
+    )) as OpenAI.Chat.Completions.ChatCompletion;
   }
 }
 
-export function logCompletionFinish(completion: Pick<OpenAI.Chat.Completions.ChatCompletion, "choices">, endpoint: string) {
+export function logCompletionFinish(
+  completion: Pick<OpenAI.Chat.Completions.ChatCompletion, "choices">,
+  endpoint: string,
+) {
   const reason = completion.choices?.[0]?.finish_reason;
-  if (reason === "length") console.warn("[licia-ai] Completion truncated by token limit", { endpoint, finish_reason: reason });
+  if (reason === "length")
+    console.warn("[licia-ai] Completion truncated by token limit", { endpoint, finish_reason: reason });
 }
 
-export async function withOpenAIRetry<T>(
-  fn: () => Promise<T>,
-  attempts = 2,
-  signal?: AbortSignal,
-): Promise<T> {
+export async function withOpenAIRetry<T>(fn: () => Promise<T>, attempts = 2, signal?: AbortSignal): Promise<T> {
   let last: unknown;
   for (let i = 0; i <= attempts; i += 1) {
     if (signal?.aborted) throw new DOMException("Permintaan dibatalkan.", "AbortError");
@@ -98,10 +115,14 @@ export async function withOpenAIRetry<T>(
       if (signal?.aborted || !retryable(error) || i >= attempts) break;
       await new Promise<void>((resolve, reject) => {
         const timer = setTimeout(resolve, 450 * (i + 1));
-        signal?.addEventListener("abort", () => {
-          clearTimeout(timer);
-          reject(new DOMException("Permintaan dibatalkan.", "AbortError"));
-        }, { once: true });
+        signal?.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            reject(new DOMException("Permintaan dibatalkan.", "AbortError"));
+          },
+          { once: true },
+        );
       });
     }
   }
@@ -127,7 +148,8 @@ export function isFallbackEligible(error: unknown): boolean {
   if (/OPENAI_API_KEY/i.test(message)) return false;
   const status = Number(e?.status || e?.response?.status || 0);
   const code = String(e?.code || e?.error?.code || "");
-  if (code === "model_not_found" || /model[^.]{0,60}(does not exist|not found|not available|deprecated)/i.test(message)) return true;
+  if (code === "model_not_found" || /model[^.]{0,60}(does not exist|not found|not available|deprecated)/i.test(message))
+    return true;
   if (status === 401 || status === 403) return false;
   if (!status) return true;
   return status === 404 || status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
@@ -165,7 +187,9 @@ function breakerSuccess(model: string) {
 export function resetAiBreakers() {
   breakers.clear();
 }
-export function aiBreakerSnapshot(nowMs: number = Date.now()): Array<{ model: string; failures: number; open: boolean }> {
+export function aiBreakerSnapshot(
+  nowMs: number = Date.now(),
+): Array<{ model: string; failures: number; open: boolean }> {
   return [...breakers.entries()].map(([model, b]) => ({ model, failures: b.failures, open: b.openUntil > nowMs }));
 }
 

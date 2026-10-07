@@ -5,11 +5,11 @@
 export const TABBABLE_SELECTOR = [
   "a[href]",
   "button:not([disabled])",
-  "input:not([disabled]):not([type=\"hidden\"])",
+  'input:not([disabled]):not([type="hidden"])',
   "select:not([disabled])",
   "textarea:not([disabled])",
-  "[contenteditable=\"true\"]",
-  "[tabindex]:not([tabindex=\"-1\"])",
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
 /**

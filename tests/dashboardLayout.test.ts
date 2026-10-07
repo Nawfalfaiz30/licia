@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { DASHBOARD_WIDGETS, isCustomized, isWidgetVisible, moveWidget, normalizeLayout, parseLayout, resetLayout, serializeLayout, setTodayOnly, toggleWidget, widgetOrder } from "@/lib/dashboardLayout";
+import {
+  DASHBOARD_WIDGETS,
+  isCustomized,
+  isWidgetVisible,
+  moveWidget,
+  normalizeLayout,
+  parseLayout,
+  resetLayout,
+  serializeLayout,
+  setTodayOnly,
+  toggleWidget,
+  widgetOrder,
+} from "@/lib/dashboardLayout";
 
 const ids = DASHBOARD_WIDGETS.map((w) => w.id);
 
@@ -13,7 +25,10 @@ describe("normalizeLayout", () => {
     }
   });
   it("membuang ID asing/duplikat dan melengkapi yang hilang", () => {
-    const l = normalizeLayout({ order: ["stats", "stats", "hantu", "overview"], hidden: ["hantu", "review", "review"] });
+    const l = normalizeLayout({
+      order: ["stats", "stats", "hantu", "overview"],
+      hidden: ["hantu", "review", "review"],
+    });
     expect(l.order[0]).toBe("stats");
     expect(l.order).toContain("overview");
     expect(new Set(l.order).size).toBe(ids.length);

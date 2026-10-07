@@ -1,9 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { bucketWeek, clockInTimezone, dayPatch, inversePatch, isEmptyPatch, isUrgent, quadrantOf, quadrantPatch, statusPatch, stepFocus, taskKeyAction, weekDays, weekStartYmd, type ViewTask } from "@/lib/tasks/views";
+import {
+  bucketWeek,
+  clockInTimezone,
+  dayPatch,
+  inversePatch,
+  isEmptyPatch,
+  isUrgent,
+  quadrantOf,
+  quadrantPatch,
+  statusPatch,
+  stepFocus,
+  taskKeyAction,
+  weekDays,
+  weekStartYmd,
+  type ViewTask,
+} from "@/lib/tasks/views";
 
 const TZ = "Asia/Jakarta";
 const NOW = new Date("2026-10-05T03:00:00.000Z"); // Senin 5 Okt 2026, 10:00 WIB
-const task = (over: Partial<ViewTask> = {}): ViewTask => ({ id: "t", title: "x", status: "todo", priority: "medium", due_at: null, ...over });
+const task = (over: Partial<ViewTask> = {}): ViewTask => ({
+  id: "t",
+  title: "x",
+  status: "todo",
+  priority: "medium",
+  due_at: null,
+  ...over,
+});
 const inHours = (h: number) => new Date(NOW.getTime() + h * 3_600_000).toISOString();
 
 describe("kuadran Eisenhower", () => {
@@ -64,14 +86,24 @@ describe("minggu", () => {
     expect(weekStartYmd("2026-10-05", "monday")).toBe("2026-10-05");
   });
   it("7 hari berurutan melewati pergantian bulan", () => {
-    expect(weekDays("2026-10-28")).toEqual(["2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02", "2026-11-03"]);
+    expect(weekDays("2026-10-28")).toEqual([
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-01",
+      "2026-11-02",
+      "2026-11-03",
+    ]);
   });
   it("jam lokal dihitung pada zona waktu yang diminta", () => {
     expect(clockInTimezone("2026-10-05T10:00:00.000Z", "Asia/Jakarta")).toBe("17:00");
     expect(clockInTimezone("2026-10-05T10:00:00.000Z", "Asia/Jayapura")).toBe("19:00");
   });
   it("dayPatch mempertahankan jam; tanpa tenggat → 09:00", () => {
-    expect(dayPatch(task({ due_at: "2026-10-05T10:00:00.000Z" }), "2026-10-08", TZ).due_at).toBe("2026-10-08T10:00:00.000Z");
+    expect(dayPatch(task({ due_at: "2026-10-05T10:00:00.000Z" }), "2026-10-08", TZ).due_at).toBe(
+      "2026-10-08T10:00:00.000Z",
+    );
     expect(dayPatch(task(), "2026-10-08", TZ).due_at).toBe("2026-10-08T02:00:00.000Z");
   });
   it("bucketWeek memisahkan hari, tanpa tenggat, dan di luar pekan", () => {
@@ -98,7 +130,10 @@ describe("Kanban & Urungkan", () => {
   });
   it("inversePatch mengembalikan nilai sebelumnya", () => {
     const t = task({ priority: "low", due_at: "2026-10-05T10:00:00.000Z" });
-    expect(inversePatch(t, { priority: "high", due_at: null })).toEqual({ priority: "low", due_at: "2026-10-05T10:00:00.000Z" });
+    expect(inversePatch(t, { priority: "high", due_at: null })).toEqual({
+      priority: "low",
+      due_at: "2026-10-05T10:00:00.000Z",
+    });
   });
 });
 

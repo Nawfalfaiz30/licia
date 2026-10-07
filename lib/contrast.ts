@@ -13,7 +13,10 @@ export function hexToRgb(hex: string): Rgb | null {
 }
 
 export function rgbToHex([r, g, b]: Rgb): string {
-  const part = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  const part = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, "0");
   return `#${part(r)}${part(g)}${part(b)}`;
 }
 
@@ -52,7 +55,12 @@ export const meetsAA = (ratio: number, large = false) => ratio >= (large ? AA_LA
  * Menggeser warna ke arah gelap/terang sedikit demi sedikit sampai kontrasnya terhadap SEMUA latar
  * mencapai `min`. Mempertahankan rona; hanya kecerahannya yang berubah.
  */
-export function adjustToContrast(hex: string, against: readonly string[], min: number, direction: "darken" | "lighten"): string {
+export function adjustToContrast(
+  hex: string,
+  against: readonly string[],
+  min: number,
+  direction: "darken" | "lighten",
+): string {
   const start = hexToRgb(hex);
   if (!start) return hex;
   const target: Rgb = direction === "darken" ? [0, 0, 0] : [255, 255, 255];
@@ -106,7 +114,10 @@ export const rgbTriple = (hex: string): string => {
 };
 
 export type AccentTokens = {
-  lightFill: string; lightInk: string; darkFill: string; darkInk: string;
+  lightFill: string;
+  lightInk: string;
+  darkFill: string;
+  darkInk: string;
 };
 
 export function deriveAccentTokens(hex: string): AccentTokens {

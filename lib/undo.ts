@@ -17,13 +17,18 @@ export class UndoQueue {
   private pending = new Map<string, Pending>();
   private timers: UndoTimerApi;
   constructor(timers?: UndoTimerApi) {
-    this.timers = timers ?? { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) };
+    this.timers = timers ?? {
+      set: (fn, ms) => setTimeout(fn, ms),
+      clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+    };
   }
 
   /** Jadwalkan komit. ID yang sama menimpa jadwal lama (komit lama dijalankan lebih dulu). */
   schedule(id: string, commit: () => void | Promise<void>, delayMs: number) {
     if (this.pending.has(id)) void this.flush(id);
-    const handle = this.timers.set(() => { void this.flush(id); }, delayMs);
+    const handle = this.timers.set(() => {
+      void this.flush(id);
+    }, delayMs);
     this.pending.set(id, { commit, handle });
   }
 
@@ -49,8 +54,12 @@ export class UndoQueue {
     for (const id of [...this.pending.keys()]) await this.flush(id);
   }
 
-  has(id: string) { return this.pending.has(id); }
-  get size() { return this.pending.size; }
+  has(id: string) {
+    return this.pending.has(id);
+  }
+  get size() {
+    return this.pending.size;
+  }
 }
 
 export const UNDO_WINDOW_MS = 5000;

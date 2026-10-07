@@ -4,7 +4,7 @@ import { ToastProvider } from "@/components/ui";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { getServerLanguage } from "@/lib/i18n-server";
 import { ThemeSync } from "@/components/layout/ThemeSync";
-
+import { WebVitals } from "@/components/WebVitals";
 
 // Keep typography deterministic at build time. The app exposes the same
 // six font choices as system-first stacks, so production builds never need
@@ -99,18 +99,21 @@ const themeInitScript = `
 })();
 `;
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const language = await getServerLanguage();
   return (
     <html lang={language} data-language={language} style={fontStyles} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="font-body min-h-screen"><LanguageProvider initialLanguage={language}><ToastProvider /><ThemeSync />{children}</LanguageProvider></body>
+      <body className="font-body min-h-screen">
+        <LanguageProvider initialLanguage={language}>
+          <ToastProvider />
+          <ThemeSync />
+          <WebVitals />
+          {children}
+        </LanguageProvider>
+      </body>
     </html>
   );
 }

@@ -1,7 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Coffee, Droplets, Flame, HeartPulse, Leaf, Pill, Plus, Ruler, Sparkles, Trash2, Utensils, Wind } from "lucide-react";
+import {
+  Activity,
+  Coffee,
+  Droplets,
+  Flame,
+  HeartPulse,
+  Leaf,
+  Pill,
+  Plus,
+  Ruler,
+  Sparkles,
+  Trash2,
+  Utensils,
+  Wind,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, EmptyState, PrimaryButton, SectionTitle, TextInput, notifyToast } from "@/components/ui";
 import { clsx } from "clsx";
@@ -9,51 +23,862 @@ import { mutateEntity } from "@/lib/sync/client";
 
 import { useLanguage } from "@/components/LanguageProvider";
 import { documentLocale } from "@/lib/format";
-type Water={id:string;amount_ml:number;logged_at:string;version?:number;updated_at?:string};
-type Meal={id:string;meal_type:string|null;description:string;calories:number|null;protein_g:number|null;carbs_g:number|null;fat_g:number|null;logged_at:string;version?:number;updated_at?:string};
-type Caff={id:string;drink:string;mg_estimate:number|null;logged_at:string;version?:number;updated_at?:string};
-type Med={id:string;medication_name:string;dosage:string|null;logged_at:string;version?:number;updated_at?:string};
-type Fatigue={id:string;fatigue_score:number;note:string|null;logged_at:string;version?:number;updated_at?:string};
-type Movement={id:string;activity:string;duration_minutes:number;intensity:string;note:string|null;logged_at:string;version?:number;updated_at?:string};
-type Metric={id:string;weight_kg:number|null;systolic:number|null;diastolic:number|null;resting_hr:number|null;note:string|null;measured_at:string;version?:number;updated_at?:string};
-function dateKey(value:string|Date,tz:string){try{return new Intl.DateTimeFormat("en-CA",{timeZone:tz}).format(typeof value==="string"?new Date(value):value)}catch{return String(value).slice(0,10)}}
-function fromDays(days:number){return new Date(Date.now()-days*86400000).toISOString()}
-function prettyDate(v:string,tz:string){return new Intl.DateTimeFormat(documentLocale(),{timeZone:tz,weekday:"short",day:"numeric",month:"short"}).format(new Date(v))}
-function intensityLabel(v:string){return v==="vigorous"?"Berat":v==="light"?"Ringan":"Sedang"}
+type Water = { id: string; amount_ml: number; logged_at: string; version?: number; updated_at?: string };
+type Meal = {
+  id: string;
+  meal_type: string | null;
+  description: string;
+  calories: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  logged_at: string;
+  version?: number;
+  updated_at?: string;
+};
+type Caff = {
+  id: string;
+  drink: string;
+  mg_estimate: number | null;
+  logged_at: string;
+  version?: number;
+  updated_at?: string;
+};
+type Med = {
+  id: string;
+  medication_name: string;
+  dosage: string | null;
+  logged_at: string;
+  version?: number;
+  updated_at?: string;
+};
+type Fatigue = {
+  id: string;
+  fatigue_score: number;
+  note: string | null;
+  logged_at: string;
+  version?: number;
+  updated_at?: string;
+};
+type Movement = {
+  id: string;
+  activity: string;
+  duration_minutes: number;
+  intensity: string;
+  note: string | null;
+  logged_at: string;
+  version?: number;
+  updated_at?: string;
+};
+type Metric = {
+  id: string;
+  weight_kg: number | null;
+  systolic: number | null;
+  diastolic: number | null;
+  resting_hr: number | null;
+  note: string | null;
+  measured_at: string;
+  version?: number;
+  updated_at?: string;
+};
+function dateKey(value: string | Date, tz: string) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(
+      typeof value === "string" ? new Date(value) : value,
+    );
+  } catch {
+    return String(value).slice(0, 10);
+  }
+}
+function fromDays(days: number) {
+  return new Date(Date.now() - days * 86400000).toISOString();
+}
+function prettyDate(v: string, tz: string) {
+  return new Intl.DateTimeFormat(documentLocale(), {
+    timeZone: tz,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(v));
+}
+function intensityLabel(v: string) {
+  return v === "vigorous" ? "Berat" : v === "light" ? "Ringan" : "Sedang";
+}
 
-export default function HealthPage(){
+export default function HealthPage() {
   const { t: tr, locale } = useLanguage();
- const supabase=createClient(); const[timezone,setTimezone]=useState("Asia/Jakarta"); const[water,setWater]=useState<Water[]>([]); const[meals,setMeals]=useState<Meal[]>([]); const[caff,setCaff]=useState<Caff[]>([]); const[meds,setMeds]=useState<Med[]>([]); const[fatigue,setFatigue]=useState<Fatigue[]>([]); const[movement,setMovement]=useState<Movement[]>([]); const[metrics,setMetrics]=useState<Metric[]>([]); const[waterMl,setWaterMl]=useState("250"); const[meal,setMeal]=useState({type:"makan_siang",description:""}); const[caffeine,setCaffeine]=useState({drink:"Kopi",mg:""}); const[med,setMed]=useState({name:"",dosage:""}); const[energy,setEnergy]=useState(3); const[energyNote,setEnergyNote]=useState(""); const[move,setMove]=useState({activity:"Jalan kaki",duration:"20",intensity:"moderate",note:""}); const[metric,setMetric]=useState({weight:"",systolic:"",diastolic:"",hr:"",note:""}); const[loading,setLoading]=useState(true); const[estimatingMeal,setEstimatingMeal]=useState(false); const[mealNotice,setMealNotice]=useState<string|null>(null);
- async function load(){setLoading(true);const {data:{user}}=await supabase.auth.getUser();if(!user){setLoading(false);return;}const [{data:profile},w,me,c,p,f,mv,hm]=await Promise.all([supabase.from("users").select("timezone").eq("id",user.id).single(),supabase.from("hydration_logs").select("id,amount_ml,logged_at").eq("user_id",user.id).gte("logged_at",fromDays(6)).order("logged_at",{ascending:false}),supabase.from("meal_logs").select("id,meal_type,description,calories,protein_g,carbs_g,fat_g,logged_at").eq("user_id",user.id).gte("logged_at",fromDays(29)).order("logged_at",{ascending:false}),supabase.from("caffeine_logs").select("id,drink,mg_estimate,logged_at").eq("user_id",user.id).gte("logged_at",fromDays(6)).order("logged_at",{ascending:false}),supabase.from("medication_logs").select("id,medication_name,dosage,logged_at").eq("user_id",user.id).gte("logged_at",fromDays(6)).order("logged_at",{ascending:false}),supabase.from("fatigue_logs").select("id,fatigue_score,note,logged_at").eq("user_id",user.id).gte("logged_at",fromDays(6)).order("logged_at",{ascending:false}),supabase.from("movement_logs").select("id,activity,duration_minutes,intensity,note,logged_at").eq("user_id",user.id).gte("logged_at",fromDays(6)).order("logged_at",{ascending:false}),supabase.from("health_metrics").select("id,weight_kg,systolic,diastolic,resting_hr,note,measured_at").eq("user_id",user.id).order("measured_at",{ascending:false}).limit(12)]);const tz=(profile?.timezone as string)||"Asia/Jakarta";setTimezone(tz);setWater((w.data as Water[])||[]);setMeals((me.data as Meal[])||[]);setCaff((c.data as Caff[])||[]);setMeds((p.data as Med[])||[]);setFatigue((f.data as Fatigue[])||[]);setMovement((mv.data as Movement[])||[]);setMetrics((hm.data as Metric[])||[]);setLoading(false)}
- useEffect(()=>{void load()},[]); async function uid(){const{data:{user}}=await supabase.auth.getUser();if(!user)throw new Error(tr("Belum masuk"));return user.id}
- async function addWater(){const amount=Math.max(1,Number(waterMl)||250);const result=await mutateEntity({entityType:"hydration",operation:"create",payload:{amount_ml:amount}});if(!result.ok)return notifyToast({title:"Hidrasi belum tersimpan",message:result.error || "Perubahan gagal disimpan.",tone:"error"});setWaterMl("250");await load()}
- async function addMeal(){const description=meal.description.trim();if(!description||estimatingMeal)return;setEstimatingMeal(true);setMealNotice(null);try{const r=await fetch("/api/estimate-nutrition",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({description})});const n=await r.json().catch(()=>({}));const insert=await mutateEntity({entityType:"meal",operation:"create",payload:{meal_type:meal.type,description,calories:Number(n.calories)||null,protein_g:Number(n.protein_g)||null,carbs_g:Number(n.carbs_g)||null,fat_g:Number(n.fat_g)||null}});if(!insert.ok)throw new Error(insert.error||tr("Makanan belum tersimpan."));if(!r.ok||n.ok===false)setMealNotice(n.error||tr("Makanan tersimpan, tetapi estimasi gizi AI belum tersedia."));setMeal(x=>({...x,description:""}));await load()}catch(error){setMealNotice(error instanceof Error?error.message:tr("Makanan belum berhasil dicatat."))}finally{setEstimatingMeal(false)}}
- async function addCaffeine(){if(!caffeine.drink.trim())return;await mutateEntity({entityType:"caffeine",operation:"create",payload:{drink:caffeine.drink.trim(),mg_estimate:Number(caffeine.mg)||null}});setCaffeine({drink:"Kopi",mg:""});await load()}
- async function addMed(){if(!med.name.trim())return;await mutateEntity({entityType:"medication",operation:"create",payload:{medication_name:med.name.trim(),dosage:med.dosage.trim()||null}});setMed({name:"",dosage:""});await load()}
- async function addFatigue(){await mutateEntity({entityType:"fatigue",operation:"create",payload:{fatigue_score:energy,note:energyNote.trim()||null}});setEnergyNote("");await load()}
- async function addMovement(){if(!move.activity.trim())return;await mutateEntity({entityType:"movement",operation:"create",payload:{activity:move.activity.trim(),duration_minutes:Math.max(1,Math.min(1440,Number(move.duration)||20)),intensity:move.intensity,note:move.note.trim()||null}});setMove({activity:"Jalan kaki",duration:"20",intensity:"moderate",note:""});await load()}
- async function addMetric(){const weight=Number(metric.weight);const systolic=Number(metric.systolic);const diastolic=Number(metric.diastolic);const hr=Number(metric.hr);if(!weight&&!systolic&&!diastolic&&!hr)return;await mutateEntity({entityType:"healthMetric",operation:"create",payload:{weight_kg:weight||null,systolic:systolic||null,diastolic:diastolic||null,resting_hr:hr||null,note:metric.note.trim()||null}});setMetric({weight:"",systolic:"",diastolic:"",hr:"",note:""});await load()}
- async function del(table:"hydration_logs"|"meal_logs"|"caffeine_logs"|"medication_logs"|"fatigue_logs"|"movement_logs"|"health_metrics",id:string){const map:Record<string,any>={hydration_logs:"hydration",meal_logs:"meal",caffeine_logs:"caffeine",medication_logs:"medication",fatigue_logs:"fatigue",movement_logs:"movement",health_metrics:"healthMetric"};await mutateEntity({entityType:map[table],operation:"delete",entityId:id});await load()}
- const today=dateKey(new Date(),timezone); const todayWater=water.filter(x=>dateKey(x.logged_at,timezone)===today); const todayMeals=meals.filter(x=>dateKey(x.logged_at,timezone)===today); const todayCaff=caff.filter(x=>dateKey(x.logged_at,timezone)===today); const todayMeds=meds.filter(x=>dateKey(x.logged_at,timezone)===today); const todayFatigue=fatigue.filter(x=>dateKey(x.logged_at,timezone)===today); const todayMovement=movement.filter(x=>dateKey(x.logged_at,timezone)===today); const totalWater=todayWater.reduce((s,x)=>s+x.amount_ml,0); const calories=todayMeals.reduce((s,x)=>s+Number(x.calories||0),0); const protein=todayMeals.reduce((s,x)=>s+Number(x.protein_g||0),0); const caffeineTotal=todayCaff.reduce((s,x)=>s+Number(x.mg_estimate||0),0); const movementMinutes=todayMovement.reduce((s,x)=>s+x.duration_minutes,0); const latestMetric=metrics[0]; const latestCondition=todayFatigue[0]?.fatigue_score??null;
- const waterByDay=useMemo(()=>{const map:Record<string,number>={};water.forEach(x=>{const k=dateKey(x.logged_at,timezone);map[k]=(map[k]||0)+x.amount_ml});return Object.entries(map).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,7)},[water,timezone]); const caloriesByDay=useMemo(()=>{const map:Record<string,number>={};meals.forEach(x=>{const k=dateKey(x.logged_at,timezone);map[k]=(map[k]||0)+Number(x.calories||0)});return Object.entries(map).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,7)},[meals,timezone]);
- if(loading)return <div className="space-y-4"><Card className="p-5"><div className="h-8 w-1/2 animate-licia-shimmer rounded-xl bg-bg"/><div className="mt-3 h-32 animate-licia-shimmer rounded-2xl bg-bg"/></Card></div>;
- return <div className="licia-v33-page-in health-v27 space-y-5">
-  <header className="health-v27-hero relative overflow-hidden rounded-[2rem] border border-accent/15 bg-surface p-5 sm:p-7"><div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-accent/10 blur-3xl"/><div className="relative grid gap-5 lg:grid-cols-[1.25fr_.75fr] lg:items-end"><div><p className="mb-2 flex items-center gap-2 text-2xs font-bold uppercase tracking-[.17em] text-accent"><HeartPulse size={13}/> {" "}{tr("Catatan kesehatan")}</p><h1 className="font-display text-3xl text-text sm:text-4xl">{tr("Kesehatan harian")}</h1><p className="mt-2 max-w-3xl text-sm leading-relaxed text-textMuted">{tr("Catat hal-hal penting tentang keseharianmu—air, makanan, aktivitas, kafein, obat, kondisi tubuh, dan metrik. Data di sini adalah catatan pribadi, bukan diagnosis.")}</p></div><div className="grid grid-cols-2 gap-2"><div className="rounded-2xl border border-border bg-bg/75 p-3"><p className="text-2xs uppercase tracking-wider text-textMuted">{tr("Air")}</p><p className="mt-1 font-display text-2xl text-accent">{(totalWater/1000).toFixed(1)}L</p><p className="text-2xs text-textMuted">{tr("hari ini")}</p></div><div className="rounded-2xl border border-border bg-bg/75 p-3"><p className="text-2xs uppercase tracking-wider text-textMuted">{tr("Gerak")}</p><p className="mt-1 font-display text-2xl text-success">{movementMinutes}</p><p className="text-2xs text-textMuted">{tr("menit hari ini")}</p></div></div></div></header>
-  {mealNotice&&<Card className="border-accent/20 bg-accent/5 p-3"><p className="text-xs leading-relaxed text-textMuted">{mealNotice}</p></Card>}
-  <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4"><Card className="p-3.5"><p className="text-2xs text-textMuted">{tr("Hidrasi")}</p><p className="mt-1 font-display text-xl text-accent">{(totalWater/1000).toFixed(1)} L</p><p className="mt-1 text-2xs text-textMuted">{tr("{todayWater_length} catatan", { todayWater_length: todayWater.length })}</p></Card><Card className="p-3.5"><p className="text-2xs text-textMuted">{tr("Kalori")}</p><p className="mt-1 font-display text-xl text-text">{tr("{round} kcal", { round: Math.round(calories) })}</p><p className="mt-1 text-2xs text-textMuted">{tr("{todayMeals_length} makanan", { todayMeals_length: todayMeals.length })}</p></Card><Card className="p-3.5"><p className="text-2xs text-textMuted">{tr("Protein")}</p><p className="mt-1 font-display text-xl text-text">{Math.round(protein)} g</p><p className="mt-1 text-2xs text-textMuted">{tr("dari log makanan")}</p></Card><Card className="p-3.5"><p className="text-2xs text-textMuted">{tr("Kondisi")}</p><p className="mt-1 font-display text-xl text-text">{latestCondition?tr("{latestCondition}/5", { latestCondition }):"—"}</p><p className="mt-1 text-2xs text-textMuted">{tr("check-in hari ini")}</p></Card></section>
+  const supabase = createClient();
+  const [timezone, setTimezone] = useState("Asia/Jakarta");
+  const [water, setWater] = useState<Water[]>([]);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [caff, setCaff] = useState<Caff[]>([]);
+  const [meds, setMeds] = useState<Med[]>([]);
+  const [fatigue, setFatigue] = useState<Fatigue[]>([]);
+  const [movement, setMovement] = useState<Movement[]>([]);
+  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [waterMl, setWaterMl] = useState("250");
+  const [meal, setMeal] = useState({ type: "makan_siang", description: "" });
+  const [caffeine, setCaffeine] = useState({ drink: "Kopi", mg: "" });
+  const [med, setMed] = useState({ name: "", dosage: "" });
+  const [energy, setEnergy] = useState(3);
+  const [energyNote, setEnergyNote] = useState("");
+  const [move, setMove] = useState({ activity: "Jalan kaki", duration: "20", intensity: "moderate", note: "" });
+  const [metric, setMetric] = useState({ weight: "", systolic: "", diastolic: "", hr: "", note: "" });
+  const [loading, setLoading] = useState(true);
+  const [estimatingMeal, setEstimatingMeal] = useState(false);
+  const [mealNotice, setMealNotice] = useState<string | null>(null);
+  async function load() {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    const [{ data: profile }, w, me, c, p, f, mv, hm] = await Promise.all([
+      supabase.from("users").select("timezone").eq("id", user.id).single(),
+      supabase
+        .from("hydration_logs")
+        .select("id,amount_ml,logged_at")
+        .eq("user_id", user.id)
+        .gte("logged_at", fromDays(6))
+        .order("logged_at", { ascending: false }),
+      supabase
+        .from("meal_logs")
+        .select("id,meal_type,description,calories,protein_g,carbs_g,fat_g,logged_at")
+        .eq("user_id", user.id)
+        .gte("logged_at", fromDays(29))
+        .order("logged_at", { ascending: false }),
+      supabase
+        .from("caffeine_logs")
+        .select("id,drink,mg_estimate,logged_at")
+        .eq("user_id", user.id)
+        .gte("logged_at", fromDays(6))
+        .order("logged_at", { ascending: false }),
+      supabase
+        .from("medication_logs")
+        .select("id,medication_name,dosage,logged_at")
+        .eq("user_id", user.id)
+        .gte("logged_at", fromDays(6))
+        .order("logged_at", { ascending: false }),
+      supabase
+        .from("fatigue_logs")
+        .select("id,fatigue_score,note,logged_at")
+        .eq("user_id", user.id)
+        .gte("logged_at", fromDays(6))
+        .order("logged_at", { ascending: false }),
+      supabase
+        .from("movement_logs")
+        .select("id,activity,duration_minutes,intensity,note,logged_at")
+        .eq("user_id", user.id)
+        .gte("logged_at", fromDays(6))
+        .order("logged_at", { ascending: false }),
+      supabase
+        .from("health_metrics")
+        .select("id,weight_kg,systolic,diastolic,resting_hr,note,measured_at")
+        .eq("user_id", user.id)
+        .order("measured_at", { ascending: false })
+        .limit(12),
+    ]);
+    const tz = (profile?.timezone as string) || "Asia/Jakarta";
+    setTimezone(tz);
+    setWater((w.data as Water[]) || []);
+    setMeals((me.data as Meal[]) || []);
+    setCaff((c.data as Caff[]) || []);
+    setMeds((p.data as Med[]) || []);
+    setFatigue((f.data as Fatigue[]) || []);
+    setMovement((mv.data as Movement[]) || []);
+    setMetrics((hm.data as Metric[]) || []);
+    setLoading(false);
+  }
+  useEffect(() => {
+    void load();
+  }, []);
+  async function uid() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error(tr("Belum masuk"));
+    return user.id;
+  }
+  async function addWater() {
+    const amount = Math.max(1, Number(waterMl) || 250);
+    const result = await mutateEntity({ entityType: "hydration", operation: "create", payload: { amount_ml: amount } });
+    if (!result.ok)
+      return notifyToast({
+        title: "Hidrasi belum tersimpan",
+        message: result.error || "Perubahan gagal disimpan.",
+        tone: "error",
+      });
+    setWaterMl("250");
+    await load();
+  }
+  async function addMeal() {
+    const description = meal.description.trim();
+    if (!description || estimatingMeal) return;
+    setEstimatingMeal(true);
+    setMealNotice(null);
+    try {
+      const r = await fetch("/api/estimate-nutrition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description }),
+      });
+      const n = await r.json().catch(() => ({}));
+      const insert = await mutateEntity({
+        entityType: "meal",
+        operation: "create",
+        payload: {
+          meal_type: meal.type,
+          description,
+          calories: Number(n.calories) || null,
+          protein_g: Number(n.protein_g) || null,
+          carbs_g: Number(n.carbs_g) || null,
+          fat_g: Number(n.fat_g) || null,
+        },
+      });
+      if (!insert.ok) throw new Error(insert.error || tr("Makanan belum tersimpan."));
+      if (!r.ok || n.ok === false)
+        setMealNotice(n.error || tr("Makanan tersimpan, tetapi estimasi gizi AI belum tersedia."));
+      setMeal((x) => ({ ...x, description: "" }));
+      await load();
+    } catch (error) {
+      setMealNotice(error instanceof Error ? error.message : tr("Makanan belum berhasil dicatat."));
+    } finally {
+      setEstimatingMeal(false);
+    }
+  }
+  async function addCaffeine() {
+    if (!caffeine.drink.trim()) return;
+    await mutateEntity({
+      entityType: "caffeine",
+      operation: "create",
+      payload: { drink: caffeine.drink.trim(), mg_estimate: Number(caffeine.mg) || null },
+    });
+    setCaffeine({ drink: "Kopi", mg: "" });
+    await load();
+  }
+  async function addMed() {
+    if (!med.name.trim()) return;
+    await mutateEntity({
+      entityType: "medication",
+      operation: "create",
+      payload: { medication_name: med.name.trim(), dosage: med.dosage.trim() || null },
+    });
+    setMed({ name: "", dosage: "" });
+    await load();
+  }
+  async function addFatigue() {
+    await mutateEntity({
+      entityType: "fatigue",
+      operation: "create",
+      payload: { fatigue_score: energy, note: energyNote.trim() || null },
+    });
+    setEnergyNote("");
+    await load();
+  }
+  async function addMovement() {
+    if (!move.activity.trim()) return;
+    await mutateEntity({
+      entityType: "movement",
+      operation: "create",
+      payload: {
+        activity: move.activity.trim(),
+        duration_minutes: Math.max(1, Math.min(1440, Number(move.duration) || 20)),
+        intensity: move.intensity,
+        note: move.note.trim() || null,
+      },
+    });
+    setMove({ activity: "Jalan kaki", duration: "20", intensity: "moderate", note: "" });
+    await load();
+  }
+  async function addMetric() {
+    const weight = Number(metric.weight);
+    const systolic = Number(metric.systolic);
+    const diastolic = Number(metric.diastolic);
+    const hr = Number(metric.hr);
+    if (!weight && !systolic && !diastolic && !hr) return;
+    await mutateEntity({
+      entityType: "healthMetric",
+      operation: "create",
+      payload: {
+        weight_kg: weight || null,
+        systolic: systolic || null,
+        diastolic: diastolic || null,
+        resting_hr: hr || null,
+        note: metric.note.trim() || null,
+      },
+    });
+    setMetric({ weight: "", systolic: "", diastolic: "", hr: "", note: "" });
+    await load();
+  }
+  async function del(
+    table:
+      | "hydration_logs"
+      | "meal_logs"
+      | "caffeine_logs"
+      | "medication_logs"
+      | "fatigue_logs"
+      | "movement_logs"
+      | "health_metrics",
+    id: string,
+  ) {
+    const map: Record<string, any> = {
+      hydration_logs: "hydration",
+      meal_logs: "meal",
+      caffeine_logs: "caffeine",
+      medication_logs: "medication",
+      fatigue_logs: "fatigue",
+      movement_logs: "movement",
+      health_metrics: "healthMetric",
+    };
+    await mutateEntity({ entityType: map[table], operation: "delete", entityId: id });
+    await load();
+  }
+  const today = dateKey(new Date(), timezone);
+  const todayWater = water.filter((x) => dateKey(x.logged_at, timezone) === today);
+  const todayMeals = meals.filter((x) => dateKey(x.logged_at, timezone) === today);
+  const todayCaff = caff.filter((x) => dateKey(x.logged_at, timezone) === today);
+  const todayMeds = meds.filter((x) => dateKey(x.logged_at, timezone) === today);
+  const todayFatigue = fatigue.filter((x) => dateKey(x.logged_at, timezone) === today);
+  const todayMovement = movement.filter((x) => dateKey(x.logged_at, timezone) === today);
+  const totalWater = todayWater.reduce((s, x) => s + x.amount_ml, 0);
+  const calories = todayMeals.reduce((s, x) => s + Number(x.calories || 0), 0);
+  const protein = todayMeals.reduce((s, x) => s + Number(x.protein_g || 0), 0);
+  const caffeineTotal = todayCaff.reduce((s, x) => s + Number(x.mg_estimate || 0), 0);
+  const movementMinutes = todayMovement.reduce((s, x) => s + x.duration_minutes, 0);
+  const latestMetric = metrics[0];
+  const latestCondition = todayFatigue[0]?.fatigue_score ?? null;
+  const waterByDay = useMemo(() => {
+    const map: Record<string, number> = {};
+    water.forEach((x) => {
+      const k = dateKey(x.logged_at, timezone);
+      map[k] = (map[k] || 0) + x.amount_ml;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .slice(0, 7);
+  }, [water, timezone]);
+  const caloriesByDay = useMemo(() => {
+    const map: Record<string, number> = {};
+    meals.forEach((x) => {
+      const k = dateKey(x.logged_at, timezone);
+      map[k] = (map[k] || 0) + Number(x.calories || 0);
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .slice(0, 7);
+  }, [meals, timezone]);
+  if (loading)
+    return (
+      <div className="space-y-4">
+        <Card className="p-5">
+          <div className="h-8 w-1/2 animate-licia-shimmer rounded-xl bg-bg" />
+          <div className="mt-3 h-32 animate-licia-shimmer rounded-2xl bg-bg" />
+        </Card>
+      </div>
+    );
+  return (
+    <div className="licia-v33-page-in health-v27 space-y-5">
+      <header className="health-v27-hero relative overflow-hidden rounded-[2rem] border border-accent/15 bg-surface p-5 sm:p-7">
+        <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-accent/10 blur-3xl" />
+        <div className="relative grid gap-5 lg:grid-cols-[1.25fr_.75fr] lg:items-end">
+          <div>
+            <p className="mb-2 flex items-center gap-2 text-2xs font-bold uppercase tracking-[.17em] text-accent">
+              <HeartPulse size={13} /> {tr("Catatan kesehatan")}
+            </p>
+            <h1 className="font-display text-3xl text-text sm:text-4xl">{tr("Kesehatan harian")}</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-textMuted">
+              {tr(
+                "Catat hal-hal penting tentang keseharianmu—air, makanan, aktivitas, kafein, obat, kondisi tubuh, dan metrik. Data di sini adalah catatan pribadi, bukan diagnosis.",
+              )}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-2xl border border-border bg-bg/75 p-3">
+              <p className="text-2xs uppercase tracking-wider text-textMuted">{tr("Air")}</p>
+              <p className="mt-1 font-display text-2xl text-accent">{(totalWater / 1000).toFixed(1)}L</p>
+              <p className="text-2xs text-textMuted">{tr("hari ini")}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-bg/75 p-3">
+              <p className="text-2xs uppercase tracking-wider text-textMuted">{tr("Gerak")}</p>
+              <p className="mt-1 font-display text-2xl text-success">{movementMinutes}</p>
+              <p className="text-2xs text-textMuted">{tr("menit hari ini")}</p>
+            </div>
+          </div>
+        </div>
+      </header>
+      {mealNotice && (
+        <Card className="border-accent/20 bg-accent/5 p-3">
+          <p className="text-xs leading-relaxed text-textMuted">{mealNotice}</p>
+        </Card>
+      )}
+      <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <Card className="p-3.5">
+          <p className="text-2xs text-textMuted">{tr("Hidrasi")}</p>
+          <p className="mt-1 font-display text-xl text-accent">{(totalWater / 1000).toFixed(1)} L</p>
+          <p className="mt-1 text-2xs text-textMuted">
+            {tr("{todayWater_length} catatan", { todayWater_length: todayWater.length })}
+          </p>
+        </Card>
+        <Card className="p-3.5">
+          <p className="text-2xs text-textMuted">{tr("Kalori")}</p>
+          <p className="mt-1 font-display text-xl text-text">{tr("{round} kcal", { round: Math.round(calories) })}</p>
+          <p className="mt-1 text-2xs text-textMuted">
+            {tr("{todayMeals_length} makanan", { todayMeals_length: todayMeals.length })}
+          </p>
+        </Card>
+        <Card className="p-3.5">
+          <p className="text-2xs text-textMuted">{tr("Protein")}</p>
+          <p className="mt-1 font-display text-xl text-text">{Math.round(protein)} g</p>
+          <p className="mt-1 text-2xs text-textMuted">{tr("dari log makanan")}</p>
+        </Card>
+        <Card className="p-3.5">
+          <p className="text-2xs text-textMuted">{tr("Kondisi")}</p>
+          <p className="mt-1 font-display text-xl text-text">
+            {latestCondition ? tr("{latestCondition}/5", { latestCondition }) : "—"}
+          </p>
+          <p className="mt-1 text-2xs text-textMuted">{tr("check-in hari ini")}</p>
+        </Card>
+      </section>
 
-  <section className="grid gap-4 lg:grid-cols-2">
-   <Card className="p-4 sm:p-5"><SectionTitle><span className="flex items-center gap-2"><Droplets size={17} className="text-accent"/>{tr("Hidrasi")}</span></SectionTitle><div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"><TextInput type="number" min={1} value={waterMl} onChange={e=>setWaterMl(e.target.value)} placeholder={tr("250 ml")}/><PrimaryButton onClick={()=>void addWater()}><Plus size={15}/>{tr("Tambah")}</PrimaryButton></div><div className="mt-4 space-y-2">{waterByDay.map(([d,v])=><div key={d}><div className="flex items-center justify-between gap-2 text-2xs"><span className="text-textMuted">{prettyDate(`${d}T12:00:00`,timezone)}</span><span className="font-semibold text-text">{tr("{v} ml", { v })}</span></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-accent" style={{width:`${Math.min(100,Math.round(v/2500*100))}%`}}/></div></div>)}{!waterByDay.length&&<EmptyState title={tr("Belum ada hidrasi")} description={tr("Tambahkan catatan minum pertama hari ini.")}/>}</div></Card>
-   <Card className="p-4 sm:p-5"><SectionTitle><span className="flex items-center gap-2"><Utensils size={17}/>{tr("Makanan")}</span></SectionTitle><div className="grid gap-2 sm:grid-cols-2"><select value={meal.type} onChange={e=>setMeal({...meal,type:e.target.value})} className="field-v27"><option value="sarapan">{tr("Sarapan")}</option><option value="makan_siang">{tr("Makan siang")}</option><option value="makan_malam">{tr("Makan malam")}</option><option value="camilan">{tr("Camilan")}</option></select><TextInput value={meal.description} onChange={e=>setMeal({...meal,description:e.target.value})} placeholder={tr("Contoh: nasi, ayam, sayur")}/></div><PrimaryButton disabled={estimatingMeal} onClick={()=>void addMeal()} className="mt-2 w-full sm:w-auto">{estimatingMeal?<><Sparkles size={15} className="animate-pulse"/>{tr("Menghitung…")}</>:<><Plus size={15}/>{tr("Simpan & estimasi gizi")}</>}</PrimaryButton><div className="mt-4 space-y-2">{todayMeals.map(x=><div key={x.id} className="rounded-xl bg-bg p-3"><div className="flex items-start gap-2"><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium text-text">{x.description}</p><p className="mt-1 text-2xs text-textMuted">{x.meal_type||"makan"} · {x.calories?tr("{round} kcal", { round: Math.round(x.calories) }):tr("gizi —")}{x.protein_g?tr(" · {round}g protein", { round: Math.round(x.protein_g) }):""}</p></div><button onClick={()=>void del("meal_logs",x.id)} className="touch-target shrink-0 rounded-lg text-textMuted hover:text-danger" aria-label={tr("Hapus makanan")}><Trash2 size={13}/></button></div></div>)}{!todayMeals.length&&<p className="rounded-xl border border-dashed border-border p-5 text-center text-xs text-textMuted">{tr("Belum ada makanan hari ini.")}</p>}</div></Card>
-  </section>
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card className="p-4 sm:p-5">
+          <SectionTitle>
+            <span className="flex items-center gap-2">
+              <Droplets size={17} className="text-accent" />
+              {tr("Hidrasi")}
+            </span>
+          </SectionTitle>
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <TextInput
+              type="number"
+              min={1}
+              value={waterMl}
+              onChange={(e) => setWaterMl(e.target.value)}
+              placeholder={tr("250 ml")}
+            />
+            <PrimaryButton onClick={() => void addWater()}>
+              <Plus size={15} />
+              {tr("Tambah")}
+            </PrimaryButton>
+          </div>
+          <div className="mt-4 space-y-2">
+            {waterByDay.map(([d, v]) => (
+              <div key={d}>
+                <div className="flex items-center justify-between gap-2 text-2xs">
+                  <span className="text-textMuted">{prettyDate(`${d}T12:00:00`, timezone)}</span>
+                  <span className="font-semibold text-text">{tr("{v} ml", { v })}</span>
+                </div>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg">
+                  <div
+                    className="h-full rounded-full bg-accent"
+                    style={{ width: `${Math.min(100, Math.round((v / 2500) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+            {!waterByDay.length && (
+              <EmptyState
+                title={tr("Belum ada hidrasi")}
+                description={tr("Tambahkan catatan minum pertama hari ini.")}
+              />
+            )}
+          </div>
+        </Card>
+        <Card className="p-4 sm:p-5">
+          <SectionTitle>
+            <span className="flex items-center gap-2">
+              <Utensils size={17} />
+              {tr("Makanan")}
+            </span>
+          </SectionTitle>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <select
+              value={meal.type}
+              onChange={(e) => setMeal({ ...meal, type: e.target.value })}
+              className="field-v27"
+            >
+              <option value="sarapan">{tr("Sarapan")}</option>
+              <option value="makan_siang">{tr("Makan siang")}</option>
+              <option value="makan_malam">{tr("Makan malam")}</option>
+              <option value="camilan">{tr("Camilan")}</option>
+            </select>
+            <TextInput
+              value={meal.description}
+              onChange={(e) => setMeal({ ...meal, description: e.target.value })}
+              placeholder={tr("Contoh: nasi, ayam, sayur")}
+            />
+          </div>
+          <PrimaryButton disabled={estimatingMeal} onClick={() => void addMeal()} className="mt-2 w-full sm:w-auto">
+            {estimatingMeal ? (
+              <>
+                <Sparkles size={15} className="animate-pulse" />
+                {tr("Menghitung…")}
+              </>
+            ) : (
+              <>
+                <Plus size={15} />
+                {tr("Simpan & estimasi gizi")}
+              </>
+            )}
+          </PrimaryButton>
+          <div className="mt-4 space-y-2">
+            {todayMeals.map((x) => (
+              <div key={x.id} className="rounded-xl bg-bg p-3">
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-medium text-text">{x.description}</p>
+                    <p className="mt-1 text-2xs text-textMuted">
+                      {x.meal_type || "makan"} ·{" "}
+                      {x.calories ? tr("{round} kcal", { round: Math.round(x.calories) }) : tr("gizi —")}
+                      {x.protein_g ? tr(" · {round}g protein", { round: Math.round(x.protein_g) }) : ""}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void del("meal_logs", x.id)}
+                    className="touch-target shrink-0 rounded-lg text-textMuted hover:text-danger"
+                    aria-label={tr("Hapus makanan")}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {!todayMeals.length && (
+              <p className="rounded-xl border border-dashed border-border p-5 text-center text-xs text-textMuted">
+                {tr("Belum ada makanan hari ini.")}
+              </p>
+            )}
+          </div>
+        </Card>
+      </section>
 
-  <section className="grid gap-4 xl:grid-cols-[1fr_1fr_.9fr]">
-   <Card className="p-4 sm:p-5"><SectionTitle><span className="flex items-center gap-2"><Activity size={17} className="text-success"/>{tr("Gerak")}</span></SectionTitle><div className="grid gap-2 sm:grid-cols-2"><TextInput value={move.activity} onChange={e=>setMove({...move,activity:e.target.value})} placeholder={tr("Aktivitas")}/><TextInput type="number" value={move.duration} onChange={e=>setMove({...move,duration:e.target.value})} placeholder={tr("Menit")}/><select value={move.intensity} onChange={e=>setMove({...move,intensity:e.target.value})} className="field-v27"><option value="light">{tr("Ringan")}</option><option value="moderate">{tr("Sedang")}</option><option value="vigorous">{tr("Berat")}</option></select><TextInput value={move.note} onChange={e=>setMove({...move,note:e.target.value})} placeholder={tr("Catatan (opsional)")}/></div><PrimaryButton onClick={()=>void addMovement()} className="mt-2 w-full sm:w-auto"><Plus size={15}/>{tr("Simpan aktivitas")}</PrimaryButton><div className="mt-4 space-y-2">{todayMovement.slice(0,5).map(x=><div key={x.id} className="flex items-start gap-2 rounded-xl bg-bg p-3"><Activity size={14} className="mt-0.5 shrink-0 text-success"/><div className="min-w-0 flex-1"><p className="break-words text-xs font-semibold text-text">{x.activity}</p><p className="mt-1 text-2xs text-textMuted">{tr("{duration_minutes} menit · {intensityLabel}", { duration_minutes: x.duration_minutes, intensityLabel: intensityLabel(x.intensity) })}</p></div><button onClick={()=>void del("movement_logs",x.id)} className="touch-target text-textMuted hover:text-danger" aria-label={tr("Hapus gerak")}><Trash2 size={13}/></button></div>)}{!todayMovement.length&&<p className="text-xs text-textMuted">{tr("Belum ada gerak yang dicatat hari ini.")}</p>}</div></Card>
-   <Card className="p-4 sm:p-5"><SectionTitle><span className="flex items-center gap-2"><Wind size={17}/>{tr("Kondisi hari ini")}</span></SectionTitle><div className="rounded-2xl bg-bg p-4"><div className="flex items-center justify-between"><span className="text-2xs text-textMuted">{tr("Kondisi hari ini")}</span><span className="font-display text-2xl text-accent">{energy}/5</span></div><input type="range" min="1" max="5" value={energy} onChange={e=>setEnergy(Number(e.target.value))} className="mt-3 w-full accent-[var(--accent)]"/><div className="mt-1 flex justify-between text-2xs text-textMuted"><span>{tr("1 · rendah")}</span><span>{tr("5 · tinggi")}</span></div><TextInput value={energyNote} onChange={e=>setEnergyNote(e.target.value)} placeholder={tr("Catatan singkat (opsional)")} className="mt-3"/><PrimaryButton onClick={()=>void addFatigue()} className="mt-2 w-full"><Plus size={14}/>{tr("Simpan kondisi")}</PrimaryButton></div><div className="mt-3 space-y-2">{todayFatigue.slice(0,4).map(x=><div key={x.id} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface p-3"><div><p className="text-xs font-semibold text-text">{tr("Kondisi {fatigue_score}/5", { fatigue_score: x.fatigue_score })}</p><p className="mt-1 line-clamp-2 text-2xs text-textMuted">{x.note||tr("Tanpa catatan")}</p></div><button onClick={()=>void del("fatigue_logs",x.id)} className="touch-target text-textMuted hover:text-danger" aria-label={tr("Hapus check-in")}><Trash2 size={13}/></button></div>)}</div></Card>
-   <Card className="p-4 sm:p-5"><SectionTitle><span className="flex items-center gap-2"><Ruler size={17}/>{tr("Metrik")}</span></SectionTitle><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1"><TextInput type="number" step="0.1" value={metric.weight} onChange={e=>setMetric({...metric,weight:e.target.value})} placeholder={tr("Berat kg")}/><TextInput type="number" value={metric.systolic} onChange={e=>setMetric({...metric,systolic:e.target.value})} placeholder={tr("Sistolik")}/><TextInput type="number" value={metric.diastolic} onChange={e=>setMetric({...metric,diastolic:e.target.value})} placeholder={tr("Diastolik")}/><TextInput type="number" value={metric.hr} onChange={e=>setMetric({...metric,hr:e.target.value})} placeholder={tr("Denyut istirahat")}/><TextInput value={metric.note} onChange={e=>setMetric({...metric,note:e.target.value})} placeholder={tr("Catatan")}/></div><PrimaryButton onClick={()=>void addMetric()} className="mt-2 w-full"><Plus size={14}/>{tr("Simpan metrik")}</PrimaryButton><div className="mt-4 rounded-2xl bg-bg p-3">{latestMetric?<><p className="text-2xs uppercase tracking-wider text-textMuted">{tr("Terakhir dicatat")}</p><div className="mt-2 grid grid-cols-2 gap-2 text-xs">{[["Berat",latestMetric.weight_kg?`${latestMetric.weight_kg} kg`:"—"],["Tekanan",latestMetric.systolic?`${latestMetric.systolic}/${latestMetric.diastolic||"—"}`:"—"],["Denyut",latestMetric.resting_hr?`${latestMetric.resting_hr} bpm`:"—"],["Tanggal",new Date(latestMetric.measured_at).toLocaleDateString(locale,{day:"numeric",month:"short"})]].map(([k,v])=><div key={k}><span className="text-2xs text-textMuted">{k}</span><p className="mt-0.5 font-semibold text-text">{v}</p></div>)}</div></>:<p className="text-2xs text-textMuted">{tr("Belum ada metrik fisik.")}</p>}</div></Card>
-  </section>
+      <section className="grid gap-4 xl:grid-cols-[1fr_1fr_.9fr]">
+        <Card className="p-4 sm:p-5">
+          <SectionTitle>
+            <span className="flex items-center gap-2">
+              <Activity size={17} className="text-success" />
+              {tr("Gerak")}
+            </span>
+          </SectionTitle>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <TextInput
+              value={move.activity}
+              onChange={(e) => setMove({ ...move, activity: e.target.value })}
+              placeholder={tr("Aktivitas")}
+            />
+            <TextInput
+              type="number"
+              value={move.duration}
+              onChange={(e) => setMove({ ...move, duration: e.target.value })}
+              placeholder={tr("Menit")}
+            />
+            <select
+              value={move.intensity}
+              onChange={(e) => setMove({ ...move, intensity: e.target.value })}
+              className="field-v27"
+            >
+              <option value="light">{tr("Ringan")}</option>
+              <option value="moderate">{tr("Sedang")}</option>
+              <option value="vigorous">{tr("Berat")}</option>
+            </select>
+            <TextInput
+              value={move.note}
+              onChange={(e) => setMove({ ...move, note: e.target.value })}
+              placeholder={tr("Catatan (opsional)")}
+            />
+          </div>
+          <PrimaryButton onClick={() => void addMovement()} className="mt-2 w-full sm:w-auto">
+            <Plus size={15} />
+            {tr("Simpan aktivitas")}
+          </PrimaryButton>
+          <div className="mt-4 space-y-2">
+            {todayMovement.slice(0, 5).map((x) => (
+              <div key={x.id} className="flex items-start gap-2 rounded-xl bg-bg p-3">
+                <Activity size={14} className="mt-0.5 shrink-0 text-success" />
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-xs font-semibold text-text">{x.activity}</p>
+                  <p className="mt-1 text-2xs text-textMuted">
+                    {tr("{duration_minutes} menit · {intensityLabel}", {
+                      duration_minutes: x.duration_minutes,
+                      intensityLabel: intensityLabel(x.intensity),
+                    })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => void del("movement_logs", x.id)}
+                  className="touch-target text-textMuted hover:text-danger"
+                  aria-label={tr("Hapus gerak")}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+            {!todayMovement.length && (
+              <p className="text-xs text-textMuted">{tr("Belum ada gerak yang dicatat hari ini.")}</p>
+            )}
+          </div>
+        </Card>
+        <Card className="p-4 sm:p-5">
+          <SectionTitle>
+            <span className="flex items-center gap-2">
+              <Wind size={17} />
+              {tr("Kondisi hari ini")}
+            </span>
+          </SectionTitle>
+          <div className="rounded-2xl bg-bg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-2xs text-textMuted">{tr("Kondisi hari ini")}</span>
+              <span className="font-display text-2xl text-accent">{energy}/5</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="5"
+              value={energy}
+              onChange={(e) => setEnergy(Number(e.target.value))}
+              className="mt-3 w-full accent-[var(--accent)]"
+            />
+            <div className="mt-1 flex justify-between text-2xs text-textMuted">
+              <span>{tr("1 · rendah")}</span>
+              <span>{tr("5 · tinggi")}</span>
+            </div>
+            <TextInput
+              value={energyNote}
+              onChange={(e) => setEnergyNote(e.target.value)}
+              placeholder={tr("Catatan singkat (opsional)")}
+              className="mt-3"
+            />
+            <PrimaryButton onClick={() => void addFatigue()} className="mt-2 w-full">
+              <Plus size={14} />
+              {tr("Simpan kondisi")}
+            </PrimaryButton>
+          </div>
+          <div className="mt-3 space-y-2">
+            {todayFatigue.slice(0, 4).map((x) => (
+              <div
+                key={x.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface p-3"
+              >
+                <div>
+                  <p className="text-xs font-semibold text-text">
+                    {tr("Kondisi {fatigue_score}/5", { fatigue_score: x.fatigue_score })}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-2xs text-textMuted">{x.note || tr("Tanpa catatan")}</p>
+                </div>
+                <button
+                  onClick={() => void del("fatigue_logs", x.id)}
+                  className="touch-target text-textMuted hover:text-danger"
+                  aria-label={tr("Hapus check-in")}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card className="p-4 sm:p-5">
+          <SectionTitle>
+            <span className="flex items-center gap-2">
+              <Ruler size={17} />
+              {tr("Metrik")}
+            </span>
+          </SectionTitle>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+            <TextInput
+              type="number"
+              step="0.1"
+              value={metric.weight}
+              onChange={(e) => setMetric({ ...metric, weight: e.target.value })}
+              placeholder={tr("Berat kg")}
+            />
+            <TextInput
+              type="number"
+              value={metric.systolic}
+              onChange={(e) => setMetric({ ...metric, systolic: e.target.value })}
+              placeholder={tr("Sistolik")}
+            />
+            <TextInput
+              type="number"
+              value={metric.diastolic}
+              onChange={(e) => setMetric({ ...metric, diastolic: e.target.value })}
+              placeholder={tr("Diastolik")}
+            />
+            <TextInput
+              type="number"
+              value={metric.hr}
+              onChange={(e) => setMetric({ ...metric, hr: e.target.value })}
+              placeholder={tr("Denyut istirahat")}
+            />
+            <TextInput
+              value={metric.note}
+              onChange={(e) => setMetric({ ...metric, note: e.target.value })}
+              placeholder={tr("Catatan")}
+            />
+          </div>
+          <PrimaryButton onClick={() => void addMetric()} className="mt-2 w-full">
+            <Plus size={14} />
+            {tr("Simpan metrik")}
+          </PrimaryButton>
+          <div className="mt-4 rounded-2xl bg-bg p-3">
+            {latestMetric ? (
+              <>
+                <p className="text-2xs uppercase tracking-wider text-textMuted">{tr("Terakhir dicatat")}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  {[
+                    ["Berat", latestMetric.weight_kg ? `${latestMetric.weight_kg} kg` : "—"],
+                    [
+                      "Tekanan",
+                      latestMetric.systolic ? `${latestMetric.systolic}/${latestMetric.diastolic || "—"}` : "—",
+                    ],
+                    ["Denyut", latestMetric.resting_hr ? `${latestMetric.resting_hr} bpm` : "—"],
+                    [
+                      "Tanggal",
+                      new Date(latestMetric.measured_at).toLocaleDateString(locale, { day: "numeric", month: "short" }),
+                    ],
+                  ].map(([k, v]) => (
+                    <div key={k}>
+                      <span className="text-2xs text-textMuted">{k}</span>
+                      <p className="mt-0.5 font-semibold text-text">{v}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-2xs text-textMuted">{tr("Belum ada metrik fisik.")}</p>
+            )}
+          </div>
+        </Card>
+      </section>
 
-  <section className="grid gap-4 lg:grid-cols-2"><Card className="p-4 sm:p-5"><SectionTitle><span className="flex items-center gap-2"><Flame size={17} className="text-accent"/>{tr("Ringkasan 7 hari")}</span></SectionTitle><div className="space-y-3">{caloriesByDay.map(([d,v])=><div key={d}><div className="flex items-center justify-between gap-2 text-2xs"><span className="text-textMuted">{prettyDate(`${d}T12:00:00`,timezone)}</span><span className="font-semibold text-text">{tr("{round} kcal", { round: Math.round(v) })}</span></div><div className="mt-1 h-2 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-accentSoft" style={{width:`${Math.min(100,Math.round(v/2500*100))}%`}}/></div></div>)}{!caloriesByDay.length&&<p className="text-xs text-textMuted">{tr("Belum cukup data untuk pola.")}</p>}</div></Card><Card className="p-4 sm:p-5"><SectionTitle><span className="flex items-center gap-2"><Coffee size={17}/>{tr("Kafein & obat")}</span></SectionTitle><div className="grid gap-4 sm:grid-cols-2"><div><p className="text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Kafein hari ini · {round} mg", { round: Math.round(caffeineTotal) })}</p><div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,.7fr)_auto]"><TextInput value={caffeine.drink} onChange={e=>setCaffeine({...caffeine,drink:e.target.value})} placeholder={tr("Minuman")}/><TextInput type="number" value={caffeine.mg} onChange={e=>setCaffeine({...caffeine,mg:e.target.value})} placeholder={tr("mg")}/><button onClick={()=>void addCaffeine()} className="flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl bg-accent px-3 text-white sm:w-auto" aria-label={tr("Tambah kafein")}><Plus size={15} className="mx-auto"/></button></div><div className="mt-2 space-y-1">{todayCaff.slice(0,4).map(x=><div key={x.id} className="flex items-center justify-between gap-2 text-2xs"><span className="truncate text-text">{x.drink}</span><span className="text-textMuted">{x.mg_estimate?tr("{mg_estimate} mg", { mg_estimate: x.mg_estimate }):"—"}</span></div>)}</div></div><div><p className="text-2xs font-bold uppercase tracking-wider text-textMuted">{tr("Obat hari ini · {todayMeds_length}", { todayMeds_length: todayMeds.length })}</p><div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,.75fr)_auto]"><TextInput value={med.name} onChange={e=>setMed({...med,name:e.target.value})} placeholder={tr("Nama obat")}/><TextInput value={med.dosage} onChange={e=>setMed({...med,dosage:e.target.value})} placeholder={tr("Dosis")}/><button onClick={()=>void addMed()} className="flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl bg-accent px-3 text-white sm:w-auto" aria-label={tr("Tambah obat")}><Plus size={15} className="mx-auto"/></button></div><div className="mt-2 space-y-1">{todayMeds.slice(0,4).map(x=><div key={x.id} className="flex items-center justify-between gap-2 text-2xs"><span className="min-w-0 truncate text-text">{x.medication_name}{x.dosage?tr(" · {dosage}", { dosage: x.dosage }):""}</span><button onClick={()=>void del("medication_logs",x.id)} className="touch-target text-textMuted hover:text-danger" aria-label={tr("Hapus obat")}><Trash2 size={12}/></button></div>)}</div></div></div></Card></section>
-  <Card className="border-accent/15 bg-accent/5 p-4"><div className="flex items-start gap-3"><Leaf size={17} className="mt-0.5 shrink-0 text-success"/><div><p className="text-sm font-semibold text-text">{tr("Catatan kesehatan, bukan diagnosis")}</p><p className="mt-1 text-xs leading-relaxed text-textMuted">{tr("Licia menyimpan catatan dan membantu merangkum pola yang sudah kamu masukkan. Informasi ini tidak menggantikan diagnosis atau pemeriksaan tenaga kesehatan.")}</p></div></div></Card>
- </div>
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card className="p-4 sm:p-5">
+          <SectionTitle>
+            <span className="flex items-center gap-2">
+              <Flame size={17} className="text-accent" />
+              {tr("Ringkasan 7 hari")}
+            </span>
+          </SectionTitle>
+          <div className="space-y-3">
+            {caloriesByDay.map(([d, v]) => (
+              <div key={d}>
+                <div className="flex items-center justify-between gap-2 text-2xs">
+                  <span className="text-textMuted">{prettyDate(`${d}T12:00:00`, timezone)}</span>
+                  <span className="font-semibold text-text">{tr("{round} kcal", { round: Math.round(v) })}</span>
+                </div>
+                <div className="mt-1 h-2 overflow-hidden rounded-full bg-bg">
+                  <div
+                    className="h-full rounded-full bg-accentSoft"
+                    style={{ width: `${Math.min(100, Math.round((v / 2500) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+            {!caloriesByDay.length && <p className="text-xs text-textMuted">{tr("Belum cukup data untuk pola.")}</p>}
+          </div>
+        </Card>
+        <Card className="p-4 sm:p-5">
+          <SectionTitle>
+            <span className="flex items-center gap-2">
+              <Coffee size={17} />
+              {tr("Kafein & obat")}
+            </span>
+          </SectionTitle>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-2xs font-bold uppercase tracking-wider text-textMuted">
+                {tr("Kafein hari ini · {round} mg", { round: Math.round(caffeineTotal) })}
+              </p>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,.7fr)_auto]">
+                <TextInput
+                  value={caffeine.drink}
+                  onChange={(e) => setCaffeine({ ...caffeine, drink: e.target.value })}
+                  placeholder={tr("Minuman")}
+                />
+                <TextInput
+                  type="number"
+                  value={caffeine.mg}
+                  onChange={(e) => setCaffeine({ ...caffeine, mg: e.target.value })}
+                  placeholder={tr("mg")}
+                />
+                <button
+                  onClick={() => void addCaffeine()}
+                  className="flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl bg-accent px-3 text-white sm:w-auto"
+                  aria-label={tr("Tambah kafein")}
+                >
+                  <Plus size={15} className="mx-auto" />
+                </button>
+              </div>
+              <div className="mt-2 space-y-1">
+                {todayCaff.slice(0, 4).map((x) => (
+                  <div key={x.id} className="flex items-center justify-between gap-2 text-2xs">
+                    <span className="truncate text-text">{x.drink}</span>
+                    <span className="text-textMuted">
+                      {x.mg_estimate ? tr("{mg_estimate} mg", { mg_estimate: x.mg_estimate }) : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-2xs font-bold uppercase tracking-wider text-textMuted">
+                {tr("Obat hari ini · {todayMeds_length}", { todayMeds_length: todayMeds.length })}
+              </p>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,.75fr)_auto]">
+                <TextInput
+                  value={med.name}
+                  onChange={(e) => setMed({ ...med, name: e.target.value })}
+                  placeholder={tr("Nama obat")}
+                />
+                <TextInput
+                  value={med.dosage}
+                  onChange={(e) => setMed({ ...med, dosage: e.target.value })}
+                  placeholder={tr("Dosis")}
+                />
+                <button
+                  onClick={() => void addMed()}
+                  className="flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl bg-accent px-3 text-white sm:w-auto"
+                  aria-label={tr("Tambah obat")}
+                >
+                  <Plus size={15} className="mx-auto" />
+                </button>
+              </div>
+              <div className="mt-2 space-y-1">
+                {todayMeds.slice(0, 4).map((x) => (
+                  <div key={x.id} className="flex items-center justify-between gap-2 text-2xs">
+                    <span className="min-w-0 truncate text-text">
+                      {x.medication_name}
+                      {x.dosage ? tr(" · {dosage}", { dosage: x.dosage }) : ""}
+                    </span>
+                    <button
+                      onClick={() => void del("medication_logs", x.id)}
+                      className="touch-target text-textMuted hover:text-danger"
+                      aria-label={tr("Hapus obat")}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </section>
+      <Card className="border-accent/15 bg-accent/5 p-4">
+        <div className="flex items-start gap-3">
+          <Leaf size={17} className="mt-0.5 shrink-0 text-success" />
+          <div>
+            <p className="text-sm font-semibold text-text">{tr("Catatan kesehatan, bukan diagnosis")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-textMuted">
+              {tr(
+                "Licia menyimpan catatan dan membantu merangkum pola yang sudah kamu masukkan. Informasi ini tidak menggantikan diagnosis atau pemeriksaan tenaga kesehatan.",
+              )}
+            </p>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
 }

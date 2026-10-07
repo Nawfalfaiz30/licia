@@ -7,9 +7,12 @@ export type AiModelRouteInput = {
   mode?: string;
 };
 
-const HEAVY_INTENT_ID = /\b(analisis|jelaskan|bandingkan|rencanakan|susun|kenapa|strategi|review|evaluasi|hubungkan|ringkas|teliti|jadwalkan|hapus|ubah|ganti|edit|revisi|perbaiki|buatkan|atur)\b/i;
-const HEAVY_INTENT_EN = /\b(analy[sz]e|explain|compare|plan|organi[sz]e|why|strategy|evaluate|summari[sz]e|schedule|delete|remove|change|update|rename|fix|create|reschedule|prioriti[sz]e|break down)\b/i;
-const TIME_WORDS = /\b(sabtu|minggu|senin|selasa|rabu|kamis|jumat|besok|lusa|tanggal|jam|monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|tonight|date|o'clock)\b/i;
+const HEAVY_INTENT_ID =
+  /\b(analisis|jelaskan|bandingkan|rencanakan|susun|kenapa|strategi|review|evaluasi|hubungkan|ringkas|teliti|jadwalkan|hapus|ubah|ganti|edit|revisi|perbaiki|buatkan|atur)\b/i;
+const HEAVY_INTENT_EN =
+  /\b(analy[sz]e|explain|compare|plan|organi[sz]e|why|strategy|evaluate|summari[sz]e|schedule|delete|remove|change|update|rename|fix|create|reschedule|prioriti[sz]e|break down)\b/i;
+const TIME_WORDS =
+  /\b(sabtu|minggu|senin|selasa|rabu|kamis|jumat|besok|lusa|tanggal|jam|monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|tonight|date|o'clock)\b/i;
 const SCHEDULE_WORDS = /\b(jadwal|kalender|agenda|ingatkan|reminder|schedule|calendar|remind)\b/i;
 
 export function selectAiModel(input: AiModelRouteInput) {

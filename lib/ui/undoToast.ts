@@ -9,9 +9,13 @@ let flushHooked = false;
 function hookFlush() {
   if (flushHooked || typeof window === "undefined") return;
   flushHooked = true;
-  const flush = () => { void queue.flushAll(); };
+  const flush = () => {
+    void queue.flushAll();
+  };
   window.addEventListener("pagehide", flush);
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
 }
 
 type Common = { title: string; message?: string; undoLabel: string; windowMs?: number };
@@ -25,7 +29,13 @@ export function toastWithUndo(opts: Common & { revert: () => void | Promise<void
     message: opts.message,
     tone: "success",
     duration: opts.windowMs ?? UNDO_WINDOW_MS,
-    action: { label: opts.undoLabel, onClick: () => { haptic("selection"); void opts.revert(); } },
+    action: {
+      label: opts.undoLabel,
+      onClick: () => {
+        haptic("selection");
+        void opts.revert();
+      },
+    },
   });
 }
 
@@ -33,7 +43,9 @@ export function toastWithUndo(opts: Common & { revert: () => void | Promise<void
  * Aksi destruktif ditunda: `hide` dipanggil sekarang (sembunyikan item), `commit` hanya berjalan bila
  * pengguna tidak menekan Urungkan dalam jendela waktu; `restore` mengembalikan item di UI.
  */
-export function deferDestructive(opts: Common & { id: string; hide: () => void; restore: () => void; commit: () => void | Promise<void> }) {
+export function deferDestructive(
+  opts: Common & { id: string; hide: () => void; restore: () => void; commit: () => void | Promise<void> },
+) {
   hookFlush();
   const windowMs = opts.windowMs ?? UNDO_WINDOW_MS;
   opts.hide();
@@ -46,7 +58,10 @@ export function deferDestructive(opts: Common & { id: string; hide: () => void; 
     action: {
       label: opts.undoLabel,
       onClick: () => {
-        if (queue.cancel(opts.id)) { haptic("selection"); opts.restore(); }
+        if (queue.cancel(opts.id)) {
+          haptic("selection");
+          opts.restore();
+        }
       },
     },
   });

@@ -25,7 +25,15 @@ const TONES: Record<SmartChipKind, string> = {
  * Menampilkan hasil parseSmartCapture sebagai "chip" kecil di bawah kolom ketik, sehingga
  * pengguna melihat apa yang dikenali (tanggal, jam, prioritas, tag, nominal) sebelum menyimpan.
  */
-export function SmartChips({ chips, hint, className }: { chips: SmartChip[]; hint?: string | null; className?: string }) {
+export function SmartChips({
+  chips,
+  hint,
+  className,
+}: {
+  chips: SmartChip[];
+  hint?: string | null;
+  className?: string;
+}) {
   const { t } = useLanguage();
   if (!chips.length) return null;
   return (
@@ -37,7 +45,10 @@ export function SmartChips({ chips, hint, className }: { chips: SmartChip[]; hin
           return (
             <li
               key={`${chip.kind}-${chip.label}-${index}`}
-              className={clsx("licia-smart-chip inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-2xs font-semibold", TONES[chip.kind])}
+              className={clsx(
+                "licia-smart-chip inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-2xs font-semibold",
+                TONES[chip.kind],
+              )}
             >
               <Icon size={11} aria-hidden="true" />
               {chip.label}

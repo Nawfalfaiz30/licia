@@ -52,9 +52,11 @@ export default function SignupPage() {
         <div>
           <h1 className="font-display text-3xl mb-3 text-text">{tr("Cek email kamu")}</h1>
           <p className="text-textMuted max-w-sm">
-            {tr("Licia sudah mengirim tautan konfirmasi. Setelah dikonfirmasi, kamu bisa langsung masuk.")}</p>
+            {tr("Licia sudah mengirim tautan konfirmasi. Setelah dikonfirmasi, kamu bisa langsung masuk.")}
+          </p>
           <Link href="/login" className="text-accent font-medium mt-4 inline-block">
-            {tr("Kembali ke halaman masuk")}</Link>
+            {tr("Kembali ke halaman masuk")}
+          </Link>
         </div>
       </div>
     );
@@ -122,7 +124,8 @@ export default function SignupPage() {
         <p className="text-sm text-textMuted mt-6 text-center">
           {tr("Sudah punya akun?")}{" "}
           <Link href="/login" className="text-accent font-medium">
-            {tr("Masuk")}</Link>
+            {tr("Masuk")}
+          </Link>
         </p>
       </div>
     </div>

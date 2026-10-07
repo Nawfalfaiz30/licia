@@ -107,7 +107,9 @@ const STORAGE_MAP: Record<string, string> = {
 };
 
 function setStorage(key: string, value: unknown) {
-  try { localStorage.setItem(key, String(value)); } catch {}
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {}
 }
 
 export function applySyncedPreferences(input: unknown) {
@@ -121,8 +123,10 @@ export function applySyncedPreferences(input: unknown) {
   applyLanguage(language);
   if (typeof preferences.theme === "string") applyThemePreference(preferences.theme);
   const root = document.documentElement;
-  const bool = (key: string) => preferences[key] === true ? "true" : preferences[key] === false ? "false" : undefined;
-  const setData = (datasetKey: string, value: string | undefined) => { if (value !== undefined) root.dataset[datasetKey] = value; };
+  const bool = (key: string) => (preferences[key] === true ? "true" : preferences[key] === false ? "false" : undefined);
+  const setData = (datasetKey: string, value: string | undefined) => {
+    if (value !== undefined) root.dataset[datasetKey] = value;
+  };
   setData("reducedMotion", bool("reducedMotion"));
   setData("compactSidebar", bool("compactSidebar"));
   setData("quickSearchMobile", bool("showQuickSearchMobile"));

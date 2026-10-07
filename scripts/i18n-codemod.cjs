@@ -24,12 +24,93 @@ const SKIP_FILES = new Set([
   "components/layout/SkipLink.tsx",
   "app/layout.tsx",
 ]);
-const ATTRS = new Set(["placeholder", "title", "aria-label", "alt", "label", "description", "hint", "confirmLabel", "cancelLabel", "submitLabel", "emptyText", "subtitle", "tooltip", "helper", "aria-description", "aria-placeholder", "summary", "heading", "eyebrow", "caption", "actionLabel"]);
-const KEYS = new Set(["title", "message", "label", "text", "description", "hint", "desc", "subtitle", "sub", "caption", "heading", "placeholder", "helper", "tooltip", "empty", "emptyTitle", "emptyText", "cta", "summary", "detail", "note", "reason", "error", "warning", "success", "info", "headline", "tagline", "badge", "tip", "question", "answer", "eyebrow", "body", "actionLabel", "confirmLabel", "cancelLabel", "submitLabel"]);
-const CALLEES = /^(set(Error|Message|Status|Notice|Info|Feedback|Result|Toast|Hint|Warning|Success|Text|Msg|Note)|alert|confirm|prompt|showActionResult|notify|toast)$/;
+const ATTRS = new Set([
+  "placeholder",
+  "title",
+  "aria-label",
+  "alt",
+  "label",
+  "description",
+  "hint",
+  "confirmLabel",
+  "cancelLabel",
+  "submitLabel",
+  "emptyText",
+  "subtitle",
+  "tooltip",
+  "helper",
+  "aria-description",
+  "aria-placeholder",
+  "summary",
+  "heading",
+  "eyebrow",
+  "caption",
+  "actionLabel",
+]);
+const KEYS = new Set([
+  "title",
+  "message",
+  "label",
+  "text",
+  "description",
+  "hint",
+  "desc",
+  "subtitle",
+  "sub",
+  "caption",
+  "heading",
+  "placeholder",
+  "helper",
+  "tooltip",
+  "empty",
+  "emptyTitle",
+  "emptyText",
+  "cta",
+  "summary",
+  "detail",
+  "note",
+  "reason",
+  "error",
+  "warning",
+  "success",
+  "info",
+  "headline",
+  "tagline",
+  "badge",
+  "tip",
+  "question",
+  "answer",
+  "eyebrow",
+  "body",
+  "actionLabel",
+  "confirmLabel",
+  "cancelLabel",
+  "submitLabel",
+]);
+const CALLEES =
+  /^(set(Error|Message|Status|Notice|Info|Feedback|Result|Toast|Hint|Warning|Success|Text|Msg|Note)|alert|confirm|prompt|showActionResult|notify|toast)$/;
 const SKIP_JSX_TAGS = new Set(["kbd", "code", "pre", "style", "script"]);
-const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: "\u00a0", middot: "·", hellip: "…", mdash: "—", ndash: "–", rarr: "→", larr: "←", times: "×", bull: "•", copy: "©", laquo: "«", raquo: "»" };
-const CSSY = /\b(rounded|flex|grid|px-\d|py-\d|bg-|text-\[|text-(xs|sm|lg|xl)|border-|w-\d|h-\d|gap-\d|items-|justify-|licia-|absolute|relative|hover:|sm:|md:|lg:|animate-|shadow-|font-)/;
+const ENTITIES = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: "\u00a0",
+  middot: "·",
+  hellip: "…",
+  mdash: "—",
+  ndash: "–",
+  rarr: "→",
+  larr: "←",
+  times: "×",
+  bull: "•",
+  copy: "©",
+  laquo: "«",
+  raquo: "»",
+};
+const CSSY =
+  /\b(rounded|flex|grid|px-\d|py-\d|bg-|text-\[|text-(xs|sm|lg|xl)|border-|w-\d|h-\d|gap-\d|items-|justify-|licia-|absolute|relative|hover:|sm:|md:|lg:|animate-|shadow-|font-)/;
 
 const keys = new Map(); // key -> {file, count}
 const skipped = { moduleLevel: [], helper: [], serverNonAsync: [], entity: [], noScope: [] };
@@ -46,13 +127,14 @@ function walk(dir, out = []) {
   return out;
 }
 
-const isFn = (n) => ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n) || ts.isMethodDeclaration(n);
+const isFn = (n) =>
+  ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n) || ts.isMethodDeclaration(n);
 function fnName(n) {
   if (n.name && n.name.text) return n.name.text;
   let p = n.parent;
   if (p && ts.isCallExpression(p)) p = p.parent; // memo(function X) / forwardRef((…) => …)
   if (p && ts.isVariableDeclaration(p) && ts.isIdentifier(p.name)) return p.name.text;
-  if (p && (ts.isExportAssignment(p))) return "Default";
+  if (p && ts.isExportAssignment(p)) return "Default";
   return null;
 }
 const isComponentName = (nm) => !!nm && (/^[A-Z]/.test(nm) || /^use[A-Z]/.test(nm));
@@ -108,10 +190,21 @@ function contextOf(node) {
     return name && KEYS.has(name) ? "weak" : null;
   }
   if (ts.isCallExpression(p) && p.arguments[0] === n) {
-    const callee = ts.isIdentifier(p.expression) ? p.expression.text : ts.isPropertyAccessExpression(p.expression) ? p.expression.name.text : "";
+    const callee = ts.isIdentifier(p.expression)
+      ? p.expression.text
+      : ts.isPropertyAccessExpression(p.expression)
+        ? p.expression.name.text
+        : "";
     return CALLEES.test(callee) ? "weak" : null;
   }
-  if (ts.isNewExpression(p) && p.arguments && p.arguments[0] === n && ts.isIdentifier(p.expression) && p.expression.text === "Error") return "weak";
+  if (
+    ts.isNewExpression(p) &&
+    p.arguments &&
+    p.arguments[0] === n &&
+    ts.isIdentifier(p.expression) &&
+    p.expression.text === "Error"
+  )
+    return "weak";
   if (ts.isReturnStatement(p)) return "strong";
   if (ts.isVariableDeclaration(p) && p.initializer === n) return "strong";
   if (ts.isArrowFunction(p) && p.body === n) return "strong";
@@ -122,9 +215,17 @@ function contextOf(node) {
 function decodeJsxText(raw) {
   let ok = true;
   const text = raw.replace(/&(#x?[0-9a-fA-F]+|\w+);/g, (m, g) => {
-    if (g[0] === "#") { try { return String.fromCodePoint(g[1].toLowerCase() === "x" ? parseInt(g.slice(2), 16) : parseInt(g.slice(1), 10)); } catch { ok = false; return m; } }
+    if (g[0] === "#") {
+      try {
+        return String.fromCodePoint(g[1].toLowerCase() === "x" ? parseInt(g.slice(2), 16) : parseInt(g.slice(1), 10));
+      } catch {
+        ok = false;
+        return m;
+      }
+    }
     if (ENTITIES[g] !== undefined) return ENTITIES[g];
-    ok = false; return m;
+    ok = false;
+    return m;
   });
   return { text, ok };
 }
@@ -146,8 +247,10 @@ function processFile(file) {
     for (let p = node.parent; p; p = p.parent) {
       if (!isFn(p)) continue;
       const nm = fnName(p);
-      if (isComponentName(nm)) { outer = p; sawPlain = false; }
-      else if (!outer) sawPlain = true;
+      if (isComponentName(nm)) {
+        outer = p;
+        sawPlain = false;
+      } else if (!outer) sawPlain = true;
       else sawPlain = sawPlain; // fungsi biasa di dalam komponen: tidak masalah
     }
     return { outer, sawPlain };
@@ -161,12 +264,22 @@ function processFile(file) {
     }
     // fungsi biasa di LUAR komponen terluar (HOC) tidak didukung
     let bad = false;
-    for (let p = outer.parent; p; p = p.parent) if (isFn(p)) { bad = true; break; }
-    if (bad) { skipped.noScope.push(`${rel}: ${key.slice(0, 70)}`); return false; }
+    for (let p = outer.parent; p; p = p.parent)
+      if (isFn(p)) {
+        bad = true;
+        break;
+      }
+    if (bad) {
+      skipped.noScope.push(`${rel}: ${key.slice(0, 70)}`);
+      return false;
+    }
     if (!isClient && !hasAsync(outer)) {
       // Komponen server: ubah deklarasi fungsi menjadi async (React 19 mendukung RSC async).
       if (ts.isFunctionDeclaration(outer) && !makeAsync.has(outer)) makeAsync.set(outer, true);
-      if (!ts.isFunctionDeclaration(outer)) { skipped.serverNonAsync.push(`${rel}: ${key.slice(0, 70)}`); return false; }
+      if (!ts.isFunctionDeclaration(outer)) {
+        skipped.serverNonAsync.push(`${rel}: ${key.slice(0, 70)}`);
+        return false;
+      }
     }
     needs.set(outer, true);
     edits.push({ start: node.getStart(sf), end: node.getEnd(), text: replacement, kind });
@@ -196,7 +309,10 @@ function processFile(file) {
       if (SKIP_JSX_TAGS.has(tag)) return;
       if (!/[A-Za-zÀ-ÿ]{2,}/.test(raw)) return;
       const { text, ok } = decodeJsxText(raw);
-      if (!ok) { skipped.entity.push(`${rel}: ${raw.trim().slice(0, 60)}`); return; }
+      if (!ok) {
+        skipped.entity.push(`${rel}: ${raw.trim().slice(0, 60)}`);
+        return;
+      }
       const core = text.replace(/\s+/g, " ").trim();
       if (!looksHuman(core, false) && !/\s/.test(core) && !/^[A-ZÀ-Ý]/.test(core)) {
         // kata tunggal berhuruf kecil di JSX tetap teks tampilan (mis. "menit")
@@ -210,7 +326,12 @@ function processFile(file) {
       return;
     }
     // --- atribut string
-    if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer) && ATTRS.has(node.name.getText(sf))) {
+    if (
+      ts.isJsxAttribute(node) &&
+      node.initializer &&
+      ts.isStringLiteral(node.initializer) &&
+      ATTRS.has(node.name.getText(sf))
+    ) {
       const value = node.initializer.text;
       if (looksHuman(value, false)) {
         const name = node.name.getText(sf);
@@ -223,24 +344,55 @@ function processFile(file) {
       if (node.initializer && ts.isJsxExpression(node.initializer)) ts.forEachChild(node.initializer, visit);
       return;
     }
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node) || ts.isTypeNode(node) || ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)) return;
-    if (ts.isCaseClause(node)) { node.statements.forEach(visit); return; }
-    if (ts.isBinaryExpression(node) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken].includes(node.operatorToken.kind)) {
+    if (
+      ts.isImportDeclaration(node) ||
+      ts.isExportDeclaration(node) ||
+      ts.isTypeNode(node) ||
+      ts.isTypeAliasDeclaration(node) ||
+      ts.isInterfaceDeclaration(node)
+    )
+      return;
+    if (ts.isCaseClause(node)) {
+      node.statements.forEach(visit);
+      return;
+    }
+    if (
+      ts.isBinaryExpression(node) &&
+      [
+        ts.SyntaxKind.EqualsEqualsEqualsToken,
+        ts.SyntaxKind.ExclamationEqualsEqualsToken,
+        ts.SyntaxKind.EqualsEqualsToken,
+        ts.SyntaxKind.ExclamationEqualsToken,
+      ].includes(node.operatorToken.kind)
+    ) {
       // lewati operand literal, tetap telusuri sisi non-literal
-      [node.left, node.right].forEach((c) => { if (!ts.isStringLiteral(c) && !ts.isNoSubstitutionTemplateLiteral(c)) visit(c); });
+      [node.left, node.right].forEach((c) => {
+        if (!ts.isStringLiteral(c) && !ts.isNoSubstitutionTemplateLiteral(c)) visit(c);
+      });
       return;
     }
     // --- string / template di konteks tampilan
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
       const ctx = contextOf(node);
-      if (ctx && looksHuman(node.text, ctx === "strong")) register(node, node.text.replace(/\s+/g, " ").trim() === node.text ? node.text : node.text, callTr(node.text), "str");
+      if (ctx && looksHuman(node.text, ctx === "strong"))
+        register(
+          node,
+          node.text.replace(/\s+/g, " ").trim() === node.text ? node.text : node.text,
+          callTr(node.text),
+          "str",
+        );
       return;
     }
     if (ts.isTemplateExpression(node)) {
       const ctx = contextOf(node);
       const { key, vars } = templateKey(node);
       const staticText = key.replace(/\{\d+\}/g, " ");
-      if (ctx && looksHuman(staticText, ctx === "strong") && /[A-Za-zÀ-ÿ]{3,}/.test(staticText) && !CSSY.test(staticText)) {
+      if (
+        ctx &&
+        looksHuman(staticText, ctx === "strong") &&
+        /[A-Za-zÀ-ÿ]{3,}/.test(staticText) &&
+        !CSSY.test(staticText)
+      ) {
         register(node, key, callTr(key, vars), "tpl");
         return; // jangan telusuri ekspresi di dalam
       }
@@ -270,7 +422,12 @@ function processFile(file) {
       edits.push({ start: body.getStart(sf) + 1, end: body.getStart(sf) + 1, text: `\n  ${decl}`, kind: "hook" });
     } else {
       const exprText = body.getText(sf);
-      edits.push({ start: body.getStart(sf), end: body.getEnd(), text: `{\n  ${decl}\n  return (${exprText});\n}`, kind: "hookExpr" });
+      edits.push({
+        start: body.getStart(sf),
+        end: body.getEnd(),
+        text: `{\n  ${decl}\n  return (${exprText});\n}`,
+        kind: "hookExpr",
+      });
     }
   }
   // Edit di dalam body ekspresi yang dibungkus ulang akan bertabrakan; selesaikan dengan menerapkan edit dalam dulu.
@@ -291,8 +448,12 @@ function processFile(file) {
     const targets = [];
     (function find(n) {
       if (isFn(n) && !ts.isBlock(n.body) && isComponentName(fnName(n))) {
-        const outerCheck = (() => { for (let p = n.parent; p; p = p.parent) if (isFn(p)) return false; return true; })();
-        if (outerCheck && /\btr\(/.test(n.body.getText(sf2)) && !/const \{ tr \}/.test(n.body.getText(sf2))) targets.push(n);
+        const outerCheck = (() => {
+          for (let p = n.parent; p; p = p.parent) if (isFn(p)) return false;
+          return true;
+        })();
+        if (outerCheck && /\btr\(/.test(n.body.getText(sf2)) && !/const \{ tr \}/.test(n.body.getText(sf2)))
+          targets.push(n);
       }
       ts.forEachChild(n, find);
     })(sf2);
@@ -304,13 +465,19 @@ function processFile(file) {
     }
   }
   // --- impor
-  const importLine = serverMode ? 'import { getServerI18n } from "@/lib/i18n/server";' : 'import { useLanguage } from "@/components/LanguageProvider";';
+  const importLine = serverMode
+    ? 'import { getServerI18n } from "@/lib/i18n/server";'
+    : 'import { useLanguage } from "@/components/LanguageProvider";';
   const marker = serverMode ? "getServerI18n" : "useLanguage";
   if (!new RegExp(`import[^;]*\\b${marker}\\b[^;]*from`).test(out)) {
     const sf3 = ts.createSourceFile(file, out, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     let lastImportEnd = 0;
-    sf3.statements.forEach((s) => { if (ts.isImportDeclaration(s)) lastImportEnd = s.getEnd(); });
-    out = lastImportEnd ? out.slice(0, lastImportEnd) + "\n" + importLine + out.slice(lastImportEnd) : importLine + "\n" + out;
+    sf3.statements.forEach((s) => {
+      if (ts.isImportDeclaration(s)) lastImportEnd = s.getEnd();
+    });
+    out = lastImportEnd
+      ? out.slice(0, lastImportEnd) + "\n" + importLine + out.slice(lastImportEnd)
+      : importLine + "\n" + out;
   }
   fs.writeFileSync(file, out);
   changedFiles++;
@@ -321,6 +488,11 @@ for (const root of ROOTS) for (const f of walk(root)) processFile(f);
 fs.mkdirSync("i18n-src", { recursive: true });
 const arr = [...keys.entries()].map(([key, v], i) => ({ n: i + 1, key, file: v.file, count: v.count }));
 if (MODE === "collect") fs.writeFileSync("i18n-src/keys.json", JSON.stringify(arr, null, 0));
-fs.writeFileSync("i18n-src/skipped.txt", Object.entries(skipped).map(([k, v]) => `## ${k} (${v.length})\n${v.join("\n")}`).join("\n\n"));
+fs.writeFileSync(
+  "i18n-src/skipped.txt",
+  Object.entries(skipped)
+    .map(([k, v]) => `## ${k} (${v.length})\n${v.join("\n")}`)
+    .join("\n\n"),
+);
 console.log(`[${MODE}] situs dibungkus: ${wrappedTotal}, kunci unik: ${keys.size}, berkas diubah: ${changedFiles}`);
 for (const [k, v] of Object.entries(skipped)) console.log(`  dilewati ${k}: ${v.length}`);

@@ -11,7 +11,7 @@ export const QUICK_CAPTURE_EVENT = "licia:open-quick-capture";
 export type GoTarget = { href: string; label: string };
 
 export const GO_TO: Record<string, GoTarget> = {
-  d: { href: "/dashboard", label: "Beranda" },
+  d: { href: "/today", label: "Hari Ini" },
   p: { href: "/plan", label: "Rencana" },
   c: { href: "/chat", label: "Chat Licia" },
   t: { href: "/tasks", label: "Tugas" },
@@ -33,7 +33,11 @@ export function resolveGoTo(key: string): GoTarget | null {
 
 /** True bila fokus ada di kolom ketik — pintasan satu huruf tidak boleh aktif di sana. */
 export function isTypingTarget(target: EventTarget | null): boolean {
-  const el = target as { tagName?: string; isContentEditable?: boolean; getAttribute?: (n: string) => string | null } | null;
+  const el = target as {
+    tagName?: string;
+    isContentEditable?: boolean;
+    getAttribute?: (n: string) => string | null;
+  } | null;
   if (!el || typeof el !== "object") return false;
   const tag = String(el.tagName || "").toUpperCase();
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
@@ -77,7 +81,10 @@ export const SHORTCUT_HELP: ShortcutGroup[] = [
   },
   {
     title: "Pindah halaman (tekan G, lalu huruf)",
-    items: Object.entries(GO_TO).map(([key, target]) => ({ keys: ["G", key === "/" ? "/" : key.toUpperCase()], label: target.label })),
+    items: Object.entries(GO_TO).map(([key, target]) => ({
+      keys: ["G", key === "/" ? "/" : key.toUpperCase()],
+      label: target.label,
+    })),
   },
 ];
 

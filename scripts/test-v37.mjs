@@ -20,7 +20,8 @@ assert.match(read("components/plan/PlanWorkspace.tsx"), /mutateEntity/);
 assert.match(read("supabase/schema_v37_unified_workspaces.sql"), /alter table public\.schedule_blocks/);
 
 const nav = read("components/layout/nav-items.ts");
-for (const expected of ["/dashboard", "/plan", "/chat", "/capture", "/insights"]) assert.ok(nav.includes(`item("${expected}"`), `missing ${expected}`);
+for (const expected of ["/dashboard", "/plan", "/chat", "/capture", "/insights"])
+  assert.ok(nav.includes(`item("${expected}"`), `missing ${expected}`);
 
 const settings = read("app/(app)/settings/page.tsx");
 assert.match(settings, /fontPresets/);

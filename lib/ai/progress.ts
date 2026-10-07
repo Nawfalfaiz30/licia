@@ -15,7 +15,11 @@ export function runWithProgress<T>(emitter: Emitter, fn: () => Promise<T>): Prom
 
 /** Aman dipanggil di mana saja: tidak berbuat apa-apa bila request tidak streaming. */
 export function emitProgress(event: ChatProgressEvent) {
-  try { storage.getStore()?.(event); } catch { /* progres tidak boleh menggagalkan chat */ }
+  try {
+    storage.getStore()?.(event);
+  } catch {
+    /* progres tidak boleh menggagalkan chat */
+  }
 }
 
 const LABELS: Array<[RegExp, string]> = [
@@ -43,24 +47,57 @@ export function streamChatResponse(run: () => Promise<Response>, signal?: AbortS
       let closed = false;
       // Klien menutup koneksi (Stop / pindah halaman): berhenti menulis ke stream
       // agar tidak muncul "The destination stream closed early".
-      signal?.addEventListener("abort", () => { closed = true; }, { once: true });
+      signal?.addEventListener(
+        "abort",
+        () => {
+          closed = true;
+        },
+        { once: true },
+      );
       const send = (event: string, data: unknown) => {
         if (closed) return;
-        try { controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch { closed = true; }
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          closed = true;
+        }
       };
-      const close = () => { if (!closed) { closed = true; try { controller.close(); } catch {} } };
-      const heartbeat = setInterval(() => { if (!closed) { try { controller.enqueue(encoder.encode(": ping\n\n")); } catch { closed = true; } } }, 15_000);
+      const close = () => {
+        if (!closed) {
+          closed = true;
+          try {
+            controller.close();
+          } catch {}
+        }
+      };
+      const heartbeat = setInterval(() => {
+        if (!closed) {
+          try {
+            controller.enqueue(encoder.encode(": ping\n\n"));
+          } catch {
+            closed = true;
+          }
+        }
+      }, 15_000);
       try {
         send("status", { type: "status", text: "Licia sedang berpikir…" });
         const response = await runWithProgress((e) => send(e.type, e), run);
-        if (response.status === 204) { close(); return; }
+        if (response.status === 204) {
+          close();
+          return;
+        }
         const raw = await response.text();
         let payload: unknown = {};
-        try { payload = raw ? JSON.parse(raw) : {}; } catch { payload = { error: raw.slice(0, 300) || "Respons tidak valid." }; }
+        try {
+          payload = raw ? JSON.parse(raw) : {};
+        } catch {
+          payload = { error: raw.slice(0, 300) || "Respons tidak valid." };
+        }
         if (response.ok) send("final", payload);
         else send("error", { status: response.status, ...(payload as Record<string, unknown>) });
       } catch (error) {
-        if (!signal?.aborted) send("error", { status: 500, error: error instanceof Error ? error.message : "Kesalahan server." });
+        if (!signal?.aborted)
+          send("error", { status: 500, error: error instanceof Error ? error.message : "Kesalahan server." });
       } finally {
         clearInterval(heartbeat);
         close();

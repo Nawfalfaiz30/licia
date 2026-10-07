@@ -14,7 +14,17 @@ import { haptic } from "@/lib/interaction";
  * Tombol "Catat sebagai pengeluaran" yang muncul bila teks memuat nominal (A1).
  * Tebakan arah dari kata kunci (gaji → pemasukan, beli → pengeluaran); bila ragu, kedua pilihan tampil setara.
  */
-export function MoneyAction({ amount, text, onDone, className }: { amount: number; text: string; onDone?: () => void; className?: string }) {
+export function MoneyAction({
+  amount,
+  text,
+  onDone,
+  className,
+}: {
+  amount: number;
+  text: string;
+  onDone?: () => void;
+  className?: string;
+}) {
   const { t: tr } = useLanguage();
   const { t, locale } = useLanguage();
   const [busy, setBusy] = useState<MoneyKind | null>(null);
@@ -25,16 +35,29 @@ export function MoneyAction({ amount, text, onDone, className }: { amount: numbe
     const draft = buildMoneyDraft(text, kind, amount);
     if (!draft || busy) return;
     setBusy(kind);
-    const result = await mutateEntity({ entityType: kind, operation: "create", payload: moneyPayload(draft), offlineOk: true });
+    const result = await mutateEntity({
+      entityType: kind,
+      operation: "create",
+      payload: moneyPayload(draft),
+      offlineOk: true,
+    });
     setBusy(null);
     if (!result.ok) {
       haptic("warning");
-      notifyToast({ title: t("Belum tercatat"), message: result.error || t("Perubahan gagal disimpan."), tone: "error" });
+      notifyToast({
+        title: t("Belum tercatat"),
+        message: result.error || t("Perubahan gagal disimpan."),
+        tone: "error",
+      });
       return;
     }
     haptic("success");
     notifyToast({
-      title: result.queued ? t("Disimpan di perangkat") : kind === "expense" ? t("Pengeluaran tercatat") : t("Pemasukan tercatat"),
+      title: result.queued
+        ? t("Disimpan di perangkat")
+        : kind === "expense"
+          ? t("Pengeluaran tercatat")
+          : t("Pemasukan tercatat"),
       message: tr("{draft_label} · {pretty}", { draft_label: draft.label, pretty }),
       tone: "success",
     });
@@ -49,7 +72,11 @@ export function MoneyAction({ amount, text, onDone, className }: { amount: numbe
   buttons.sort((a, b) => Number(b.primary) - Number(a.primary));
 
   return (
-    <div className={clsx("flex flex-wrap items-center gap-2", className)} role="group" aria-label={t("Catat nominal ke Keuangan")}>
+    <div
+      className={clsx("flex flex-wrap items-center gap-2", className)}
+      role="group"
+      aria-label={t("Catat nominal ke Keuangan")}
+    >
       {buttons.map(({ kind, label, Icon, primary }, index) => (
         <button
           key={kind}
@@ -58,10 +85,16 @@ export function MoneyAction({ amount, text, onDone, className }: { amount: numbe
           disabled={Boolean(busy)}
           className={clsx(
             "inline-flex min-h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition disabled:opacity-60",
-            index === 0 ? "border-success/30 bg-success/10 text-success hover:bg-success/15" : "border-border bg-surface text-textMuted hover:text-text",
+            index === 0
+              ? "border-success/30 bg-success/10 text-success hover:bg-success/15"
+              : "border-border bg-surface text-textMuted hover:text-text",
           )}
         >
-          {busy === kind ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <Icon size={13} aria-hidden="true" />}
+          {busy === kind ? (
+            <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Icon size={13} aria-hidden="true" />
+          )}
           {label} · {pretty}
           {primary && !guess ? null : null}
         </button>

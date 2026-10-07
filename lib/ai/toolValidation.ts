@@ -14,13 +14,20 @@ export type ToolValidationResult =
 function typeMatches(value: unknown, schema: JsonSchema): boolean {
   if (value === null) return true;
   switch (schema.type) {
-    case "string": return typeof value === "string";
-    case "number": return typeof value === "number" && Number.isFinite(value);
-    case "integer": return typeof value === "number" && Number.isInteger(value);
-    case "boolean": return typeof value === "boolean";
-    case "array": return Array.isArray(value);
-    case "object": return typeof value === "object" && !Array.isArray(value);
-    default: return true;
+    case "string":
+      return typeof value === "string";
+    case "number":
+      return typeof value === "number" && Number.isFinite(value);
+    case "integer":
+      return typeof value === "number" && Number.isInteger(value);
+    case "boolean":
+      return typeof value === "boolean";
+    case "array":
+      return Array.isArray(value);
+    case "object":
+      return typeof value === "object" && !Array.isArray(value);
+    default:
+      return true;
   }
 }
 

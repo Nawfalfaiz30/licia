@@ -187,7 +187,9 @@ export function resolveLanguage(value: unknown): Language {
 /** Ganti {nama} dengan nilai params. Placeholder tak dikenal dibiarkan apa adanya. */
 export function interpolate(text: string, params?: TranslateParams): string {
   if (!params) return text;
-  return text.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (match, key: string) => (key in params ? String(params[key] ?? "") : match));
+  return text.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (match, key: string) =>
+    key in params ? String(params[key] ?? "") : match,
+  );
 }
 
 /**
@@ -197,9 +199,10 @@ export function interpolate(text: string, params?: TranslateParams): string {
  * Bahasa Indonesia mengembalikan kunci itu sendiri, sehingga teks tak pernah hilang meski belum diterjemahkan.
  */
 export function t(key: string, language: Language = "id", params?: TranslateParams): string {
-  const base = language === "en"
-    ? (translations.en[key] ?? enPhrases[key] ?? translations.id[key] ?? key)
-    : (translations.id[key] ?? key);
+  const base =
+    language === "en"
+      ? (translations.en[key] ?? enPhrases[key] ?? translations.id[key] ?? key)
+      : (translations.id[key] ?? key);
   return interpolate(base, params);
 }
 
@@ -211,7 +214,11 @@ export function applyLanguage(language: Language = "id") {
   const root = document.documentElement;
   root.lang = language;
   root.dataset.language = language;
-  try { localStorage.setItem(LANGUAGE_STORAGE_KEY, language); } catch {}
-  try { document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=31536000; samesite=lax`; } catch {}
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  } catch {}
+  try {
+    document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=31536000; samesite=lax`;
+  } catch {}
   window.dispatchEvent(new CustomEvent("licia:language-change", { detail: language }));
 }

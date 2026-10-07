@@ -20,10 +20,16 @@ const required = [
   "public/sw.js",
 ];
 for (const file of required) {
-  if (!fs.existsSync(path.join(root, file))) { console.error(`MISSING: ${file}`); failed = true; }
+  if (!fs.existsSync(path.join(root, file))) {
+    console.error(`MISSING: ${file}`);
+    failed = true;
+  }
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-if (!/^0\.3[45]\.0$/.test(pkg.version)) { console.error("PACKAGE VERSION MUST BE V34/V35"); failed = true; }
+if (!/^0\.3[45]\.0$/.test(pkg.version)) {
+  console.error("PACKAGE VERSION MUST BE V34/V35");
+  failed = true;
+}
 const tokens = {
   "supabase/schema_v34_sync_robustness.sql": ["changed_fields", "licia_changed_fields", "licia_write_sync_event"],
   "lib/sync/conflict.ts": ["serverChangedFields", "mergeIfSafe"],
@@ -39,7 +45,11 @@ const tokens = {
 };
 for (const [file, list] of Object.entries(tokens)) {
   const source = fs.readFileSync(path.join(root, file), "utf8");
-  for (const token of list) if (!source.includes(token)) { console.error(`TOKEN MISSING ${token} in ${file}`); failed = true; }
+  for (const token of list)
+    if (!source.includes(token)) {
+      console.error(`TOKEN MISSING ${token} in ${file}`);
+      failed = true;
+    }
 }
 try {
   const tsPath = execSync("node -e \"console.log(require.resolve('typescript'))\"", { encoding: "utf8" }).trim();
@@ -53,7 +63,13 @@ try {
       else if (/\.tsx?$/.test(entry.name)) {
         count += 1;
         const src = fs.readFileSync(filePath, "utf8");
-        const sf = ts.createSourceFile(filePath, src, ts.ScriptTarget.Latest, true, entry.name.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+        const sf = ts.createSourceFile(
+          filePath,
+          src,
+          ts.ScriptTarget.Latest,
+          true,
+          entry.name.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+        );
         if (sf.parseDiagnostics?.length) {
           console.error(`PARSE ERROR: ${path.relative(root, filePath)}`);
           errors += sf.parseDiagnostics.length;

@@ -4,20 +4,50 @@
  */
 
 export type DashboardWidgetId =
-  | "overview" | "nextmove" | "stats" | "now" | "insights" | "direction" | "body" | "review" | "control";
+  "overview" | "nextmove" | "stats" | "now" | "insights" | "direction" | "body" | "review" | "control";
 
 export type WidgetDef = { id: DashboardWidgetId; label: string; description: string; todayMode: boolean };
 
 /** Urutan bawaan = urutan di halaman sebelum v0.57. `todayMode` = tetap tampil di mode "Hari ini saja". */
 export const DASHBOARD_WIDGETS: readonly WidgetDef[] = [
-  { id: "overview", label: "Ringkasan cepat", description: "Jadwal, keuangan, target, dan kondisi hari ini", todayMode: true },
-  { id: "nextmove", label: "Langkah berikutnya", description: "Saran satu langkah paling berguna sekarang", todayMode: true },
+  {
+    id: "overview",
+    label: "Ringkasan cepat",
+    description: "Jadwal, keuangan, target, dan kondisi hari ini",
+    todayMode: true,
+  },
+  {
+    id: "nextmove",
+    label: "Langkah berikutnya",
+    description: "Saran satu langkah paling berguna sekarang",
+    todayMode: true,
+  },
   { id: "stats", label: "Angka penting", description: "Tugas terbuka, agenda, fokus, target", todayMode: true },
-  { id: "now", label: "Yang perlu dilakukan & perencanaan", description: "Tugas prioritas dan rencana hari ini", todayMode: true },
+  {
+    id: "now",
+    label: "Yang perlu dilakukan & perencanaan",
+    description: "Tugas prioritas dan rencana hari ini",
+    todayMode: true,
+  },
   { id: "insights", label: "Wawasan hidup", description: "Pola dan insight dari datamu", todayMode: false },
-  { id: "direction", label: "Target & agenda", description: "Arah yang dikejar dan agenda mendatang", todayMode: false },
-  { id: "body", label: "Tubuh & keuangan bulan ini", description: "Kesehatan harian dan ringkasan bulanan", todayMode: false },
-  { id: "review", label: "Tinjauan mingguan & aktivitas", description: "Review pekan dan umpan aktivitas terbaru", todayMode: false },
+  {
+    id: "direction",
+    label: "Target & agenda",
+    description: "Arah yang dikejar dan agenda mendatang",
+    todayMode: false,
+  },
+  {
+    id: "body",
+    label: "Tubuh & keuangan bulan ini",
+    description: "Kesehatan harian dan ringkasan bulanan",
+    todayMode: false,
+  },
+  {
+    id: "review",
+    label: "Tinjauan mingguan & aktivitas",
+    description: "Review pekan dan umpan aktivitas terbaru",
+    todayMode: false,
+  },
   { id: "control", label: "Pusat kendali", description: "Pintasan modul dan akses cepat", todayMode: false },
 ] as const;
 
@@ -26,7 +56,8 @@ export const DASHBOARD_LAYOUT_KEY = "licia-dashboard-layout";
 export type DashboardLayout = { order: DashboardWidgetId[]; hidden: DashboardWidgetId[]; todayOnly: boolean };
 
 const ALL_IDS = DASHBOARD_WIDGETS.map((w) => w.id);
-const isId = (value: unknown): value is DashboardWidgetId => typeof value === "string" && (ALL_IDS as string[]).includes(value);
+const isId = (value: unknown): value is DashboardWidgetId =>
+  typeof value === "string" && (ALL_IDS as string[]).includes(value);
 
 export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = { order: [...ALL_IDS], hidden: [], todayOnly: false };
 
@@ -39,7 +70,10 @@ export function normalizeLayout(input: unknown): DashboardLayout {
   const seen = new Set<DashboardWidgetId>();
   const order: DashboardWidgetId[] = [];
   for (const id of Array.isArray(raw.order) ? raw.order : []) {
-    if (isId(id) && !seen.has(id)) { seen.add(id); order.push(id); }
+    if (isId(id) && !seen.has(id)) {
+      seen.add(id);
+      order.push(id);
+    }
   }
   // Widget yang belum ada di urutan tersimpan disisipkan setelah widget bawaan sebelumnya.
   ALL_IDS.forEach((id, index) => {
@@ -47,7 +81,10 @@ export function normalizeLayout(input: unknown): DashboardLayout {
     let insertAt = 0;
     for (let i = index - 1; i >= 0; i -= 1) {
       const at = order.indexOf(ALL_IDS[i]);
-      if (at >= 0) { insertAt = at + 1; break; }
+      if (at >= 0) {
+        insertAt = at + 1;
+        break;
+      }
     }
     order.splice(insertAt, 0, id);
     seen.add(id);
@@ -58,7 +95,11 @@ export function normalizeLayout(input: unknown): DashboardLayout {
 
 export function parseLayout(json: string | null | undefined): DashboardLayout {
   if (!json) return { ...DEFAULT_DASHBOARD_LAYOUT, order: [...DEFAULT_DASHBOARD_LAYOUT.order], hidden: [] };
-  try { return normalizeLayout(JSON.parse(json)); } catch { return normalizeLayout(null); }
+  try {
+    return normalizeLayout(JSON.parse(json));
+  } catch {
+    return normalizeLayout(null);
+  }
 }
 
 export const serializeLayout = (layout: DashboardLayout): string => JSON.stringify(normalizeLayout(layout));
@@ -71,7 +112,8 @@ export function isWidgetVisible(layout: DashboardLayout, id: DashboardWidgetId):
 }
 
 /** Nilai CSS `order` untuk widget (0 = paling atas). */
-export const widgetOrder = (layout: DashboardLayout, id: DashboardWidgetId): number => Math.max(0, layout.order.indexOf(id));
+export const widgetOrder = (layout: DashboardLayout, id: DashboardWidgetId): number =>
+  Math.max(0, layout.order.indexOf(id));
 
 export function moveWidget(layout: DashboardLayout, id: DashboardWidgetId, direction: -1 | 1): DashboardLayout {
   const order = [...layout.order];
@@ -87,7 +129,10 @@ export function toggleWidget(layout: DashboardLayout, id: DashboardWidgetId): Da
   return { ...layout, hidden };
 }
 
-export const setTodayOnly = (layout: DashboardLayout, value: boolean): DashboardLayout => ({ ...layout, todayOnly: value });
+export const setTodayOnly = (layout: DashboardLayout, value: boolean): DashboardLayout => ({
+  ...layout,
+  todayOnly: value,
+});
 
 export const resetLayout = (): DashboardLayout => normalizeLayout(null);
 

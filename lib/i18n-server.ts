@@ -1,5 +1,12 @@
 import { cookies } from "next/headers";
-import { LANGUAGE_COOKIE, localeOf, resolveLanguage, t as translate, type Language, type TranslateParams } from "@/lib/i18n";
+import {
+  LANGUAGE_COOKIE,
+  localeOf,
+  resolveLanguage,
+  t as translate,
+  type Language,
+  type TranslateParams,
+} from "@/lib/i18n";
 
 export type ServerT = {
   language: Language;

@@ -80,17 +80,39 @@ function stripForUpdate(row: Record<string, any>) {
   return copy;
 }
 
-export async function captureBeforeAction(supabase: SupabaseClient, userId: string, toolName: string, args: any, timezone = "Asia/Jakarta") {
+export async function captureBeforeAction(
+  supabase: SupabaseClient,
+  userId: string,
+  toolName: string,
+  args: any,
+  timezone = "Asia/Jakarta",
+) {
   if (toolName === "update_task" && args?.subtask_id) {
-    const { data, error } = await supabase.from("subtasks").select("*").eq("id", String(args.subtask_id)).eq("user_id", userId).maybeSingle();
+    const { data, error } = await supabase
+      .from("subtasks")
+      .select("*")
+      .eq("id", String(args.subtask_id))
+      .eq("user_id", userId)
+      .maybeSingle();
     return error || !data ? null : { row: data, table: "subtasks" };
   }
   const update = UPDATE_META[toolName];
   if (toolName === "delete_health_log" && args?.kind && args?.confirm_log_id) {
-    const healthTables: Record<string, string> = { hydration: "hydration_logs", caffeine: "caffeine_logs", meal: "meal_logs", medication: "medication_logs", energy: "fatigue_logs" };
+    const healthTables: Record<string, string> = {
+      hydration: "hydration_logs",
+      caffeine: "caffeine_logs",
+      meal: "meal_logs",
+      medication: "medication_logs",
+      energy: "fatigue_logs",
+    };
     const table = healthTables[String(args.kind)];
     if (table) {
-      const { data, error } = await supabase.from(table).select("*").eq("id", String(args.confirm_log_id)).eq("user_id", userId).maybeSingle();
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .eq("id", String(args.confirm_log_id))
+        .eq("user_id", userId)
+        .maybeSingle();
       return error || !data ? null : { row: data, table };
     }
   }
@@ -98,10 +120,11 @@ export async function captureBeforeAction(supabase: SupabaseClient, userId: stri
     let query = supabase.from("tasks").select("*").eq("user_id", userId);
     const status = typeof args?.status === "string" ? args.status : "all";
     if (["todo", "in_progress", "done"].includes(status)) query = query.eq("status", status);
-    if (typeof args?.keyword === "string" && args.keyword.trim()) query = query.ilike("title", `%${args.keyword.trim()}%`);
+    if (typeof args?.keyword === "string" && args.keyword.trim())
+      query = query.ilike("title", `%${args.keyword.trim()}%`);
     const { data: rows, error } = await query.order("created_at", { ascending: false });
     if (error || !rows?.length) return error ? null : { rows: [], subtasks: [] };
-    const ids = rows.map((row:any)=>String(row.id));
+    const ids = rows.map((row: any) => String(row.id));
     const [{ data: subtasks }, { data: reminders }] = await Promise.all([
       supabase.from("subtasks").select("*").in("task_id", ids).eq("user_id", userId),
       supabase.from("reminders").select("*").eq("user_id", userId).eq("target_type", "task").in("target_id", ids),
@@ -110,13 +133,16 @@ export async function captureBeforeAction(supabase: SupabaseClient, userId: stri
   }
   if (toolName === "update_tasks_bulk") {
     let query = supabase.from("tasks").select("*").eq("user_id", userId);
-    const ids = Array.isArray(args?.task_ids) ? args.task_ids.map(String).filter((id:string)=>id) : [];
+    const ids = Array.isArray(args?.task_ids) ? args.task_ids.map(String).filter((id: string) => id) : [];
     if (ids.length) query = query.in("id", ids);
-    else if (typeof args?.keyword === "string" && args.keyword.trim()) query = query.ilike("title", `%${args.keyword.trim()}%`);
+    else if (typeof args?.keyword === "string" && args.keyword.trim())
+      query = query.ilike("title", `%${args.keyword.trim()}%`);
     else if (!args?.due_on && !args?.due_from && !args?.due_to && !args?.due_after) return null;
     if (typeof args?.due_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_on)) {
       const day = new Date(`${args.due_on}T12:00:00Z`);
-      query = query.gte("due_at", startOfDayIsoForTimezone(day, timezone)).lte("due_at", endOfDayIsoForTimezone(day, timezone));
+      query = query
+        .gte("due_at", startOfDayIsoForTimezone(day, timezone))
+        .lte("due_at", endOfDayIsoForTimezone(day, timezone));
     }
     if (typeof args?.due_from === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.due_from)) {
       const from = new Date(`${args.due_from}T12:00:00Z`);
@@ -132,8 +158,13 @@ export async function captureBeforeAction(supabase: SupabaseClient, userId: stri
     }
     const { data: rows, error } = await query;
     if (error || !rows?.length) return error ? null : { rows: [], reminders: [] };
-    const rowIds = rows.map((row:any)=>String(row.id));
-    const { data: reminders } = await supabase.from("reminders").select("*").eq("user_id", userId).eq("target_type", "task").in("target_id", rowIds);
+    const rowIds = rows.map((row: any) => String(row.id));
+    const { data: reminders } = await supabase
+      .from("reminders")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("target_type", "task")
+      .in("target_id", rowIds);
     return { rows, reminders: reminders ?? [] };
   }
   const deletion = DELETE_IDS[toolName];
@@ -150,7 +181,12 @@ export async function captureBeforeAction(supabase: SupabaseClient, userId: stri
     return { row: data, subtasks: subtasks ?? [], reminders: reminders ?? [] };
   }
   if (meta.table === "schedule_blocks") {
-    const { data: reminders } = await supabase.from("reminders").select("*").eq("target_type", "schedule").eq("target_id", id).eq("user_id", userId);
+    const { data: reminders } = await supabase
+      .from("reminders")
+      .select("*")
+      .eq("target_type", "schedule")
+      .eq("target_id", id)
+      .eq("user_id", userId);
     return { row: data, reminders: reminders ?? [] };
   }
   return { row: data };
@@ -163,36 +199,118 @@ export function buildUndoRecord(toolName: string, result: any, before: any) {
     const value = result[created.resultKey];
     const rows = Array.isArray(value) ? value : value ? [value] : [];
     if (!rows.length) return null;
-    return { operation: "create", table_name: created.table, record_ids: rows.map((r:any)=>r.id).filter(Boolean), before_snapshot: null, after_snapshot: rows, undoable: true };
+    return {
+      operation: "create",
+      table_name: created.table,
+      record_ids: rows.map((r: any) => r.id).filter(Boolean),
+      before_snapshot: null,
+      after_snapshot: rows,
+      undoable: true,
+    };
   }
   if (toolName === "log_expenses_batch" && Array.isArray(result.expenses)) {
-    return { operation: "create", table_name: "expenses", record_ids: result.expenses.map((r:any)=>r.id).filter(Boolean), before_snapshot: null, after_snapshot: result.expenses, undoable: true };
+    return {
+      operation: "create",
+      table_name: "expenses",
+      record_ids: result.expenses.map((r: any) => r.id).filter(Boolean),
+      before_snapshot: null,
+      after_snapshot: result.expenses,
+      undoable: true,
+    };
   }
   if (toolName === "update_tasks_bulk" && Array.isArray(result.updated) && before && Array.isArray(before.rows)) {
-    const ids = result.updated.map((row:any)=>row?.id).filter(Boolean);
+    const ids = result.updated.map((row: any) => row?.id).filter(Boolean);
     if (!ids.length) return null;
-    return { operation: "update", table_name: "tasks", record_ids: ids, before_snapshot: { rows: before.rows, reminders: before.reminders ?? [] }, after_snapshot: result.updated, undoable: true };
+    return {
+      operation: "update",
+      table_name: "tasks",
+      record_ids: ids,
+      before_snapshot: { rows: before.rows, reminders: before.reminders ?? [] },
+      after_snapshot: result.updated,
+      undoable: true,
+    };
   }
   const update = UPDATE_META[toolName];
   if (update && result["ok"] && before) {
-    const afterValue = result.task || result.expense || result.income || result.goal || result.note || result.reading || result.project || result.account || result.budget || result.subscription || result.item || result.rule || result.reminder || result.habit || result.skill || result.decision || result.block;
-    if (result.subtask?.id) return { operation: "update", table_name: "subtasks", record_ids: [result.subtask.id], before_snapshot: before, after_snapshot: result.subtask, undoable: true };
-    if (afterValue?.id) return { operation: "update", table_name: before.table || update.table, record_ids: [afterValue.id], before_snapshot: before, after_snapshot: afterValue, undoable: true };
+    const afterValue =
+      result.task ||
+      result.expense ||
+      result.income ||
+      result.goal ||
+      result.note ||
+      result.reading ||
+      result.project ||
+      result.account ||
+      result.budget ||
+      result.subscription ||
+      result.item ||
+      result.rule ||
+      result.reminder ||
+      result.habit ||
+      result.skill ||
+      result.decision ||
+      result.block;
+    if (result.subtask?.id)
+      return {
+        operation: "update",
+        table_name: "subtasks",
+        record_ids: [result.subtask.id],
+        before_snapshot: before,
+        after_snapshot: result.subtask,
+        undoable: true,
+      };
+    if (afterValue?.id)
+      return {
+        operation: "update",
+        table_name: before.table || update.table,
+        record_ids: [afterValue.id],
+        before_snapshot: before,
+        after_snapshot: afterValue,
+        undoable: true,
+      };
   }
   if (toolName === "delete_subtask" && result.deleted?.id && before) {
-    return { operation: "delete", table_name: "subtasks", record_ids: [result.deleted.id], before_snapshot: before, after_snapshot: null, undoable: true };
+    return {
+      operation: "delete",
+      table_name: "subtasks",
+      record_ids: [result.deleted.id],
+      before_snapshot: before,
+      after_snapshot: null,
+      undoable: true,
+    };
   }
   if (toolName === "delete_tasks_bulk" && Array.isArray(result.deleted) && before && Array.isArray(before.rows)) {
-    const ids = result.deleted.map((r:any)=>r.id).filter(Boolean);
+    const ids = result.deleted.map((r: any) => r.id).filter(Boolean);
     if (!ids.length) return null;
-    return { operation: "delete", table_name: "tasks", record_ids: ids, before_snapshot: { rows: before.rows, subtasks: before.subtasks ?? [], reminders: before.reminders ?? [] }, after_snapshot: null, undoable: true };
+    return {
+      operation: "delete",
+      table_name: "tasks",
+      record_ids: ids,
+      before_snapshot: { rows: before.rows, subtasks: before.subtasks ?? [], reminders: before.reminders ?? [] },
+      after_snapshot: null,
+      undoable: true,
+    };
   }
   const deletion = DELETE_IDS[toolName];
   if (toolName === "delete_health_log" && result.deleted?.id && before?.table) {
-    return { operation: "delete", table_name: before.table, record_ids: [result.deleted.id], before_snapshot: before, after_snapshot: null, undoable: true };
+    return {
+      operation: "delete",
+      table_name: before.table,
+      record_ids: [result.deleted.id],
+      before_snapshot: before,
+      after_snapshot: null,
+      undoable: true,
+    };
   }
   if (deletion?.table && result.deleted?.id && before) {
-    return { operation: "delete", table_name: deletion.table, record_ids: [result.deleted.id], before_snapshot: before, after_snapshot: null, undoable: true };
+    return {
+      operation: "delete",
+      table_name: deletion.table,
+      record_ids: [result.deleted.id],
+      before_snapshot: before,
+      after_snapshot: null,
+      undoable: true,
+    };
   }
   return null;
 }

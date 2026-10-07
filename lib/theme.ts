@@ -53,7 +53,6 @@ export const fontPresets = [
   { name: "Playfair Display", cssVar: "--font-playfair", mood: "Elegan & klasik" },
 ];
 
-
 export const ACCENT_TOKENS_STORAGE_KEY = "licia-accent-tokens";
 
 /**
@@ -80,7 +79,14 @@ export function applyAccent(hex: string) {
 
 export function resetAccent() {
   const root = document.documentElement;
-  for (const key of ["--accent-fill-light-rgb", "--accent-ink-light-rgb", "--accent-fill-dark-rgb", "--accent-ink-dark-rgb", "--accent-rgb"]) root.style.removeProperty(key);
+  for (const key of [
+    "--accent-fill-light-rgb",
+    "--accent-ink-light-rgb",
+    "--accent-fill-dark-rgb",
+    "--accent-ink-dark-rgb",
+    "--accent-rgb",
+  ])
+    root.style.removeProperty(key);
   try {
     localStorage.removeItem(ACCENT_STORAGE_KEY);
     localStorage.removeItem(ACCENT_TOKENS_STORAGE_KEY);
@@ -140,16 +146,18 @@ export function getStoredFont(): string {
   return FONT_DEFAULT;
 }
 
-
 export type TextScale = "small" | "normal" | "large" | "xlarge";
 export const TEXT_SCALES: TextScale[] = ["small", "normal", "large", "xlarge"];
 export const TEXT_SCALE_PERCENT: Record<TextScale, number> = { small: 93.75, normal: 100, large: 112.5, xlarge: 125 };
-export const resolveTextScale = (value: unknown): TextScale => (TEXT_SCALES as unknown[]).includes(value) ? (value as TextScale) : "normal";
+export const resolveTextScale = (value: unknown): TextScale =>
+  (TEXT_SCALES as unknown[]).includes(value) ? (value as TextScale) : "normal";
 
 export function applyTextScale(value: unknown): TextScale {
   const scale = resolveTextScale(value);
   if (typeof document !== "undefined") document.documentElement.dataset.textScale = scale;
-  try { localStorage.setItem("licia-text-scale", scale); } catch {}
+  try {
+    localStorage.setItem("licia-text-scale", scale);
+  } catch {}
   return scale;
 }
 
@@ -166,7 +174,9 @@ export function applyThemePreference(mode: string): ThemeMode {
   if (typeof document === "undefined") return safe;
   document.documentElement.classList.toggle("dark", resolveThemeIsDark(safe));
   document.documentElement.dataset.theme = safe;
-  try { localStorage.setItem("licia-theme", safe); } catch {}
+  try {
+    localStorage.setItem("licia-theme", safe);
+  } catch {}
   applyBackgroundForCurrentMode();
   return safe;
 }

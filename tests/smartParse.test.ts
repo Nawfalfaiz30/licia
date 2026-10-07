@@ -10,7 +10,8 @@ import {
 
 // Minggu, 4 Oktober 2026 pukul 10:00 WIB (03:00 UTC). Semua tanggal relatif dihitung dari sini.
 const NOW = new Date("2026-10-04T03:00:00Z");
-const parse = (text: string, extra: Record<string, unknown> = {}) => parseSmartCapture(text, { now: NOW, timezone: "Asia/Jakarta", ...extra });
+const parse = (text: string, extra: Record<string, unknown> = {}) =>
+  parseSmartCapture(text, { now: NOW, timezone: "Asia/Jakarta", ...extra });
 
 describe("parseMoneyId", () => {
   it("akhiran k/rb/ribu/jt/juta", () => {
@@ -191,7 +192,9 @@ describe("utilitas tanggal & ISO", () => {
   it("smartDueAtIso: jam default 09:00 WIB = 02:00 UTC", () => {
     expect(smartDueAtIso({ dueDate: "2026-10-05", dueTime: null })).toBe("2026-10-05T02:00:00.000Z");
     expect(smartDueAtIso({ dueDate: "2026-10-05", dueTime: "19:00" })).toBe("2026-10-05T12:00:00.000Z");
-    expect(smartDueAtIso({ dueDate: "2026-10-05", dueTime: "19:00" }, "Asia/Makassar")).toBe("2026-10-05T11:00:00.000Z");
+    expect(smartDueAtIso({ dueDate: "2026-10-05", dueTime: "19:00" }, "Asia/Makassar")).toBe(
+      "2026-10-05T11:00:00.000Z",
+    );
     expect(smartDueAtIso({ dueDate: null, dueTime: "19:00" })).toBeNull();
   });
   it("zona waktu memengaruhi 'hari ini' (23:30 UTC sudah besok di WIB)", () => {

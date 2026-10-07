@@ -6,8 +6,10 @@ import { findMoneyMentions } from "@/lib/text/smartParse";
 
 export type MoneyKind = "expense" | "income";
 
-const INCOME_HINT = /\b(gaji|salary|bonus|terima|diterima|dapat|dapet|masuk|transferan masuk|cashback|refund|dividen|income|received|earned|payment received)\b/i;
-const EXPENSE_HINT = /\b(beli|bayar|belanja|makan|minum|jajan|bensin|parkir|tagihan|ongkir|langganan|top ?up|isi|buy|bought|pay|paid|spent|lunch|dinner|coffee|bill)\b/i;
+const INCOME_HINT =
+  /\b(gaji|salary|bonus|terima|diterima|dapat|dapet|masuk|transferan masuk|cashback|refund|dividen|income|received|earned|payment received)\b/i;
+const EXPENSE_HINT =
+  /\b(beli|bayar|belanja|makan|minum|jajan|bensin|parkir|tagihan|ongkir|langganan|top ?up|isi|buy|bought|pay|paid|spent|lunch|dinner|coffee|bill)\b/i;
 
 /** Tebakan arah arus uang; null bila tidak jelas (UI menawarkan keduanya). */
 export function guessMoneyKind(text: string): MoneyKind | null {
@@ -18,7 +20,8 @@ export function guessMoneyKind(text: string): MoneyKind | null {
   return null;
 }
 
-const NOISE = /\b(hari ini|besok|lusa|kemarin|tomorrow|today|yesterday|(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?(?:\s*(?:pagi|siang|sore|malam))?|\d{1,2}(?:[.:]\d{2})?\s*(?:am|pm))\b/gi;
+const NOISE =
+  /\b(hari ini|besok|lusa|kemarin|tomorrow|today|yesterday|(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?(?:\s*(?:pagi|siang|sore|malam))?|\d{1,2}(?:[.:]\d{2})?\s*(?:am|pm))\b/gi;
 
 export type MoneyDraft = { kind: MoneyKind; amount: number; label: string; note: string };
 
@@ -29,14 +32,27 @@ export function buildMoneyDraft(text: string, kind: MoneyKind, amount?: number):
   if (!value || value <= 0) return null;
   let rest = text;
   for (const m of mentions) rest = rest.replace(m.raw, " ");
-  rest = rest.replace(/![123]\b/g, " ").replace(/#[\p{L}\p{N}_-]+/gu, " ").replace(NOISE, " ").replace(/\s{2,}/g, " ").trim();
+  rest = rest
+    .replace(/![123]\b/g, " ")
+    .replace(/#[\p{L}\p{N}_-]+/gu, " ")
+    .replace(NOISE, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
   rest = rest.replace(/^(?:untuk|buat|di|ke|for|on)\s+/i, "").trim();
   const label = (rest || (kind === "income" ? "Pemasukan" : "Lainnya")).slice(0, 60);
-  return { kind, amount: value, label: label.charAt(0).toUpperCase() + label.slice(1), note: text.trim().slice(0, 240) };
+  return {
+    kind,
+    amount: value,
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    note: text.trim().slice(0, 240),
+  };
 }
 
 /** Muatan siap kirim ke mutateEntity (entityType "expense" | "income"). */
-export function moneyPayload(draft: MoneyDraft, occurredAt: string = new Date().toISOString()): Record<string, unknown> {
+export function moneyPayload(
+  draft: MoneyDraft,
+  occurredAt: string = new Date().toISOString(),
+): Record<string, unknown> {
   const base = { amount: draft.amount, note: draft.note, occurred_at: occurredAt };
   return draft.kind === "expense" ? { ...base, category: draft.label } : { ...base, source: draft.label };
 }

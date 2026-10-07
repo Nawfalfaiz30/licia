@@ -6,15 +6,20 @@ export async function DELETE(req: Request) {
   const originError = enforceSameOrigin(req);
   if (originError) return originError;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
   const gate = rateLimit(`ai-history-delete:${user.id}`, 12, 60_000);
   if (gate) return gate;
 
   let body: { id?: string; all?: boolean } = {};
-  try { body = await req.json(); } catch {}
+  try {
+    body = await req.json();
+  } catch {}
   const id = typeof body.id === "string" ? body.id.trim() : "";
-  if (!id && body.all !== true) return NextResponse.json({ error: "Tentukan aksi atau gunakan all=true." }, { status: 400 });
+  if (!id && body.all !== true)
+    return NextResponse.json({ error: "Tentukan aksi atau gunakan all=true." }, { status: 400 });
 
   let query = supabase.from("ai_action_history").delete().eq("user_id", user.id);
   if (id) query = query.eq("id", id);

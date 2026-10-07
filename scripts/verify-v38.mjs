@@ -18,7 +18,7 @@ const checks = [
   ["chat metadata", "app/api/chat/route.ts", "aiMeta"],
   ["chat temporal tool", "app/api/chat/route.ts", "resolve_calendar_date"],
   ["context cache", "lib/ai/context.ts", "connected:"],
-  ["mobile insights", "components/layout/BottomNav.tsx", "href=\"/insights\""],
+  ["mobile insights", "components/layout/BottomNav.tsx", 'href="/insights"'],
   ["daily plan workspace", "components/plan/PlanWorkspace.tsx", "DailyPlanPanel"],
   ["end of day review", "app/(app)/insights/page.tsx", "EndOfDayReview"],
 ];
@@ -30,5 +30,9 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 if (pkg.version !== "0.38.0") errors.push(`package version is ${pkg.version}`);
 if (pkg.scripts.test !== "node scripts/test-v38.mjs") errors.push("npm test is not wired to V38");
 if (pkg.scripts.verify !== "node scripts/verify-v38.mjs") errors.push("npm run verify is not wired to V38");
-if (errors.length) { console.error("V38 VERIFY FAILED"); for (const error of errors) console.error("-", error); process.exit(1); }
+if (errors.length) {
+  console.error("V38 VERIFY FAILED");
+  for (const error of errors) console.error("-", error);
+  process.exit(1);
+}
 console.log("Licia V38 verify OK —", required.length, "new upgrade artifacts checked");

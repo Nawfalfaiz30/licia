@@ -1,16 +1,37 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type LifeEventType =
-  | "task.created" | "task.updated" | "task.completed" | "task.deleted"
-  | "schedule.created" | "schedule.updated" | "schedule.deleted"
-  | "reminder.created" | "reminder.updated" | "reminder.cancelled" | "reminder.sent"
-  | "notification.created" | "notification.delivered" | "notification.read"
-  | "goal.updated" | "project.updated" | "memory.updated" | "automation.executed"
-  | "ai_watcher.created" | "ai_watcher.updated" | "ai_watcher.deleted";
+  | "task.created"
+  | "task.updated"
+  | "task.completed"
+  | "task.deleted"
+  | "schedule.created"
+  | "schedule.updated"
+  | "schedule.deleted"
+  | "reminder.created"
+  | "reminder.updated"
+  | "reminder.cancelled"
+  | "reminder.sent"
+  | "notification.created"
+  | "notification.delivered"
+  | "notification.read"
+  | "goal.updated"
+  | "project.updated"
+  | "memory.updated"
+  | "automation.executed"
+  | "ai_watcher.created"
+  | "ai_watcher.updated"
+  | "ai_watcher.deleted";
 
 export async function emitLifeEvent(
   supabase: SupabaseClient,
-  input: { userId: string; eventType: LifeEventType; entityType: string; entityId?: string | null; payload?: Record<string, unknown> },
+  input: {
+    userId: string;
+    eventType: LifeEventType;
+    entityType: string;
+    entityId?: string | null;
+    payload?: Record<string, unknown>;
+  },
 ) {
   try {
     const { error } = await supabase.from("life_os_events").insert({
