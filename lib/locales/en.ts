@@ -3375,9 +3375,11 @@ export const enPhrases: Record<string, string> = {
   "Cukup untuk sesi sekitar": "Enough for a session of about",
   "menit.": "minutes.",
   "Privasi AI tingkat lanjut": "Advanced AI privacy",
-  "Kontrol ini berlaku di server, sehingga bukan sekadar preferensi tampilan.": "These controls are enforced on the server, not just as display preferences.",
+  "Kontrol ini berlaku di server, sehingga bukan sekadar preferensi tampilan.":
+    "These controls are enforced on the server, not just as display preferences.",
   "Mode privat": "Private mode",
-  "Jangan menyimpan riwayat percakapan AI baru. Data sumber tetap mengikuti izin domain.": "Do not save new AI conversation history. Source data still follows domain permissions.",
+  "Jangan menyimpan riwayat percakapan AI baru. Data sumber tetap mengikuti izin domain.":
+    "Do not save new AI conversation history. Source data still follows domain permissions.",
   "Kecualikan Finance dari AI": "Exclude Finance from AI",
   "Kecualikan Health dari AI": "Exclude Health from AI",
   "Retensi log AI": "AI log retention",
@@ -3386,7 +3388,8 @@ export const enPhrases: Record<string, string> = {
   "180 hari": "180 days",
   "1 tahun": "1 year",
   "Asisten proaktif": "Proactive assistant",
-  "Batasi kapan dan seberapa sering Licia boleh mengangkat sinyal yang relevan.": "Control when and how often Licia can surface relevant signals.",
+  "Batasi kapan dan seberapa sering Licia boleh mengangkat sinyal yang relevan.":
+    "Control when and how often Licia can surface relevant signals.",
   "Aktifkan saran proaktif": "Enable proactive suggestions",
   "Boleh membaca jadwal": "Allow schedule access",
   "Boleh membaca tugas": "Allow task access",
