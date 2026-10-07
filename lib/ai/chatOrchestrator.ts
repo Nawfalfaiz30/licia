@@ -1071,14 +1071,12 @@ async function handleChatPost(req: Request) {
           confidence: 0.9,
           confidence_reason:
             "Jadwal berasal dari blok konkret hasil vision/parser dan tetap menunggu konfirmasi pengguna.",
-          evidence: blocks
-            .slice(0, 12)
-            .map((b) => ({
-              sourceType: "vision_schedule",
-              sourceId: null,
-              label: b.title,
-              detail: `${b.block_date} ${b.start_time}–${b.end_time}`,
-            })),
+          evidence: blocks.slice(0, 12).map((b) => ({
+            sourceType: "vision_schedule",
+            sourceId: null,
+            label: b.title,
+            detail: `${b.block_date} ${b.start_time}–${b.end_time}`,
+          })),
           risk: "normal",
           actions,
           result: { pendingActionId: saved.data.id },
@@ -2504,27 +2502,25 @@ async function handleChatPost(req: Request) {
           .single();
         if (!saved.error && saved.data?.id) {
           const planConfidence = Math.max(0.55, Math.min(0.98, 0.96 - mutations.length * 0.03));
-          await supabase
-            .from("ai_action_plans")
-            .insert({
-              user_id: user.id,
-              title: "Rencana tindakan Licia",
-              goal: String(message || "Permintaan pengguna").slice(0, 1000),
-              mode: "preview",
-              confidence: planConfidence,
-              confidence_reason: `Confidence dihitung dari jumlah perubahan (${mutations.length}) dan tingkat risiko tool. Semua perubahan masih menunggu konfirmasi.`,
-              evidence: pending.actions
-                .slice(0, 12)
-                .map((a: any) => ({ sourceType: "planned_action", sourceId: null, label: a.tool, detail: a.preview })),
-              risk: mutations.some((call) => agentRiskForTool(call.function.name) === "destructive")
-                ? "destructive"
-                : mutations.length > 3
-                  ? "high"
-                  : "normal",
-              actions: pending.actions,
-              result: { pendingActionId: saved.data.id },
-              expires_at: pending.expires_at,
-            });
+          await supabase.from("ai_action_plans").insert({
+            user_id: user.id,
+            title: "Rencana tindakan Licia",
+            goal: String(message || "Permintaan pengguna").slice(0, 1000),
+            mode: "preview",
+            confidence: planConfidence,
+            confidence_reason: `Confidence dihitung dari jumlah perubahan (${mutations.length}) dan tingkat risiko tool. Semua perubahan masih menunggu konfirmasi.`,
+            evidence: pending.actions
+              .slice(0, 12)
+              .map((a: any) => ({ sourceType: "planned_action", sourceId: null, label: a.tool, detail: a.preview })),
+            risk: mutations.some((call) => agentRiskForTool(call.function.name) === "destructive")
+              ? "destructive"
+              : mutations.length > 3
+                ? "high"
+                : "normal",
+            actions: pending.actions,
+            result: { pendingActionId: saved.data.id },
+            expires_at: pending.expires_at,
+          });
           pendingBulkAction = {
             id: saved.data.id,
             expiresAt: saved.data.expires_at,
