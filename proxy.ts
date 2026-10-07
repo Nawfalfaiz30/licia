@@ -50,6 +50,7 @@ const APP_ROUTES = [
   "/ai-history",
   "/guide",
   "/system",
+  "/step-up",
 ];
 
 function isPath(pathname: string, prefix: string) {
@@ -155,6 +156,7 @@ export const config = {
     "/ai-history/:path*",
     "/guide/:path*",
     "/system/:path*",
+    "/step-up",
     "/plan/:path*",
     "/copilot/:path*",
     "/sync/:path*",
