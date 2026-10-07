@@ -1,6 +1,7 @@
 import { toolDefs } from "@/lib/ai/toolDefinitions";
 import { isUuid, toolHandlers, type HandlerCtx } from "@/lib/ai/tools";
 import { validateToolArguments } from "@/lib/ai/toolValidation";
+import { getStepUpState, stepUpToolResponse, toolRequiresStepUp } from "@/lib/security/step-up";
 
 export async function executeTool(ctx: HandlerCtx, name: string, rawArgs: string): Promise<any> {
   let args: any = {};
@@ -42,6 +43,18 @@ export async function executeTool(ctx: HandlerCtx, name: string, rawArgs: string
       error: String(idField) + " harus berupa UUID nyata dari hasil baca/search, bukan nomor urut.",
     };
   }
+  if (toolRequiresStepUp(name)) {
+    const stepUp = await getStepUpState(ctx.supabase);
+    if (stepUp.status === "unavailable") {
+      return {
+        ok: false,
+        code: "STEP_UP_UNAVAILABLE",
+        error: "Verifikasi keamanan tambahan sedang tidak tersedia. Coba lagi sebentar.",
+      };
+    }
+    if (stepUp.status !== "fresh") return stepUpToolResponse("/chat");
+  }
+
   const handler = toolHandlers[name];
   if (!handler) return { ok: false, error: "Tool tidak dikenal: " + name };
   return await handler(ctx, args);
