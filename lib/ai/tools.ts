@@ -34,18 +34,7 @@ export function isUuid(value: unknown) {
 
 // Escape user input used in PostgREST/Postgres LIKE/ILIKE patterns.
 function escapeLikePattern(value: unknown): string {
-  return String(value ?? "").replace(/[\\%_]/g, "\\// Escape user input used in PostgREST/Postgres LIKE/ILIKE patterns.
-function escapeLikePattern(value: unknown): string {
-  return String(value ?? "").replace(/[\\%_]/g, "\\function escapeLikePattern(value: unknown): string {
-  return String(value ?? "").replace(/[\\%_]/g, "\\export function isUuid(value: unknown) {
-  return UUID_RE.test(String(value || "").trim());
-}
-
-");
-}
-");
-}
-");
+  return String(value ?? "").replace(/[\\%_]/g, "\\$&");
 }
 function normalizeMoneyAmount(value: unknown): number {
   if (typeof value === "number") return value;
