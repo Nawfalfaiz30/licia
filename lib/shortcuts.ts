@@ -11,7 +11,7 @@ export const QUICK_CAPTURE_EVENT = "licia:open-quick-capture";
 export type GoTarget = { href: string; label: string };
 
 export const GO_TO: Record<string, GoTarget> = {
-  d: { href: "/dashboard", label: "Beranda" },
+  d: { href: "/today", label: "Hari Ini" },
   p: { href: "/plan", label: "Rencana" },
   c: { href: "/chat", label: "Chat Licia" },
   t: { href: "/tasks", label: "Tugas" },
