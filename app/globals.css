@@ -1436,31 +1436,3 @@ html.kb-open .licia-bottom-nav{display:none!important;}
     font-size:.75rem;
   }
 }
-@media (min-width:1280px){
-  .dashboard-v29{
-    display:grid;
-    grid-template-columns:repeat(12,minmax(0,1fr));
-    align-items:start;
-    gap:1rem;
-  }
-  .dashboard-v29 > [data-widget]{min-width:0;}
-  .dashboard-v29 > [data-widget="now"]{grid-column:span 8;}
-  .dashboard-v29 > [data-widget="overview"]{grid-column:span 4;}
-  .dashboard-v29 > [data-widget="stats"]{grid-column:span 4;}
-  .dashboard-v29 > [data-widget="nextmove"]{grid-column:span 8;}
-  .dashboard-v29 > [data-widget="direction"]{grid-column:span 8;}
-  .dashboard-v29 > [data-widget="body"]{grid-column:span 4;}
-  .dashboard-v29 > [data-widget="insights"],
-  .dashboard-v29 > [data-widget="review"],
-  .dashboard-v29 > [data-widget="control"]{grid-column:1 / -1;}
-}
-@media (max-width:767px){
-  .dashboard-v29{gap:.75rem;}
-  .dashboard-v29 .dashboard-overview-card{min-height:104px;}
-  .dashboard-v29 .dashboard-overview-card > div:first-child{
-    text-transform:none;
-    letter-spacing:normal;
-    line-height:1.2;
-    font-size:.75rem;
-  }
-}
