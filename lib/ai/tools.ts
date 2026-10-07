@@ -34,8 +34,12 @@ export function isUuid(value: unknown) {
 
 // Escape user input used in PostgREST/Postgres LIKE/ILIKE patterns.
 function escapeLikePattern(value: unknown): string {
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+  return String(value ?? "")
+    .replaceAll("\\", "\\\\")
+    .replaceAll("%", "\\%")
+    .replaceAll("_", "\\_");
 }
+
 function normalizeMoneyAmount(value: unknown): number {
   if (typeof value === "number") return value;
   const raw = String(value ?? "")
@@ -315,7 +319,7 @@ async function deleteExpense(ctx: HandlerCtx, args: any) {
 
   if (args.keyword) {
     const key = String(args.keyword)
-      .replace(/[%,()]/g, " ")
+      .replace(/[\\%,()]/g, " ")
       .trim();
     if (key) query = query.or(`note.ilike.%${key}%,category.ilike.%${key}%`);
   }
@@ -4127,7 +4131,7 @@ async function deleteVaultItem(ctx: HandlerCtx, args: any) {
   let query = ctx.supabase.from("vault_items").select("id,title,item_type,pinned").eq("user_id", ctx.userId);
   if (args.keyword) {
     const key = String(args.keyword)
-      .replace(/[%,()]/g, " ")
+      .replace(/[\\%,()]/g, " ")
       .trim();
     if (key) query = query.or(`title.ilike.%${key}%,content.ilike.%${key}%`);
   }
@@ -4378,7 +4382,7 @@ async function deleteHabitsBulk(ctx: HandlerCtx, args: any) {
         .slice(0, 1000)
     : [];
   if (requestedIds.length) query = query.in("id", requestedIds);
-  if (keyword) query = query.ilike("name", "%" + escapeLikePattern(keyword) + "%");
+  if (keyword) query = query.ilike("name", `%${escapeLikePattern(keyword)}%`);
 
   const { data, error } = await query.limit(1000);
   if (error) return { ok: false, error: error.message };
