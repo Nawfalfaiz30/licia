@@ -2840,12 +2840,7 @@ async function deleteHabitsBulk(ctx: HandlerCtx, args: any) {
     ? args.habit_ids.map((value: unknown) => String(value).trim()).filter((value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)).slice(0, 1000)
     : [];
   if (requestedIds.length) query = query.in("id", requestedIds);
-  if (keyword) query = query.ilike("name", "%" + keyword.replace(/[%_]/g, "\\  if (keyword) query = query.ilike("name", "%" + keyword.replace(/[%_]/g, "\\  const keyword = String(args.keyword ?? "").trim();
   if (keyword) query = query.ilike("name", "%" + keyword.replace(/[%_]/g, "\\$&") + "%");
-
-  const { data, error } = await query.limit(1000);") + "%");
-
-  const { data, error } = await query.limit(1000);") + "%");
 
   const { data, error } = await query.limit(1000);
   if (error) return { ok: false, error: error.message };
