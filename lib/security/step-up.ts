@@ -3,6 +3,28 @@ import { NextResponse } from "next/server";
 
 export const STEP_UP_WINDOW_MS = 10 * 60 * 1000;
 
+export const STEP_UP_REQUIRED_AI_TOOLS = new Set([
+  "delete_tasks_bulk",
+  "delete_schedule_blocks_bulk",
+  "delete_all_reminders",
+  "delete_all_notifications",
+  "delete_account",
+  "create_vault_item",
+  "update_vault_item",
+  "delete_vault_item",
+  "transfer_money",
+]);
+
+export function toolRequiresStepUp(toolName: string): boolean {
+  return STEP_UP_REQUIRED_AI_TOOLS.has(String(toolName || ""));
+}
+
+export function syncMutationRequiresStepUp(entityType: string, operation: string): boolean {
+  if (entityType === "vault") return true;
+  if (entityType === "accountTransfer") return true;
+  return entityType === "account" && operation === "delete";
+}
+
 type JwtClaim = {
   method?: unknown;
   timestamp?: unknown;
