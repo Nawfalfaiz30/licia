@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { assertJsonSize, distributedRateLimit, enforceSameOrigin, rateLimit } from "@/lib/security";
+import { assertJsonSize, distributedRateLimit, enforceSameOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +54,3 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: "Telemetry gagal disimpan." }, { status: 500 });
   return new NextResponse(null, { status: 204 });
 }
-
-void rateLimit;
-void IP_BUCKETS;
