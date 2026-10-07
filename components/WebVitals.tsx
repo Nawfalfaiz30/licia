@@ -24,40 +24,63 @@ function report(metric: Vital, value: number) {
 export function WebVitals() {
   useEffect(() => {
     if (!("PerformanceObserver" in window)) return;
+
     let cls = 0;
-    let maxInp = 0;
+    let lcp = 0;
+    let inp = 0;
+    let flushed = false;
     const observers: PerformanceObserver[] = [];
+
     try {
       const observer = new PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        const last = entries.at(-1) as PerformanceEntry | undefined;
-        if (last) report("LCP", last.startTime);
+        const last = list.getEntries().at(-1) as PerformanceEntry | undefined;
+        if (last) lcp = Math.max(lcp, last.startTime);
       });
       observer.observe({ type: "largest-contentful-paint", buffered: true } as PerformanceObserverInit);
       observers.push(observer);
     } catch {}
+
     try {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries() as any[]) {
-          if (entry.hadRecentInput) continue;
-          cls += Number(entry.value || 0);
+          if (!entry.hadRecentInput) cls += Number(entry.value || 0);
         }
-        report("CLS", cls);
       });
       observer.observe({ type: "layout-shift", buffered: true } as PerformanceObserverInit);
       observers.push(observer);
     } catch {}
+
     try {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries() as any[]) {
-          if (entry.interactionId && Number(entry.duration) > maxInp) maxInp = Number(entry.duration);
+          if (entry.interactionId) inp = Math.max(inp, Number(entry.duration || 0));
         }
-        if (maxInp > 0) report("INP", maxInp);
       });
       observer.observe({ type: "event", buffered: true, durationThreshold: 40 } as PerformanceObserverInit);
       observers.push(observer);
     } catch {}
-    return () => observers.forEach((observer) => observer.disconnect());
+
+    const flush = () => {
+      if (flushed) return;
+      flushed = true;
+      if (lcp > 0) report("LCP", lcp);
+      if (inp > 0) report("INP", inp);
+      report("CLS", cls);
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      flush();
+      observers.forEach((observer) => observer.disconnect());
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
+
   return null;
 }
