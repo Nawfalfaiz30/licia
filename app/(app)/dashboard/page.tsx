@@ -468,13 +468,13 @@ export default async function DashboardPage() {
     <DashboardLayoutProvider>
       <div className="dashboard-v29 flex flex-col gap-5 animate-licia-page-in">
         <header className="rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3 sm:px-5">
-          <div className="flex min-h-[76px] items-center gap-3">
+          <div className="flex min-h-[76px] flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl ring-1 ring-accent/15">
               <img src="/licia-avatar.png" alt={tr("Licia")} className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-2xs font-semibold text-accent">{tr("LIFE OS")}</p>
-              <h1 className="font-display text-xl leading-tight text-text sm:truncate sm:text-2xl">
+              <h1 className="line-clamp-2 font-display text-lg leading-snug text-text sm:text-xl lg:text-2xl">
                 {greeting}, {profile?.display_name || tr("kamu")}.
               </h1>
               <p className="truncate text-2xs text-textMuted">
@@ -482,7 +482,9 @@ export default async function DashboardPage() {
                 {proactiveRisk ? tr(" · Perlu perhatian") : ""}
               </p>
             </div>
-            <DashboardCustomizer />
+            <div className="flex shrink-0 items-center sm:ml-auto">
+              <DashboardCustomizer />
+            </div>
           </div>
         </header>
         <section className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" aria-label={tr("Aksi cepat")}>

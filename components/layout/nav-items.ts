@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  CalendarCheck,
   MessageCircle,
   ListTodo,
   Timer,
@@ -41,13 +42,14 @@ const group = (label: string, i18nKey: string, items: NavItem[]): NavGroup => ({
 
 export const navGroups: NavGroup[] = [
   group("Inti", "nav_core", [
-    item("/today", "Hari Ini", "today", LayoutDashboard, true),
+    item("/dashboard", "Beranda", "Beranda", LayoutDashboard, true),
     item("/chat", "Chat Licia", "chat", MessageCircle, true),
     item("/tasks", "Tugas", "tasks", ListTodo, true),
     item("/calendar", "Kalender", "calendar", CalendarDays, true),
     item("/finance", "Keuangan", "finance", Wallet, true),
   ]),
   group("Rencana", "nav_plan", [
+    item("/today", "Hari Ini", "today", CalendarCheck),
     item("/plan", "Rencana", "plan", BrainCircuit),
     item("/focus", "Fokus", "focus", Timer),
     item("/goals-projects", "Target & Proyek", "goals_projects", Target),
@@ -66,6 +68,7 @@ export const navGroups: NavGroup[] = [
 ];
 export const moreNavGroups: NavGroup[] = [
   group("Rencana", "nav_plan", [
+    item("/today", "Hari Ini", "today", CalendarCheck),
     item("/finance", "Keuangan", "finance", Wallet),
     item("/plan", "Rencana", "plan", BrainCircuit),
     item("/focus", "Fokus", "focus", Timer),
@@ -91,7 +94,7 @@ export const moreNavGroups: NavGroup[] = [
 export const allNavItems = navGroups.flatMap((g) => g.items);
 export const primaryNavItems = allNavItems.filter((i) => i.primary);
 export const mobilePrimaryNavItems = [
-  navGroups[0].items.find((i) => i.href === "/today")!,
+  navGroups[0].items.find((i) => i.href === "/dashboard")!,
   navGroups[0].items.find((i) => i.href === "/tasks")!,
   navGroups[0].items.find((i) => i.href === "/chat")!,
   navGroups[0].items.find((i) => i.href === "/calendar")!,
@@ -100,7 +103,6 @@ export const allFeatureItems = moreNavGroups.flatMap((g) => g.items);
 export const featureGroups = moreNavGroups;
 export function isNavPathActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
-  if (href === "/today") return pathname === "/today" || pathname === "/dashboard" || pathname === "/";
-  if (href === "/dashboard") return pathname === "/dashboard" || pathname === "/today" || pathname === "/";
+  if (href === "/dashboard") return pathname === "/dashboard" || pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }

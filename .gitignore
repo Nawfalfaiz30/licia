@@ -1,6 +1,7 @@
 node_modules
 .next
 coverage/
+node-compile-cache/
 .env
 .env.*
 !.env.example
