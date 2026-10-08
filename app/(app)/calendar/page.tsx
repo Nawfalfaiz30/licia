@@ -543,7 +543,7 @@ export default function CalendarPage() {
                     ))}
                   </span>
                   {ev.length > 4 && (
-                    <span className="mt-0.5 block text-[9px] leading-none text-textMuted">+{ev.length - 4}</span>
+                    <span className="mt-0.5 block text-[11px] leading-none text-textMuted">+{ev.length - 4}</span>
                   )}
                 </button>
               );

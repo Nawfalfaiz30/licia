@@ -58,7 +58,7 @@ import { haptic } from "@/lib/interaction";
 
 type PageDef = { label: string; href: string; icon: LucideIcon; keywords: string };
 const PAGES: PageDef[] = [
-  { label: "Beranda", href: "/dashboard", icon: Home, keywords: "home dashboard" },
+  { label: "Hari Ini", href: "/today", icon: Home, keywords: "home dashboard today" },
   { label: "Rencana", href: "/plan", icon: ListChecks, keywords: "plan planner inbox" },
   { label: "Tugas", href: "/tasks", icon: CheckSquare, keywords: "tasks todo kanban matriks matrix" },
   { label: "Kalender", href: "/calendar", icon: CalendarDays, keywords: "calendar agenda schedule" },

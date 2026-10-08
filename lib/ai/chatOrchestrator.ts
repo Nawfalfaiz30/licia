@@ -870,14 +870,18 @@ async function handleChatPost(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk (unauthorized)." }, { status: 401 });
-  const gate = await distributedRateLimit(supabase, "ai-chat", 30, 60_000, `ai-chat:${user.id}`);
+  const gate = await distributedRateLimit(supabase, "ai-chat", 20, 60_000, `ai-chat:${user.id}`, {
+    failClosed: true,
+  });
   if (gate) return gate;
-  const quota = await checkDailyQuota(supabase, user.id);
-  if (quota)
-    return NextResponse.json(
-      { error: quota.message, quota: { used: quota.used, limit: quota.limit } },
-      { status: 429 },
-    );
+  if (process.env.OPENAI_API_KEY) {
+    const quota = await checkDailyQuota(supabase, user.id);
+    if (quota)
+      return NextResponse.json(
+        { error: quota.message, quota: { used: quota.used, limit: quota.limit } },
+        { status: 429 },
+      );
+  }
 
   const {
     message,

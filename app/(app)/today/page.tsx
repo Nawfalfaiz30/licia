@@ -21,6 +21,7 @@ import { previewPlainText } from "@/lib/text";
 import { getServerT } from "@/lib/i18n-server";
 import { TodayQuickSearchButton } from "@/components/today/TodayQuickSearchButton";
 import { TodayPriorityList } from "@/components/today/TodayPriorityList";
+import { OnboardingChecklist } from "@/components/intelligence/OnboardingChecklist";
 function minutesLabel(n: number) {
   if (n < 60) return `${n} m`;
   return `${Math.floor(n / 60)}j ${n % 60 ? `${n % 60}m` : ""}`.trim();
@@ -117,6 +118,7 @@ export default async function TodayPage() {
           </div>
         </div>
       </header>
+      <OnboardingChecklist />
       <section className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" aria-label={tr("Aksi cepat")}>
         <Link
           href="/tasks"

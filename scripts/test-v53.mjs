@@ -18,9 +18,13 @@ assert.match(routing, /moneyTokens\.length >= 2/);
 assert.match(routing, /financeIntent/);
 assert.match(intelligence, /belanja.*beli.*jajan.*habis/);
 assert.match(toolDefinitions, /export const toolDefs/);
-assert.match(
-  toolDefinitions,
-  /entity_type: \{ type: "string", enum: \["area","expense","income","account","budget","subscription"/,
+const lifeOsEntityTypes = toolDefinitions.match(
+  /name: "manage_life_os_data"[\s\S]*?entity_type:\s*\{[\s\S]*?enum:\s*\[([\s\S]*?)\]/,
+);
+assert.ok(lifeOsEntityTypes, "manage_life_os_data entity type enum exists");
+assert.deepEqual(
+  [...lifeOsEntityTypes[1].matchAll(/"([^"]+)"/g)].slice(0, 6).map((match) => match[1]),
+  ["area", "expense", "income", "account", "budget", "subscription"],
 );
 assert.match(tools, /function normalizeAiCrudEntityType/);
 assert.match(tools, /entity_id harus berupa UUID nyata/);

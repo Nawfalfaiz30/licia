@@ -962,9 +962,9 @@ Sumber migration production adalah:
 supabase/migrations/
 ```
 
-Chain canonical saat ini berjalan dari **0001 sampai 0015**.
+Chain canonical memuat migration legacy **0001–0015** dan migration bertimestamp.
 
-Migration chain mencakup fondasi aplikasi, sinkronisasi multi-device, finance ledger, mutation lease, distributed rate limiting, dan aggregation helpers.
+Migration chain mencakup fondasi aplikasi, sinkronisasi multi-device, finance ledger, mutation lease, distributed rate limiting, aggregation helpers, serta pembatasan token eksternal dengan hash dan `search_path` aman untuk RPC `SECURITY DEFINER`.
 
 Gunakan:
 
@@ -977,6 +977,8 @@ untuk memeriksa struktur dan urutan migration yang diharapkan.
 Untuk database yang sudah berisi data:
 
 > Jangan menjalankan snapshot legacy dan migration chain secara acak. Ikuti urutan canonical dan cek kondisi database target terlebih dahulu.
+
+Terapkan migration terbaru ke staging dan pastikan RPC rate limit aktif sebelum deploy kode yang memakainya. Batas AI default adalah 20.000 token per pengguna dalam 24 jam; atur `LICIA_AI_DAILY_TOKEN_LIMIT` dengan angka positif untuk menyesuaikannya.
 
 ---
 
@@ -1056,7 +1058,7 @@ npm run verify:native
 npm run build
 ```
 
-CI GitHub menjalankan quality gates tersebut sebagai automated verification. Sebelum membuka perubahan untuk production, jalankan setidaknya `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run test`, dan `npm run build`. CI kemudian memeriksa:
+CI GitHub menjalankan quality gates tersebut sebagai automated verification. Sebelum membuka perubahan untuk production, jalankan setidaknya `npm run api:auth:check`, `npm run typecheck`, `npm run lint`, `npm run format:check:changed`, `npm run test`, dan `npm run build`. Pemeriksaan format memeriksa file yang berubah; `npm run format:check` penuh tetap tersedia untuk memeriksa seluruh repository. CI kemudian memeriksa:
 
 - type safety,
 - lint,
@@ -1078,7 +1080,10 @@ Endpoint:
 
 ```text
 /api/health
+/api/healthz
 ```
+
+`/api/health` memerlukan sesi dan menyediakan detail untuk System. `/api/healthz` adalah probe publik minimal untuk uptime monitoring.
 
 ---
 

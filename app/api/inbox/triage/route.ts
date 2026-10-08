@@ -4,10 +4,11 @@ import OpenAI from "openai";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateProfile } from "@/lib/getOrCreateProfile";
 import { dateStrInTimezone, offsetForTimezone } from "@/lib/date";
-import { assertJsonSize, enforceSameOrigin, rateLimit } from "@/lib/security";
+import { assertJsonSize, enforceSameOrigin, distributedRateLimit } from "@/lib/security";
 import { chatCompletion, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
 import { selectAiModel } from "@/lib/ai/modelRouter";
 import { languageDirective, languageFromCookieHeader } from "@/lib/ai/language";
+import { checkDailyQuota, recordAiUsage } from "@/lib/ai/usage";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,9 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`inbox-triage:${user.id}`, 12, 60_000);
+  const gate = await distributedRateLimit(supabase, "ai-inbox-triage", 5, 60_000, `inbox-triage:${user.id}`, {
+    failClosed: true,
+  });
   if (gate) return gate;
   const body = await req.json().catch(() => ({}));
   const rawItems = Array.isArray(body.items) ? body.items : [{ content: body.content }];
@@ -40,6 +43,14 @@ export async function POST(req: Request) {
     .filter((x: any) => typeof x?.content === "string" && x.content.trim())
     .slice(0, 20);
   if (!items.length) return NextResponse.json({ error: "Isi belum tersedia." }, { status: 400 });
+  if (process.env.OPENAI_API_KEY) {
+    const quota = await checkDailyQuota(supabase, user.id);
+    if (quota)
+      return NextResponse.json(
+        { error: quota.message, code: "AI_DAILY_QUOTA_EXCEEDED", used: quota.used, limit: quota.limit },
+        { status: 429 },
+      );
+  }
 
   const { data: profile } = await supabase.from("users").select("timezone").eq("id", user.id).single();
   const resolved = profile ?? (await getOrCreateProfile(supabase, user.id, user.user_metadata?.display_name));
@@ -70,6 +81,7 @@ export async function POST(req: Request) {
       2,
     );
     logCompletionFinish(completion, "inbox-triage");
+    await recordAiUsage(supabase, user.id, { model, endpoint: "inbox-triage", usage: completion.usage });
     const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
     const out = (Array.isArray(parsed.items) ? parsed.items : []).map((x: any, i: number) => ({
       id: String(x.id ?? items[i]?.id ?? i),

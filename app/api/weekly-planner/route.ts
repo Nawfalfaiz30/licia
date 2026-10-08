@@ -4,10 +4,11 @@ import OpenAI from "openai";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateProfile } from "@/lib/getOrCreateProfile";
 import { dateStrInTimezone, startOfWeekIsoForTimezone } from "@/lib/date";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, distributedRateLimit, enforceSameOrigin } from "@/lib/security";
 import { chatCompletion, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
 import { selectAiModel } from "@/lib/ai/modelRouter";
 import { languageDirective, languageFromCookieHeader } from "@/lib/ai/language";
+import { checkDailyQuota, recordAiUsage } from "@/lib/ai/usage";
 
 export const runtime = "nodejs";
 
@@ -51,7 +52,7 @@ async function resolveContext() {
 export async function GET() {
   const { supabase, user, timezone, weekStart, weekEnd } = await resolveContext();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`weekly-planner-read:${user.id}`, 60, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "weekly-planner-read", 60, 60_000);
   if (gate) return gate;
   const { data, error } = await supabase
     .from("daily_plans")
@@ -75,8 +76,18 @@ export async function POST(req: Request) {
   const { supabase, user, timezone, weekStart, weekEnd } = await resolveContext();
   const now = new Date();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`weekly-planner-write:${user.id}`, 6, 60_000);
+  const gate = await distributedRateLimit(supabase, "ai-weekly-planner", 2, 60_000, `weekly-planner-write:${user.id}`, {
+    failClosed: true,
+  });
   if (gate) return gate;
+  if (process.env.OPENAI_API_KEY) {
+    const quota = await checkDailyQuota(supabase, user.id);
+    if (quota)
+      return NextResponse.json(
+        { error: quota.message, code: "AI_DAILY_QUOTA_EXCEEDED", used: quota.used, limit: quota.limit },
+        { status: 429 },
+      );
+  }
 
   const [tasksRes, scheduleRes, goalsRes, habitsRes, focusRes, lastPlanRes] = await Promise.all([
     supabase
@@ -152,6 +163,7 @@ export async function POST(req: Request) {
       2,
     );
     logCompletionFinish(completion, "weekly-planner");
+    await recordAiUsage(supabase, user.id, { model, endpoint: "weekly-planner", usage: completion.usage });
     const plan = JSON.parse(completion.choices[0]?.message?.content || "{}");
     await supabase
       .from("daily_plans")
@@ -215,7 +227,7 @@ export async function DELETE(req: Request) {
   if (originError) return originError;
   const { supabase, user, weekStart } = await resolveContext();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`weekly-planner-delete:${user.id}`, 12, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "weekly-planner-delete", 12, 60_000);
   if (gate) return gate;
   const { error } = await supabase.from("daily_plans").delete().eq("user_id", user.id).eq("week_start", weekStart);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

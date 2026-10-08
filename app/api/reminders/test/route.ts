@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`reminder-test:${user.id}`, 5, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "reminder-test", 5, 60_000);
   if (gate) return gate;
   const { data: profile } = await supabase.from("users").select("timezone").eq("id", user.id).maybeSingle();
   const remindAt = new Date(Date.now() + 60_000).toISOString();

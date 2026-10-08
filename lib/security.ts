@@ -212,6 +212,7 @@ export async function distributedRateLimit(
   limit: number,
   windowMs: number,
   localFallbackKey: string = bucketKey,
+  options: { failClosed?: boolean } = {},
 ): Promise<NextResponse | null> {
   try {
     const { data, error } = await supabase.rpc("licia_rate_limit", {
@@ -219,8 +220,9 @@ export async function distributedRateLimit(
       p_limit: limit,
       p_window_seconds: Math.max(1, Math.ceil(windowMs / 1000)),
     });
-    if (!error && data && typeof data === "object") {
-      if ((data as { allowed?: unknown }).allowed === false) {
+    if (!error && data && typeof data === "object" && !Array.isArray(data)) {
+      const allowed = (data as { allowed?: unknown }).allowed;
+      if (allowed === false) {
         const retryAfter = Math.max(
           1,
           Number((data as { retry_after_seconds?: unknown }).retry_after_seconds) || Math.ceil(windowMs / 1000),
@@ -230,11 +232,73 @@ export async function distributedRateLimit(
           headers: { "content-type": "application/json", "retry-after": String(retryAfter) },
         });
       }
-      return null;
+      if (allowed === true) return null;
     }
-    if (error) console.warn("Licia distributed rate limit unavailable; using local fallback", error);
+    if (error) console.warn("Licia distributed rate limit unavailable", { code: error.code || "unknown" });
+    else console.warn("Licia distributed rate limit returned an invalid response");
   } catch (error) {
-    console.warn("Licia distributed rate limit unavailable; using local fallback", error);
+    console.warn("Licia distributed rate limit unavailable", {
+      name: error instanceof Error ? error.name : "unknown",
+    });
+  }
+  if (options.failClosed && process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Pembatasan permintaan sementara tidak tersedia. Coba lagi sebentar." },
+      { status: 503, headers: { "retry-after": "30" } },
+    );
+  }
+  return rateLimit(localFallbackKey, limit, windowMs);
+}
+
+export function authenticatedRateLimit(
+  supabase: SupabaseClient,
+  userId: string,
+  bucketKey: string,
+  limit: number,
+  windowMs: number,
+): Promise<NextResponse | null> {
+  return distributedRateLimit(supabase, bucketKey, limit, windowMs, `${bucketKey}:${userId}`, { failClosed: true });
+}
+
+/** Shared limiter for signed or high-entropy external tokens using the service-role client. */
+export async function distributedExternalRateLimit(
+  supabase: SupabaseClient,
+  tokenHash: string,
+  limit: number,
+  windowMs: number,
+  localFallbackKey: string,
+): Promise<NextResponse | null> {
+  try {
+    const { data, error } = await supabase.rpc("licia_rate_limit_external", {
+      p_bucket_key: tokenHash,
+      p_limit: limit,
+      p_window_seconds: Math.max(1, Math.ceil(windowMs / 1000)),
+    });
+    if (!error && data && typeof data === "object" && !Array.isArray(data)) {
+      const allowed = (data as { allowed?: unknown }).allowed;
+      if (allowed === false) {
+        const retryAfter = Math.max(
+          1,
+          Number((data as { retry_after_seconds?: unknown }).retry_after_seconds) || Math.ceil(windowMs / 1000),
+        );
+        return new NextResponse(JSON.stringify({ error: "Terlalu banyak permintaan. Coba lagi sebentar." }), {
+          status: 429,
+          headers: { "content-type": "application/json", "retry-after": String(retryAfter) },
+        });
+      }
+      if (allowed === true) return null;
+    }
+    if (error) console.warn("Licia external rate limit unavailable", { code: error.code || "unknown" });
+  } catch (error) {
+    console.warn("Licia external rate limit unavailable", {
+      name: error instanceof Error ? error.name : "unknown",
+    });
+  }
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Pembatasan permintaan sementara tidak tersedia. Coba lagi sebentar." },
+      { status: 503, headers: { "retry-after": "30" } },
+    );
   }
   return rateLimit(localFallbackKey, limit, windowMs);
 }

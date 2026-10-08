@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sha256Hex } from "@/lib/integrations/secretBox";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertJsonSize, rateLimit } from "@/lib/security";
+import { assertJsonSize, distributedExternalRateLimit } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -18,16 +18,17 @@ export async function POST(req: Request) {
   const token = tokenFrom(req);
   if (!token) return NextResponse.json({ error: "Token inbound diperlukan." }, { status: 401 });
   const supabase = createAdminClient();
-  const gate = rateLimit("inbound:" + sha256Hex(token), 20, 60_000);
-  if (gate) return gate;
+  const tokenHash = sha256Hex(token);
   const { data: tokenRow } = await supabase
     .from("inbound_capture_tokens")
     .select("id,user_id,provider,expires_at")
-    .eq("token_hash", sha256Hex(token))
+    .eq("token_hash", tokenHash)
     .maybeSingle();
   if (!tokenRow) return NextResponse.json({ error: "Token inbound tidak valid." }, { status: 401 });
   if (tokenRow.expires_at && new Date(tokenRow.expires_at).getTime() < Date.now())
     return NextResponse.json({ error: "Token inbound sudah kedaluwarsa." }, { status: 401 });
+  const gate = await distributedExternalRateLimit(supabase, tokenHash, 20, 60_000, `inbound:${tokenHash}`);
+  if (gate) return gate;
   const body = await req.json().catch(() => null);
   const text = String(body?.text || body?.message || "")
     .trim()

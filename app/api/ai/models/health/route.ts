@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 
 const MODEL_ENV_KEYS = [
   "LICIA_AI_MODEL",
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit("ai-model-health:" + user.id, 5, 300_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "ai-model-health", 5, 300_000);
   if (gate) return gate;
   const key = process.env.OPENAI_API_KEY?.trim();
   const configured = Object.fromEntries(MODEL_ENV_KEYS.map((k) => [k, process.env[k]?.trim() || null]));

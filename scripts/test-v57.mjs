@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Licia v0.57.0 — pemeriksaan regresi tingkat-sumber untuk upgrade Kategori A (UI/UX + dwibahasa penuh).
+// Licia v0.58.0 — pemeriksaan regresi tingkat-sumber untuk UI/UX dan dukungan dwibahasa.
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -100,7 +100,7 @@ check(
 check("A2: QuickSearch lama digantikan palet", !fs.existsSync(path.join(root, "components/layout/QuickSearch.tsx")));
 
 // A7 — onboarding & empty state
-check("A7: Beranda memuat OnboardingChecklist", /<OnboardingChecklist/.test(read("app/(app)/dashboard/page.tsx")));
+check("A7: Hari Ini memuat OnboardingChecklist", /<OnboardingChecklist/.test(read("app/(app)/today/page.tsx")));
 const empties = sources.filter((f) => f.endsWith(".tsx")).filter((f) => /<EmptyState\b[^>]*\bexamples=/.test(read(f)));
 check("A7: minimal 4 halaman memakai EmptyState bercontoh", empties.length >= 4, String(empties.length));
 
@@ -127,15 +127,15 @@ const aiChatSource = read("app/api/chat/route.ts") + read("lib/ai/chatOrchestrat
 check("A11: AI mengikuti bahasa", /languageDirective/.test(aiChatSource));
 const hardLocale = sources
   .filter((f) => f.endsWith(".tsx"))
-  .filter((f) => /["']id-ID["']/.test(read(f)) && !/LanguageProvider|tasks\/page/.test(f));
+  .filter((f) => /["']id-ID["']/.test(read(f)) && !/LanguageProvider|tasks\/page/.test(f.replaceAll("\\", "/")));
 check("A11: tidak ada locale id-ID tertanam di komponen", hardLocale.length === 0, hardLocale.join(", "));
 
 // versi
-check("versi package.json = 0.57.0", JSON.parse(read("package.json")).version === "0.57.0");
+check("versi package.json = 0.58.0", JSON.parse(read("package.json")).version === "0.58.0");
 
 if (failures.length) {
-  console.error(`✗ Licia v0.57 — ${failures.length} pemeriksaan gagal:`);
+  console.error(`✗ Licia v0.58 — ${failures.length} pemeriksaan gagal:`);
   for (const f of failures) console.error("  - " + f);
   process.exit(1);
 }
-console.log("Licia v0.57.0 UI/UX + bilingual regression checks OK");
+console.log("Licia v0.58.0 UI/UX + bilingual regression checks OK");

@@ -1,5 +1,5 @@
 const base = process.env.LICIA_URL || "http://127.0.0.1:3000";
-const url = `${base.replace(/\/$/, "")}/api/health`;
+const url = `${base.replace(/\/$/, "")}/api/healthz`;
 try {
   const r = await fetch(url);
   const body = await r.text();

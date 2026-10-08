@@ -14,7 +14,7 @@ export async function recordAiUsage(
   const total = Number(input.usage?.total_tokens || prompt + completion);
   if (!Number.isFinite(total) || total <= 0) return;
   try {
-    await supabase.from("ai_usage_events").insert({
+    const { error } = await supabase.from("ai_usage_events").insert({
       user_id: userId,
       model: input.model,
       endpoint: input.endpoint || "chat",
@@ -22,15 +22,20 @@ export async function recordAiUsage(
       output_tokens: completion,
       total_tokens: total,
     });
+    if (error) console.warn("Licia AI usage record failed", { code: error.code || "unknown" });
   } catch (error) {
-    console.warn("Licia AI usage record failed", error);
+    console.warn("Licia AI usage record failed", { name: error instanceof Error ? error.name : "unknown" });
   }
 }
 
-/** Batas token AI per 24 jam per pengguna (LICIA_AI_DAILY_TOKEN_LIMIT; 0/kosong = tanpa batas). */
+const DEFAULT_DAILY_TOKEN_LIMIT = 20_000;
+
+/** Batas token AI per 24 jam per pengguna. Nilai kosong/0 memakai batas aman bawaan. */
 export function dailyTokenLimit(): number {
-  const n = Number(process.env.LICIA_AI_DAILY_TOKEN_LIMIT || 0);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  const raw = process.env.LICIA_AI_DAILY_TOKEN_LIMIT;
+  if (raw == null || raw.trim() === "") return DEFAULT_DAILY_TOKEN_LIMIT;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_DAILY_TOKEN_LIMIT;
 }
 
 export async function getDailyTokenUsage(supabase: SupabaseClient, userId: string): Promise<number> {
@@ -67,12 +72,16 @@ export async function getDailyTokenUsage(supabase: SupabaseClient, userId: strin
       if (offset >= 100_000) return Number.MAX_SAFE_INTEGER;
     }
   } catch (error) {
-    console.warn("Licia AI usage quota read failed", error);
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code?: unknown }).code || "unknown")
+        : "unknown";
+    console.warn("Licia AI usage quota read failed", { code });
     return Number.MAX_SAFE_INTEGER;
   }
 }
 
-/** Mengembalikan pesan error bila kuota habis, selain itu null. */
+/** Mengembalikan detail bila kuota habis, selain itu null. */
 export async function checkDailyQuota(
   supabase: SupabaseClient,
   userId: string,

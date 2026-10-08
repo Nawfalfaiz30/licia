@@ -7,7 +7,7 @@ import {
   startOfMonthIsoForTimezone,
   startOfWeekIsoForTimezone,
 } from "@/lib/date";
-import { rateLimit } from "@/lib/security";
+import { authenticatedRateLimit } from "@/lib/security";
 import { upsertNotificationEvent } from "@/lib/notifications/events";
 import { buildActionableContext } from "@/lib/ai/contextEngine";
 
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`intelligence:${user.id}`, 30, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "intelligence", 30, 60_000);
   if (gate) return gate;
 
   const url = new URL(req.url);

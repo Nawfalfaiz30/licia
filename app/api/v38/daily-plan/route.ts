@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, distributedRateLimit, enforceSameOrigin } from "@/lib/security";
 import { getOrCreateProfile } from "@/lib/getOrCreateProfile";
 import { dateStrInTimezone, startOfDayIsoForTimezone, endOfDayIsoForTimezone } from "@/lib/date";
 import { selectAiModel } from "@/lib/ai/modelRouter";
 import { chatCompletion, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
 import OpenAI from "openai";
 import { languageDirective, languageFromCookieHeader } from "@/lib/ai/language";
+import { checkDailyQuota, recordAiUsage } from "@/lib/ai/usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,8 +49,21 @@ export async function GET(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`v38-daily-plan:${user.id}`, 30, 60_000);
+  const refresh = new URL(req.url).searchParams.get("refresh") === "1";
+  const gate = refresh
+    ? await distributedRateLimit(supabase, "ai-daily-plan", 3, 60_000, `v38-daily-plan:${user.id}`, {
+        failClosed: true,
+      })
+    : await authenticatedRateLimit(supabase, user.id, "v38-daily-plan", 30, 60_000);
   if (gate) return gate;
+  if (refresh && process.env.OPENAI_API_KEY) {
+    const quota = await checkDailyQuota(supabase, user.id);
+    if (quota)
+      return NextResponse.json(
+        { error: quota.message, code: "AI_DAILY_QUOTA_EXCEEDED", used: quota.used, limit: quota.limit },
+        { status: 429 },
+      );
+  }
   const { data: profile } = await supabase
     .from("users")
     .select("display_name,timezone")
@@ -59,7 +73,6 @@ export async function GET(req: Request) {
   const timezone = String((resolved as any)?.timezone || "Asia/Jakarta");
   const now = new Date();
   const today = dateStrInTimezone(now, timezone);
-  const refresh = new URL(req.url).searchParams.get("refresh") === "1";
   const [tasksRes, agendaRes, goalsRes, focusRes] = await Promise.all([
     supabase
       .from("tasks")
@@ -184,6 +197,7 @@ export async function GET(req: Request) {
         1,
       );
       logCompletionFinish(completion, "daily-plan");
+      await recordAiUsage(supabase, user.id, { model, endpoint: "daily-plan", usage: completion.usage });
       const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
       if (typeof parsed.focus === "string" && parsed.focus.trim()) focus = parsed.focus.trim();
       if (Number.isFinite(Number(parsed.block_minutes))) {

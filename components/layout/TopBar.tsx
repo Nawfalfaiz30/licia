@@ -6,7 +6,7 @@ import { PALETTE_OPEN_EVENT } from "@/lib/shortcuts";
 import { useLanguage } from "@/components/LanguageProvider";
 import { SyncStatusBadge } from "@/components/layout/SyncStatusBadge";
 const PAGE_TITLES: Record<string, string> = {
-  "/today": "Beranda",
+  "/today": "Hari Ini",
   "/dashboard": "Beranda",
   "/tasks": "Tugas",
   "/calendar": "Kalender",

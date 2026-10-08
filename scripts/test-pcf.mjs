@@ -39,8 +39,8 @@ for (const token of ["claim_token", "lease_expires_at", 'eq("claim_token", claim
 }
 
 const version = JSON.parse(read("config/licia-version.json"));
-if (version.appVersion !== "0.57.0") failures.push("Unexpected appVersion in version metadata.");
-if (Number(version.schemaVersion) !== 41) failures.push("Unexpected schemaVersion in version metadata.");
+if (version.appVersion !== "0.58.0") failures.push("Unexpected appVersion in version metadata.");
+if (Number(version.schemaVersion) !== 42) failures.push("Unexpected schemaVersion in version metadata.");
 if (Number(version.pwaDbVersion) !== 4) failures.push("Unexpected pwaDbVersion in version metadata.");
 
 const migrationDir = path.join(root, "supabase", "migrations");

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 
 export async function GET(req: Request) {
   const originError = enforceSameOrigin(req);
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     data: { user },
   } = await client.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const limited = rateLimit(`onboarding:${user.id}`, 30, 60_000);
+  const limited = await authenticatedRateLimit(client, user.id, "onboarding", 30, 60_000);
   if (limited) return limited;
 
   const [profile, goals, projects, tasks, finance, habits, notes] = await Promise.all([

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { dateStrInTimezone } from "@/lib/date";
-import { rateLimit } from "@/lib/security";
+import { authenticatedRateLimit } from "@/lib/security";
 import { previewPlainText } from "@/lib/text";
 
 export async function GET(req: Request) {
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ activities: [] }, { status: 401 });
-  const gate = rateLimit(`activity:${user.id}`, 60, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "activity", 60, 60_000);
   if (gate) return gate;
   const url = new URL(req.url);
   const limit = Math.min(30, Math.max(6, Number(url.searchParams.get("limit")) || 12));

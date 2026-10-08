@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { assertJsonSize, enforceSameOrigin, rateLimit } from "@/lib/security";
+import { assertJsonSize, authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 import { requireRecentStepUp } from "@/lib/security/step-up";
 
 const TABLES = [
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`backup:get:${user.id}`, 3, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "backup:get", 3, 60_000);
   if (gate) return gate;
   const stepUpError = await requireRecentStepUp(supabase, "/settings");
   if (stepUpError) return stepUpError;
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`backup:post:${user.id}`, 2, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "backup:post", 2, 60_000);
   if (gate) return gate;
   const stepUpError = await requireRecentStepUp(supabase, "/settings");
   if (stepUpError) return stepUpError;

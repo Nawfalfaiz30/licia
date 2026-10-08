@@ -31,7 +31,6 @@ import { DashboardLayoutProvider } from "@/components/dashboard/DashboardLayoutP
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 import { DashboardCustomizer } from "@/components/dashboard/DashboardCustomizer";
 import { TodayPriorityList } from "@/components/today/TodayPriorityList";
-import { OnboardingChecklist } from "@/components/intelligence/OnboardingChecklist";
 import { getServerT } from "@/lib/i18n-server";
 
 function rupiahIn(n: number, locale: string) {
@@ -997,6 +996,10 @@ export default async function DashboardPage() {
               )}
             </Card>
           </section>
+        </DashboardWidget>
+
+        <DashboardWidget id="insights">
+          <LifeInsights />
         </DashboardWidget>
 
         <DashboardWidget id="body">
