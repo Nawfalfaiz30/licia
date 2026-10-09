@@ -30,11 +30,12 @@ export async function recordAiUsage(
 
 const DEFAULT_DAILY_TOKEN_LIMIT = 20_000;
 
-/** Batas token AI per 24 jam per pengguna. Nilai kosong/0 memakai batas aman bawaan. */
+/** Batas token AI per 24 jam per pengguna. Nilai 0 = tanpa batas; kosong memakai batas aman bawaan. */
 export function dailyTokenLimit(): number {
   const raw = process.env.LICIA_AI_DAILY_TOKEN_LIMIT;
   if (raw == null || raw.trim() === "") return DEFAULT_DAILY_TOKEN_LIMIT;
   const n = Number(raw);
+  if (n === 0) return 0;
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_DAILY_TOKEN_LIMIT;
 }
 
