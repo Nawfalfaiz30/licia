@@ -11,8 +11,8 @@
   --text-muted: #6f7185;
   /* Isian (bg-accent + teks putih) dan "tinta" (text-accent di atas latar) dipisah agar keduanya lolos WCAG AA.
      Nilai kustom dari Pengaturan > Aksen menimpa lewat --accent-fill-light-rgb dst. (lib/theme.ts). */
-  --accent-rgb: var(--accent-fill-light-rgb, 108 99 232); /* #3d5fd9 */
-  --accent-ink-rgb: var(--accent-ink-light-rgb, 91 83 195); /* #3959cc */
+  --accent-rgb: var(--accent-fill-light-rgb, 108 99 232); /* #6c63e8 */
+  --accent-ink-rgb: var(--accent-ink-light-rgb, 91 83 195); /* #5b53c3 */
   --accent-soft-rgb: 227 168 87; /* #e3a857 */
   --danger-rgb: 201 75 75; /* #c94b4b — isian; teks putih 4,57:1 */
   --danger-ink-rgb: 169 63 63; /* #a93f3f — teks di atas latar terang ≥ 4,5:1 */
