@@ -8,7 +8,7 @@ export const enPhrases: Record<string, string> = {
   Pemasukan: "Income",
   "Bulan sebelumnya": "Previous month",
   "Bulan berikutnya": "Next month",
-  "Breadcrumb": "Breadcrumb",
+  Breadcrumb: "Breadcrumb",
   "Ungu Licia (default)": "Licia Violet (default)",
   "Midnight Licia (default)": "Midnight Licia (default)",
   "Saldo semua dompet": "All wallet balances",
