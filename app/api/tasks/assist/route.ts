@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { assertJsonSize, enforceSameOrigin, distributedRateLimit } from "@/lib/security";
 import { selectAiModel } from "@/lib/ai/modelRouter";
 import { chatCompletion, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
+import { checkDailyQuota, recordAiUsage } from "@/lib/ai/usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,12 +33,16 @@ function fallback(title: string) {
 export async function POST(req: Request) {
   const sameOrigin = enforceSameOrigin(req);
   if (sameOrigin) return sameOrigin;
+  const sizeError = assertJsonSize(req, 16 * 1024);
+  if (sizeError) return sizeError;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`task-assist:${user.id}`, 40, 60_000);
+  const gate = await distributedRateLimit(supabase, "ai-task-assist", 10, 60_000, `task-assist:${user.id}`, {
+    failClosed: true,
+  });
   if (gate) return gate;
   let body: any = {};
   try {
@@ -60,6 +65,14 @@ export async function POST(req: Request) {
         .eq("id", task.project_id)
         .maybeSingle()
     : { data: null };
+  if (process.env.OPENAI_API_KEY) {
+    const quota = await checkDailyQuota(supabase, user.id);
+    if (quota)
+      return NextResponse.json(
+        { error: quota.message, code: "AI_DAILY_QUOTA_EXCEEDED", used: quota.used, limit: quota.limit },
+        { status: 429 },
+      );
+  }
   let result = fallback(String(task.title));
   if (process.env.OPENAI_API_KEY) {
     try {
@@ -87,6 +100,7 @@ export async function POST(req: Request) {
         1,
       );
       logCompletionFinish(completion, "tasks-assist");
+      await recordAiUsage(supabase, user.id, { model, endpoint: "tasks-assist", usage: completion.usage });
       const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
       if (typeof parsed.summary === "string" && parsed.summary.trim()) result.summary = parsed.summary.trim();
       if (["low", "medium", "high"].includes(parsed.priority)) result.priority = parsed.priority;

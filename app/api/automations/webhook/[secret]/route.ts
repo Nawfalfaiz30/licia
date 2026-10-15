@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sha256Hex } from "@/lib/integrations/secretBox";
-import { assertJsonSize, rateLimit } from "@/lib/security";
+import { assertJsonSize, distributedExternalRateLimit } from "@/lib/security";
 
 type Params = { params: Promise<{ secret: string }> };
 
@@ -10,16 +10,17 @@ export async function POST(req: Request, { params }: Params) {
   const sizeError = assertJsonSize(req, 256 * 1024);
   if (sizeError) return sizeError;
   if (!secret || secret.length < 24) return NextResponse.json({ error: "Webhook token tidak valid." }, { status: 401 });
-  const gate = rateLimit("automation-webhook:" + sha256Hex(secret), 60, 60_000);
-  if (gate) return gate;
   const supabase = createAdminClient();
+  const secretHash = sha256Hex(secret);
   const { data: webhook } = await supabase
     .from("automation_webhooks")
     .select("id,user_id,events,enabled")
-    .eq("secret_hash", sha256Hex(secret))
+    .eq("secret_hash", secretHash)
     .maybeSingle();
   if (!webhook || webhook.enabled !== true)
     return NextResponse.json({ error: "Webhook tidak aktif." }, { status: 404 });
+  const gate = await distributedExternalRateLimit(supabase, secretHash, 60, 60_000, `automation-webhook:${secretHash}`);
+  if (gate) return gate;
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object")
     return NextResponse.json({ error: "Payload webhook harus JSON." }, { status: 400 });

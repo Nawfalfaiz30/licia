@@ -1,6 +1,6 @@
 {
   "appVersion": "0.58.0",
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "pwaDbVersion": 4,
   "buildId": "0.58.0+platform-hardening"
 }

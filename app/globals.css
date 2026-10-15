@@ -2,17 +2,17 @@
 @config "../tailwind.config.ts";
 
 :root {
-  --bg: #eef1f7;
+  --bg: #f8f8fc;
   --surface: #ffffff;
   --surface-rgb: 255 255 255;
   --surface-raised: #ffffff;
-  --border: #dbe1ee;
+  --border: #e9e9f1;
   --text: #171b2e;
-  --text-muted: #626a85;
+  --text-muted: #6a6c80;
   /* Isian (bg-accent + teks putih) dan "tinta" (text-accent di atas latar) dipisah agar keduanya lolos WCAG AA.
      Nilai kustom dari Pengaturan > Aksen menimpa lewat --accent-fill-light-rgb dst. (lib/theme.ts). */
-  --accent-rgb: var(--accent-fill-light-rgb, 61 95 217); /* #3d5fd9 */
-  --accent-ink-rgb: var(--accent-ink-light-rgb, 57 89 204); /* #3959cc */
+  --accent-rgb: var(--accent-fill-light-rgb, 108 99 232); /* #6c63e8 */
+  --accent-ink-rgb: var(--accent-ink-light-rgb, 91 83 195); /* #5b53c3 */
   --accent-soft-rgb: 227 168 87; /* #e3a857 */
   --danger-rgb: 201 75 75; /* #c94b4b — isian; teks putih 4,57:1 */
   --danger-ink-rgb: 169 63 63; /* #a93f3f — teks di atas latar terang ≥ 4,5:1 */
@@ -27,15 +27,15 @@
 }
 
 .dark {
-  --bg: #0f1220;
-  --surface: #171b2e;
-  --surface-rgb: 23 27 46;
-  --surface-raised: #1d2238;
-  --border: #2a3050;
-  --text: #eef1f7;
-  --text-muted: #9aa3c2;
-  --accent-rgb: var(--accent-fill-dark-rgb, 61 95 217); /* isian: putih di atasnya ≥ 4,5:1 */
-  --accent-ink-rgb: var(--accent-ink-dark-rgb, 117 146 251); /* tinta: ≥ 4,5:1 di atas latar gelap */
+  --bg: #101117;
+  --surface: #181923;
+  --surface-rgb: 24 25 35;
+  --surface-raised: #20212d;
+  --border: #2d2e3b;
+  --text: #f4f4fa;
+  --text-muted: #a0a0b3;
+  --accent-rgb: var(--accent-fill-dark-rgb, 108 99 232); /* isian: putih di atasnya ≥ 4,5:1 */
+  --accent-ink-rgb: var(--accent-ink-dark-rgb, 146 140 238); /* tinta: ≥ 4,5:1 di atas latar gelap */
   --accent-soft-rgb: 227 168 87; /* #e3a857 */
   --danger-rgb: 201 75 75; /* isian tetap; teks putih 4,57:1 */
   --danger-ink-rgb: 240 135 135; /* teks di atas latar gelap */
@@ -1410,17 +1410,15 @@ html.kb-open .licia-bottom-nav{display:none!important;}
 @media (min-width:1280px){
   .dashboard-widget-grid{
     display:grid;
-    grid-template-columns:repeat(12,minmax(0,1fr));
-    align-items:start;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:stretch;
     gap:1rem;
   }
   .dashboard-widget-grid > [data-widget]{min-width:0;}
-  .dashboard-widget-grid > [data-widget="now"]{grid-column:span 8;}
-  .dashboard-widget-grid > [data-widget="overview"]{grid-column:span 4;}
-  .dashboard-widget-grid > [data-widget="stats"]{grid-column:span 4;}
-  .dashboard-widget-grid > [data-widget="nextmove"]{grid-column:span 8;}
-  .dashboard-widget-grid > [data-widget="direction"]{grid-column:span 8;}
-  .dashboard-widget-grid > [data-widget="body"]{grid-column:span 4;}
+  .dashboard-widget-grid > [data-widget="stats"],
+  .dashboard-widget-grid > [data-widget="nextmove"],
+  .dashboard-widget-grid > [data-widget="direction"],
+  .dashboard-widget-grid > [data-widget="body"]{grid-column:1 / -1;}
   .dashboard-widget-grid > [data-widget="insights"],
   .dashboard-widget-grid > [data-widget="review"],
   .dashboard-widget-grid > [data-widget="control"]{grid-column:1 / -1;}
@@ -1435,4 +1433,12 @@ html.kb-open .licia-bottom-nav{display:none!important;}
     line-height:1.2;
     font-size:.75rem;
   }
+}
+@media (max-width:639px){
+  .dashboard-v29 > header > div:first-child{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;}
+  .dashboard-v29 > header > div:first-child > :last-child{grid-column:1 / -1;}
+  .dashboard-v29 > header > div:first-child > :last-child > div{width:100%;justify-content:space-between;}
+  .dashboard-v29 > header > div:first-child > :last-child button{min-height:2.75rem;}
+  .dashboard-v29 > header > div:first-child > :last-child button:first-child{flex:1;justify-content:center;}
+  .dashboard-v29 .dashboard-top-overview{grid-template-columns:repeat(2,minmax(0,1fr));}
 }

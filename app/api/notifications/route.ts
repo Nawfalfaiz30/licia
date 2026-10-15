@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ notifications: [] }, { status: 401 });
-  const gate = rateLimit(`notifications:${user.id}`, 60, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "notifications", 60, 60_000);
   if (gate) return gate;
   const limit = Math.min(50, Math.max(10, Number(new URL(req.url).searchParams.get("limit")) || 30));
   const { data, error } = await supabase

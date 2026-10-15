@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { executeTool } from "@/lib/ai/tools";
 import { captureBeforeAction, buildUndoRecord } from "@/lib/ai/actionHistory";
 import { verifyMutationResult } from "@/lib/v35/verify";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { distributedRateLimit, enforceSameOrigin } from "@/lib/security";
 
 function mutationApplied(tool: string, result: any) {
   if (!result?.ok) return false;
@@ -102,7 +102,9 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`ai-batch:${user.id}`, 8, 60_000);
+  const gate = await distributedRateLimit(supabase, "ai-batch", 5, 60_000, `ai-batch:${user.id}`, {
+    failClosed: true,
+  });
   if (gate) return gate;
   const body = await req.json().catch(() => ({}));
   const pendingId = typeof body?.pendingId === "string" ? body.pendingId : "";

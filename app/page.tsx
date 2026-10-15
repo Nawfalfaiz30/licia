@@ -35,5 +35,5 @@ export default async function Home() {
     analytics: "/analytics",
     automations: "/automations",
   };
-  redirect(startRoutes[startPage] || "/today");
+  redirect(startRoutes[startPage] || "/dashboard");
 }

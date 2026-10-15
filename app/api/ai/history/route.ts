@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 
 export async function DELETE(req: Request) {
   const originError = enforceSameOrigin(req);
@@ -10,7 +10,7 @@ export async function DELETE(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`ai-history-delete:${user.id}`, 12, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "ai-history-delete", 12, 60_000);
   if (gate) return gate;
 
   let body: { id?: string; all?: boolean } = {};

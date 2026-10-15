@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 import { sha256Hex, randomToken } from "@/lib/integrations/secretBox";
 
 export async function GET(req: Request) {
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit("automation-webhook-create:" + user.id, 10, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "automation-webhook-create", 10, 60_000);
   if (gate) return gate;
   const body = await req.json().catch(() => null);
   const events = Array.isArray(body?.events) ? body.events.map((x: any) => String(x).slice(0, 80)).slice(0, 20) : [];

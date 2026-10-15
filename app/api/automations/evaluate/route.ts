@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { dateStrInTimezone, ensureTimezoneOffset } from "@/lib/date";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { enforceSameOrigin } from "@/lib/security";
 import { upsertNotificationEvent } from "@/lib/notifications/events";
 
 export const dynamic = "force-dynamic";

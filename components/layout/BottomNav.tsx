@@ -46,7 +46,7 @@ export function BottomNav() {
                 >
                   <Icon size={18} strokeWidth={active || emphasis ? 2.4 : 2} />
                 </span>
-                <span className="max-w-full truncate">{index === 0 ? t("Beranda") : t(item.i18nKey)}</span>
+                <span className="max-w-full truncate">{t(item.i18nKey)}</span>
               </Link>
             );
           })}

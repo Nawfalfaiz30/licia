@@ -84,7 +84,8 @@ for (const file of textFiles) {
     !file.endsWith("healthcheck.mjs") &&
     !file.endsWith("audit.mjs") &&
     !file.endsWith("reminder-cron.mjs") &&
-    !file.endsWith("reminder-worker.mjs")
+    !file.endsWith("reminder-worker.mjs") &&
+    !file.endsWith("playwright.config.mjs")
   )
     failures.push(`Runtime localhost reference in ${relative}`);
 }

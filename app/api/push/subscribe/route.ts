@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { assertJsonSize, enforceSameOrigin, rateLimit } from "@/lib/security";
+import { assertJsonSize, authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 
 export async function POST(req: Request) {
   const originError = enforceSameOrigin(req);
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`push-subscribe:${user.id}`, 10, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "push-subscribe", 10, 60_000);
   if (gate) return gate;
   let body: any;
   try {

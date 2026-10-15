@@ -72,8 +72,8 @@ export function adjustToContrast(
   return rgbToHex(target);
 }
 
-export const LIGHT_SURFACES = ["#ffffff", "#eef1f7", "#f5f3ee", "#eef3ee", "#f6f0e8"] as const;
-export const DARK_SURFACES = ["#0f1220", "#111318", "#0e1512", "#16120e", "#171b2e", "#1d2238"] as const;
+export const LIGHT_SURFACES = ["#ffffff", "#f8f8fc", "#f5f3ee", "#eef3ee", "#f6f0e8"] as const;
+export const DARK_SURFACES = ["#101117", "#111318", "#0e1512", "#16120e", "#181923", "#20212d"] as const;
 
 export type RoleTokens = {
   /** Warna isian (tombol/lencana) — teks putih di atasnya harus terbaca. */

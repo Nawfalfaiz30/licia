@@ -48,14 +48,27 @@ const requiredTimestamped = [
   "20261007150000_integrations_and_playbooks.sql",
   "20261007160000_google_calendar_two_way.sql",
   "20261007170000_automation_webhook_events.sql",
+  "20261008090000_harden_ai_security_definers.sql",
 ];
 
 for (const name of requiredTimestamped) {
   if (!timestamped.includes(name)) failures.push(`Timestamped migration wajib tidak ditemukan: ${name}`);
 }
 
+const hardeningMigration = fs.readFileSync(path.join(dir, "20261008090000_harden_ai_security_definers.sql"), "utf8");
+for (const token of [
+  "licia_rate_limit",
+  "licia_get_ai_usage_total",
+  "licia_rate_limit_external",
+  "licia_external_rate_limit_buckets",
+  "set search_path = ''",
+  "auth.uid()",
+  "auth.role()",
+])
+  if (!hardeningMigration.includes(token)) failures.push(`AI security-definer hardening missing ${token}`);
+
 const version = JSON.parse(fs.readFileSync(path.join(root, "config/licia-version.json"), "utf8"));
-if (Number(version.schemaVersion) !== 41) failures.push("config/licia-version.json schemaVersion harus 41.");
+if (Number(version.schemaVersion) !== 42) failures.push("config/licia-version.json schemaVersion harus 42.");
 if (Number(version.pwaDbVersion) !== 4) failures.push("config/licia-version.json pwaDbVersion harus 4.");
 
 if (failures.length) {

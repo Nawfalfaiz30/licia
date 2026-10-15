@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 
 import OpenAI from "openai";
 import { createClient } from "@/lib/supabase/server";
-import { assertJsonSize, enforceSameOrigin, rateLimit } from "@/lib/security";
+import { assertJsonSize, enforceSameOrigin, distributedRateLimit } from "@/lib/security";
 import { chatCompletion, generationOptions, logCompletionFinish, withOpenAIRetry } from "@/lib/ai/runtime";
 import { selectAiModel } from "@/lib/ai/modelRouter";
+import { checkDailyQuota, recordAiUsage } from "@/lib/ai/usage";
 
 export const runtime = "nodejs";
 
@@ -33,12 +34,22 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "Belum masuk (unauthorized)." }, { status: 401 });
   }
-  const gate = rateLimit(`nutrition:${user.id}`, 20, 60_000);
+  const gate = await distributedRateLimit(supabase, "ai-nutrition", 5, 60_000, `nutrition:${user.id}`, {
+    failClosed: true,
+  });
   if (gate) return gate;
 
   const { description } = (await req.json()) as { description: string };
   if (!description || typeof description !== "string") {
     return NextResponse.json({ error: "Deskripsi makanan kosong." }, { status: 400 });
+  }
+  if (process.env.OPENAI_API_KEY) {
+    const quota = await checkDailyQuota(supabase, user.id);
+    if (quota)
+      return NextResponse.json(
+        { error: quota.message, code: "AI_DAILY_QUOTA_EXCEEDED", used: quota.used, limit: quota.limit },
+        { status: 429 },
+      );
   }
 
   try {
@@ -66,6 +77,7 @@ export async function POST(req: Request) {
       2,
     );
     logCompletionFinish(completion, "estimate-nutrition");
+    await recordAiUsage(supabase, user.id, { model, endpoint: "estimate-nutrition", usage: completion.usage });
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(raw);

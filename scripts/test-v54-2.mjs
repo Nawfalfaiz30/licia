@@ -2,10 +2,9 @@ import fs from "node:fs";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
 
-const chat = fs.readFileSync(new URL("../app/api/chat/route.ts", import.meta.url), "utf8");
-const chatOrchestrator = fs.readFileSync(new URL("../lib/ai/chatOrchestrator.ts", import.meta.url), "utf8");
+const chat = readFileSync(new URL("../app/api/chat/route.ts", import.meta.url), "utf8");
+const chatOrchestrator = readFileSync(new URL("../lib/ai/chatOrchestrator.ts", import.meta.url), "utf8");
 const chatRuntimeSource = chat + "\n" + chatOrchestrator;
 const historySchema = readFileSync(new URL("../supabase/schema_ai_chat_history.sql", import.meta.url), "utf8");
 const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -39,10 +38,10 @@ assert.match(chatRuntimeSource, /selectAiToolModel/);
 assert.match(chatRuntimeSource, /pendingActionId/);
 assert.match(chatRuntimeSource, /loadServerPendingAction/);
 assert.match(chatOrchestrator, /export async function chatDelete/);
-const validatorUrl = pathToFileURL(new URL("../lib/ai/toolValidation.ts", import.meta.url).pathname).href;
+const validatorUrl = new URL("../lib/ai/toolValidation.ts", import.meta.url).href;
 const behaviorScript = `
 import { validateToolArguments } from ${JSON.stringify(validatorUrl)};
-import { chatCompletion, generationOptions } from ${JSON.stringify(pathToFileURL(new URL("../lib/ai/runtime.ts", import.meta.url).pathname).href)};
+import { chatCompletion, generationOptions } from ${JSON.stringify(new URL("../lib/ai/runtime.ts", import.meta.url).href)};
 const defs = [{ type: 'function', function: { name: 'demo', parameters: { type: 'object', properties: { amount: { type: 'number' }, label: { type: 'string' } }, required: ['amount'] } } }];
 process.env.LICIA_AI_OMIT_TEMPERATURE = 'true';
 process.env.LICIA_AI_REASONING_EFFORT = 'none';

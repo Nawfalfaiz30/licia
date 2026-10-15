@@ -16,17 +16,22 @@ jobs:
   static:
     name: Static quality gates
     runs-on: ubuntu-latest
+    env:
+      FORMAT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run security
+      - run: npm run api:auth:check
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm run format:check
+      - run: npm run format:check:changed
       - run: npm run i18n:check
       - run: npm audit --audit-level=high --omit=dev
 

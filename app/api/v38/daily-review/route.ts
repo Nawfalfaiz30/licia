@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 import { dateStrInTimezone, endOfDayIsoForTimezone, startOfDayIsoForTimezone } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit(`v38-daily-review:${user.id}`, 30, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "v38-daily-review", 30, 60_000);
   if (gate) return gate;
   const { data: profile } = await supabase.from("users").select("timezone").eq("id", user.id).maybeSingle();
   const timezone = String(profile?.timezone || "Asia/Jakarta");

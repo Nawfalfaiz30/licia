@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { legacyRedirect } from "@/lib/coreMode";
 
@@ -57,6 +57,12 @@ function isPath(pathname: string, prefix: string) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+function redirectWithCookies(current: NextResponse, url: URL, status?: number) {
+  const redirect = status ? NextResponse.redirect(url, status) : NextResponse.redirect(url);
+  current.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+  return redirect;
+}
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
 
@@ -65,23 +71,20 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          response = NextResponse.next({ request: { headers: request.headers } });
-          response.cookies.set({ name, value: "", ...options });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
+  const isAuthenticated = Boolean(data?.claims?.sub);
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = isPath(pathname, "/login") || isPath(pathname, "/signup");
   const isAppRoute = APP_ROUTES.some((prefix) => isPath(pathname, prefix));
@@ -90,21 +93,21 @@ export async function proxy(request: NextRequest) {
   if (consolidated) {
     const url = request.nextUrl.clone();
     url.pathname = consolidated;
-    return NextResponse.redirect(url, 308);
+    return redirectWithCookies(response, url, 308);
   }
 
-  if (!user && isAppRoute) {
+  if (!isAuthenticated && isAppRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    return redirectWithCookies(response, url);
   }
 
-  if (user && isAuthRoute) {
+  if (isAuthenticated && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/today";
     url.search = "";
-    return NextResponse.redirect(url);
+    return redirectWithCookies(response, url);
   }
 
   return response;

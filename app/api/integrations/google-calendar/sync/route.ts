@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { enforceSameOrigin, rateLimit } from "@/lib/security";
+import { authenticatedRateLimit, enforceSameOrigin } from "@/lib/security";
 import {
   createGoogleEvent,
   deleteGoogleEvent,
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum masuk." }, { status: 401 });
-  const gate = rateLimit("calendar-sync:" + user.id, 6, 60_000);
+  const gate = await authenticatedRateLimit(supabase, user.id, "calendar-sync", 6, 60_000);
   if (gate) return gate;
   try {
     const accessToken = await getGoogleAccessToken(supabase, user.id);

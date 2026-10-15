@@ -19,12 +19,12 @@ export const FONT_STORAGE_KEY = "licia-font";
 export const FONT_DISPLAY_STORAGE_KEY = "licia-font-display";
 export const FONT_BODY_STORAGE_KEY = "licia-font-body";
 
-export const BG_DEFAULT_LIGHT = "#eef1f7";
-export const BG_DEFAULT_DARK = "#0f1220";
+export const BG_DEFAULT_LIGHT = "#f8f8fc";
+export const BG_DEFAULT_DARK = "#101117";
 export const FONT_DEFAULT = "--font-jakarta";
 
 export const accentPresets = [
-  { name: "Biru (default)", hex: "#3d5fd9" },
+  { name: "Ungu Licia (default)", hex: "#6c63e8" },
   { name: "Biru laut", hex: "#2b6cb0" },
   { name: "Indigo", hex: "#5b4fd9" },
   { name: "Teal", hex: "#0f9488" },
@@ -32,7 +32,7 @@ export const accentPresets = [
 ];
 
 export const bgPresetsDark = [
-  { name: "Plum malam (default)", hex: BG_DEFAULT_DARK },
+  { name: "Midnight Licia (default)", hex: BG_DEFAULT_DARK },
   { name: "Abu gelap netral", hex: "#111318" },
   { name: "Hijau tua", hex: "#0e1512" },
   { name: "Coklat gelap", hex: "#16120e" },
