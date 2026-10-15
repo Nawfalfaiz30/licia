@@ -32,17 +32,6 @@ if (!files.length) {
   process.exit(0);
 }
 
-const formattedLocale = spawnSync(
-  process.execPath,
-  ["node_modules/prettier/bin/prettier.cjs", "lib/locales/en.ts"],
-  { encoding: "utf8", windowsHide: true },
-);
-if (formattedLocale.status === 0) {
-  console.log("=== PRETTIER LOCALE START ===");
-  console.log(formattedLocale.stdout);
-  console.log("=== PRETTIER LOCALE END ===");
-}
-
 const result = spawnSync(process.execPath, ["node_modules/prettier/bin/prettier.cjs", "--check", ...files], {
   stdio: "inherit",
   windowsHide: true,
