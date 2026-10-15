@@ -34,8 +34,7 @@ function titleForPath(pathname: string | null) {
   if (!pathname) return "Licia";
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
   return (
-    Object.entries(PAGE_TITLES).find(([href]) => pathname.startsWith(`${href}/`))?.[1] ||
-    "Licia"
+    Object.entries(PAGE_TITLES).find(([href]) => pathname.startsWith(`${href}/`))?.[1] || "Licia"
   );
 }
 
