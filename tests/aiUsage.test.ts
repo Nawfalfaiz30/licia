@@ -9,11 +9,14 @@ afterEach(() => {
 });
 
 describe("dailyTokenLimit", () => {
-  it("memakai batas aman bawaan jika nilai kosong atau nol", () => {
+  it("memakai batas aman bawaan jika nilai kosong", () => {
     delete process.env.LICIA_AI_DAILY_TOKEN_LIMIT;
     expect(dailyTokenLimit()).toBe(20_000);
+  });
+
+  it("memperlakukan nilai nol sebagai tanpa batas", () => {
     process.env.LICIA_AI_DAILY_TOKEN_LIMIT = "0";
-    expect(dailyTokenLimit()).toBe(20_000);
+    expect(dailyTokenLimit()).toBe(0);
   });
 
   it("menghormati batas positif yang dikonfigurasi", () => {
