@@ -8,7 +8,7 @@
   --surface-raised: #ffffff;
   --border: #e9e9f1;
   --text: #171b2e;
-  --text-muted: #6f7185;
+  --text-muted: #6a6c80;
   /* Isian (bg-accent + teks putih) dan "tinta" (text-accent di atas latar) dipisah agar keduanya lolos WCAG AA.
      Nilai kustom dari Pengaturan > Aksen menimpa lewat --accent-fill-light-rgb dst. (lib/theme.ts). */
   --accent-rgb: var(--accent-fill-light-rgb, 108 99 232); /* #6c63e8 */
