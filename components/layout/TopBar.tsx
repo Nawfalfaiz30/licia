@@ -33,9 +33,7 @@ const PAGE_TITLES: Record<string, string> = {
 function titleForPath(pathname: string | null) {
   if (!pathname) return "Licia";
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
-  return (
-    Object.entries(PAGE_TITLES).find(([href]) => pathname.startsWith(`${href}/`))?.[1] || "Licia"
-  );
+  return Object.entries(PAGE_TITLES).find(([href]) => pathname.startsWith(`${href}/`))?.[1] || "Licia";
 }
 
 export function TopBar() {
@@ -57,18 +55,12 @@ export function TopBar() {
   }
 
   return (
-    <header
-      className="relative z-header h-16 px-3 pt-[max(.5rem,env(safe-area-inset-top))] sm:px-6 md:px-8"
-    >
+    <header className="relative z-header h-16 px-3 pt-[max(.5rem,env(safe-area-inset-top))] sm:px-6 md:px-8">
       <div className="flex h-full items-center justify-between gap-3 border-b border-border/70">
         <nav aria-label={t("Breadcrumb")} className="flex min-w-0 items-center gap-2 text-sm">
           <span className="hidden shrink-0 text-textMuted sm:inline">Workspace</span>
           <ChevronRight className="hidden shrink-0 text-textMuted sm:block" size={15} aria-hidden />
-          <h1
-            className="min-w-0 truncate font-display text-base font-semibold text-text sm:text-lg"
-          >
-            {pageTitle}
-          </h1>
+          <h1 className="min-w-0 truncate font-display text-base font-semibold text-text sm:text-lg">{pageTitle}</h1>
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <SyncStatusBadge />
@@ -83,9 +75,7 @@ export function TopBar() {
               <Search size={17} aria-hidden />
               <span>{t("Cari")}</span>
             </span>
-            <kbd
-              className="hidden rounded-md border border-border bg-bg px-1.5 py-0.5 text-2xs font-medium sm:inline"
-            >
+            <kbd className="hidden rounded-md border border-border bg-bg px-1.5 py-0.5 text-2xs font-medium sm:inline">
               Ctrl K
             </kbd>
           </button>
