@@ -32,17 +32,6 @@ if (!files.length) {
   process.exit(0);
 }
 
-const formattedTopBar = spawnSync(
-  process.execPath,
-  ["node_modules/prettier/bin/prettier.cjs", "components/layout/TopBar.tsx"],
-  { encoding: "utf8", windowsHide: true },
-);
-if (formattedTopBar.status === 0) {
-  console.log("=== PRETTIER TOPBAR START ===");
-  console.log(formattedTopBar.stdout);
-  console.log("=== PRETTIER TOPBAR END ===");
-}
-
 const result = spawnSync(process.execPath, ["node_modules/prettier/bin/prettier.cjs", "--check", ...files], {
   stdio: "inherit",
   windowsHide: true,
