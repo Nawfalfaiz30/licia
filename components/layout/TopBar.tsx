@@ -33,7 +33,9 @@ const PAGE_TITLES: Record<string, string> = {
 function titleForPath(pathname: string | null) {
   if (!pathname) return "Licia";
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
-  return Object.entries(PAGE_TITLES).find(([href]) => pathname.startsWith(`${href}/`))?.[1] || "Licia";
+  return (
+    Object.entries(PAGE_TITLES).find(([href]) => pathname.startsWith(`${href}/`))?.[1] || "Licia"
+  );
 }
 
 export function TopBar() {
@@ -60,7 +62,11 @@ export function TopBar() {
         <nav aria-label={t("Breadcrumb")} className="flex min-w-0 items-center gap-2 text-sm">
           <span className="hidden shrink-0 text-textMuted sm:inline">Workspace</span>
           <ChevronRight className="hidden shrink-0 text-textMuted sm:block" size={15} aria-hidden />
-          <h1 className="min-w-0 truncate font-display text-base font-semibold text-text sm:text-lg">{pageTitle}</h1>
+          <h1
+            className="min-w-0 truncate font-display text-base font-semibold text-text sm:text-lg"
+          >
+            {pageTitle}
+          </h1>
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <SyncStatusBadge />
