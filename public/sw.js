@@ -190,7 +190,16 @@ self.addEventListener('notificationclick', (event) => {
   const selected = actions.find((item) => item.action === action);
   const href = selected?.href || event.notification?.data?.href || '/';
   event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-    const absolute = new URL(href, self.location.origin).href;
+    // Notification hrefs are internal app routes. Older queued payloads may
+    // contain an absolute localhost URL from development, so retain only the
+    // path/query/hash and always navigate on the origin of this installed PWA.
+    let absolute;
+    try {
+      const candidate = new URL(typeof href === 'string' ? href : '/', self.location.origin);
+      absolute = new URL(`${candidate.pathname}${candidate.search}${candidate.hash}`, self.location.origin).href;
+    } catch {
+      absolute = new URL('/', self.location.origin).href;
+    }
     for (const client of clients) {
       if ('focus' in client) { client.navigate?.(absolute); return client.focus(); }
     }
